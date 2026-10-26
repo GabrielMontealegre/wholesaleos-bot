@@ -1,5 +1,14 @@
 # Decisions
 
+ASSUMED:454 snapshot uploads remain a separate assistant-reported collection,
+not canonical buyer/deal/POF/value/readiness updates. Validate/hash exact bounded
+UTF8 bytes with injected backend clock,retain every import and choose newest
+import per actor. A source_file is only a reported safe relative reference,
+never opened or promoted to external evidence. Unknown nullable facts remain
+null;unknown structured fields reject. Real persistence waits for privacy/export
+audit and actual admin integration tests --454,AGENTS source/privacy invariants
+and existing strict atomic-store conventions --2026-10-26.
+
 2026-10-26: PR453 source-label backend prerequisite verified atmainf7a7977,
 automatic14777ce0 exactsource;PR255/0/0 andMAIN255/0/0. Actual bounded signed
 metadata/body provenance agrees without exporting private labels. Native label

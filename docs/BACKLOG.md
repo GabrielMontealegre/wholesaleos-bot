@@ -2,6 +2,16 @@
 
 ## Latest Run Summary
 
+2026-10-26 owner454 LOCAL CANDIDATE now has pure v1 byte decoder/validator,
+immutable append-only per-actor import/latest projection and an UNREGISTERED
+admin upload/read route module. Two synthetic unit files PASS exact hash,
+schema/date/ID/path/size/PII-safe atomic rejection/history/nonpromotion/purity
+and local auth/origin/no-store/proxy/storage failures. No server registration,
+private file inspection,real persistence/upload,UI/fullgate/PR/deploy claimed.
+Finish privacy/export audit and actual admin integration next,then Today sheet.
+457onlyreplyrank gap remains unanswered;454otherwise unblocked.456draftgreen
+256/0/0 stays unmerged. Live453f7a7977 unchanged;no dependency/lock changes.
+
 2026-10-26 NEW OWNER PRIORITIES454FIRST(private assistant snapshot/Today8AM
 sheet),455SECOND(separate quick wins),ahead of Email polish except open safety
 fixes.456 native Reports candidate preserved DRAFT/UNMERGED/UNDEPLOYED;one

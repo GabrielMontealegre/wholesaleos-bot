@@ -10,7 +10,54 @@ is .wholesaleos-release-proof/pr456-final-synthetic (47.9/50.2/38.8ms,Lighthouse
 98/98,notlive). Do not rerun/push a docs-only candidate just to churn CI.
 This branch starts from deployed f7a7977,not456. No snapshot contents,
 private assistant files,credentials or business records were read for this trace.
-No454 runtime implementation,import,full gate or release is claimed yet.
+Local pure validation/import and unregistered route candidates now exist;no
+production registration,private storage,real import,full gate or release claimed.
+
+## 2026-10-26 Bounded Local Candidate
+
+`modules/records/assistant-snapshot.js` decodes at most1MB of exact UTF8 file
+bytes,hashes those bytes (not re-serialized JSON),strictly validates v1 and
+builds a new append-only assistant_snapshots array without I/O. Server-injected
+clock and actor are mandatory;receipts carry assistant_snapshot_import origin,
+file hash,filename,imported_at,generated_at and reported snapshot. Same-file
+reimports and same-clock ties are retained with distinct deterministic append
+IDs. Latest selection is last IMPORT for the requested actor,not newest source
+generation time or another actor's data. Corrupt history fails closed;nothing
+is removed or silently recovered from a forgiving database read.
+
+Every root/row field in v1 is required;unknown fields (including structured
+walk-away fields) reject the whole file. Unknown nullable facts use null rather
+than guessed values. Limits are1000rows/section,100people/areas per row,1000log
+events/deal,1000deal refs/buyer,3questions/call,with bounded text fields. IDs are
+globally unique across deals/buyers/texts;references must name a deal in the file
+or be explicitly null where allowed. Source_file accepts only a safe flat
+deal-brains/*.md reported reference;it is NEVER opened or treated as proof.
+Approval accepts approved/pending/rejected/null and POF boolean/null as reported
+values only. Optional last_reply_at is NOT accepted without457's answer.
+
+`assistant-snapshot-routes.js` is a registration function ONLY;server.js does
+NOT import/register it yet. Synthetic tests register it over an in-memory store.
+It requires the injected existing admin boundary before parsing,sets no-store
+even on authorization/errors,checks canonical same-origin and explicit request
+header,accepts only bounded application/octet-stream and returns code-only
+errors. Private GET partitions by actual actor;upload returns a receipt,not
+file contents. Real backend storage/export audit and production registration
+are still pending. No UI,auth/session,global parser or settings changes.
+
+Unit tests assistant-snapshot and assistant-snapshot-routes pass using synthetic
+fixtures ONLY. They cover exact-byte hash,empty/zero/unknown,wrong version/date/
+duplicate/path/field/reference/money/size,atomic rejection,PII-safe errors,
+append-only/history/actor isolation,canonical non-promotion,purity,no-store,
+unsigned/nonadmin/origin/type/size rejection and read/write storage failures.
+One local proxy test initially failed because it used a fabricated Host in the
+fetch fixture;the correction uses the server's actual host with HTTPS proxy
+protocol and canonical URL origins. Strict cross-origin rejection stays intact;
+the corrected test passes. No retries against production or claimed live fix.
+
+Next:finish the serializer/private-storage audit,then integrate the existing
+admin routes into the real server with synthetic actual-auth coverage before
+adding the requested Today upload/sheet. No standalone unwired release or
+production upload is implied by the local test results.
 
 ## Trace Before Implementation
 
