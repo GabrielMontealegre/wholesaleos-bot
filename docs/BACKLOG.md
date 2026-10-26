@@ -2,6 +2,16 @@
 
 ## Latest Run Summary
 
+2026-10-26 independent451 LOCAL CANDIDATE ONLY on item/451-classic-back-results
+from verifiedca483e7,prior proof preserved. Actual production route fixture
+reproduces Back racing a pending record-only read;old helper ignored record_id
+and masked it. Minimal existing request-ticket/loading/data/focus reset passes
+three-size normal/late/hidden-price cases;no backend/auth/CSP/layout/writer
+change,classic asset16. No full gate/PR/merge/deploy/live fix claimed. Preserve
+release/rollback reserve at79% primary. Existing pipeline UI and actual
+navigation/exact-record/locked/nonadmin regressions also pass. Count450 still
+unanswered/BLOCKED;live449 unchanged. No local jobs or dependency changes.
+
 2026-10-26 rollback449 DONE/VERIFIED after448 FAILED its live count gate.
 Currentmainca483e7042a6f77d16c6d36b9181ab572f9ff647 restores exact verified
 3d41e6d product/tree. Tested rollbacke52bbd3 full40247254613=253/0/0,

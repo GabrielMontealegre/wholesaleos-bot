@@ -132,7 +132,12 @@
     var matches=e.target.closest('[data-deal-matches]');if(matches){root.openReviewedDeal(matches.closest('[data-deal-id]').dataset.dealId,{matches:true});return;}
     var card=e.target.closest('#wos-todays-deals [data-deal-card-open]');if(card&&!e.target.closest('button,a,input,select,textarea,summary,[role="button"]')){root.openReviewedDeal(card.closest('[data-deal-id]').dataset.dealId);return;}
     var open = e.target.closest('[data-deal-open]'); if(open) { root.openReviewedDeal(open.closest('[data-deal-id]').dataset.dealId); return; }
-    if(e.target.closest('[data-deal-back]')) { filters.record_id='';filters.hidden=previousHidden;active='';root.navigate('todays_deals',null);return; }
+    if(e.target.closest('[data-deal-back]')) {
+      // A pending record-only read must not win after returning to results or
+      // prevent the next list read through the shared loading guard.
+      requestVersion++;loading=false;data=null;matchFocus='';
+      filters.record_id='';filters.hidden=previousHidden;active='';root.navigate('todays_deals',null);return;
+    }
     if(e.target.closest('[data-review-steps]')) { var fieldset=e.target.closest('[data-deal-id]').querySelector('fieldset');if(fieldset)fieldset.scrollIntoView({block:'start'});return; }
     var generate=e.target.closest('[data-jv-generate]');
     if(generate) {
