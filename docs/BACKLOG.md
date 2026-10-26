@@ -2,6 +2,14 @@
 
 ## Latest Run Summary
 
+2026-10-26 D-063B provider-label BACKEND prerequisite local candidate:bounded
+message names (capability-gated existing IMAP fetch) versus opaque REST IDs,
+real adapter/MIME/annotation parity and malformed/unknown/empty/requestcount
+negatives pass,new test plus seven existing regressions. No new requests,
+registry lookup,storage/auth/send/count/writer/native consumer or cache change.
+Native Reports/wholeB/designapproval NOTdone. Full final-head gate/PR/live
+proof still pending;production452 unchanged and count450 remainsBLOCKED.
+
 2026-10-26 next D-063B label provenance TRACE ONLY on local
 item/412-provider-label-provenance from main51a7caf,452 proof preserved.
 Actual adapter does not emit the raw labels used by Reports fixtures;Gmail

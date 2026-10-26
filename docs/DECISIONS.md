@@ -1,5 +1,13 @@
 # Decisions
 
+ASSUMED: D-063B provider labels first preserve bounded per-message IMAP names
+versus opaque REST label IDs in a separate provider_labels receipt. Add only
+the existing IMAP fetch's capability-gated label attribute; no registry request,
+native category consumer, writer, scope, storage or clock contract changes.
+Missing/malformed stays null, not empty; thread unions cannot certify all
+members. Native source-label consumption remains a separately gated slice --
+D-063, AGENTS source truth and verified ImapFlow2.3/Gmail contracts --2026-10-26.
+
 OPEN needs-architect450:choose authoritative clock for count snapshots after
 448's failed live gate. Strict browser-vs-server future comparison rejects a
 genuine backend capture measured117ms ahead after response. Recommend same-

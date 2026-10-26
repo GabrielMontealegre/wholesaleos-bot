@@ -1,8 +1,43 @@
 # D-063B: Provider Label Provenance Trace
 
-2026-10-26. Local preparation only, from main51a7caf after verified452.
-No label implementation, provider request, PR, full gate or deployment claimed.
+2026-10-26. Backend prerequisite candidate, from main51a7caf after verified452.
+No PR, full gate, deployment or completed native label feature claimed yet.
 Count repair450 remains independently blocked pending its clock decision.
+
+## Bounded Backend Prerequisite Implemented Locally
+
+`provider_labels` is a new optional per-message receipt, deliberately distinct
+from legacy `labels`. IMAP carries `{origin:'imap_gmail_labels',scope:'message',
+names:[...]}` only when the connected client advertises X-GM-EXT-1 and the fetch
+actually supplies a valid label Set. OAuth carries `{origin:'gmail_label_ids',
+scope:'message',ids:[...]}` from existing metadata/raw results. An opaque ID is
+never a custom name. Unknown/malformed/oversize inputs yield null; a genuinely
+returned empty collection remains an empty receipt. At most100 strings of
+200 characters each; controls/bidi/duplicate IDs/sparse/accessor arrays reject.
+
+Installed ImapFlow2.3.0 types expose FetchQuery.labels:boolean and
+FetchMessageObject.labels:Set<string>. Its actual fetch command emits
+X-GM-LABELS only with X-GM-EXT-1; its parser decodes mailbox names into a Set.
+The candidate adds labels:true to the EXISTING metadata/header fetch only.
+No additional command, registry lookup, body batch, polling, retry, storage,
+route, scope, auth, send, count or writer is added. Unsupported servers remain
+unknown even if a forged fixture includes a Set. Existing read-only locks,
+UIDVALIDITY and body/request limits remain unchanged.
+
+New hermetic mailbox-provider-labels test covers the real mailbox adapter,
+real MIME parser, annotation, list/body parity, capability, names-vs-IDs,
+known-empty/unknown/malformed/oversize/sparse/accessor/duplicate/wrong-origin,
+fresh copies, zero ambient clock/network and unchanged bounded read counts.
+Seven existing mailbox/projection files also pass; original assertions unchanged.
+The initial restricted-sandbox Node launch produced no test output and was
+interrupted; the configured runtime then passed outside that process sandbox.
+This is not a test failure, full-suite result or permission to skip a gate.
+
+Native Reports still uses its old raw-label field. This prerequisite does NOT
+change its category, claim a custom Gmail ID/name mapping, render labels, add
+star authority or certify whole B. A later independently reviewed native
+consumer must enforce source/identity/mixed-copy/group consistency using these
+receipts and actual adapter fixtures. No native asset/cache changes here.
 
 ## Actual Writers And Readers
 
@@ -36,6 +71,7 @@ B source boundary, not a reason to roll back healthy452 or bypass450.
 
 - [Gmail label guide](https://developers.google.com/workspace/gmail/api/guides/labels)
 - [Message resource](https://developers.google.com/workspace/gmail/api/reference/rest/v1/users.messages)
+- [Gmail IMAP extensions](https://developers.google.com/workspace/gmail/imap/imap-extensions)
 
 The Message resource's `labelIds` are per-message IDs. System and user labels
 are different; custom names require a registry mapping. Thread-level membership
