@@ -93,4 +93,7 @@ deal-board-jobs.json
 deal-board-auto-run.json
 # Private reference-operation backups must never enter version control.
 **/private-record-backups/
+# The runtime store can contain private assistant imports and contact details.
+/data/db.json
+/data/db.json.tmp
 /dashboard/vendor/tabler-1.6.1/package.tgz

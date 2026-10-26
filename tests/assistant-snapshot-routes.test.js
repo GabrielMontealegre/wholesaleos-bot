@@ -54,6 +54,6 @@ async function main() {
     await request({ method: 'POST', headers: { ...upload, Origin: base.replace('http:', 'https:'), 'X-Forwarded-Proto': 'https' }, body: raw }, 200);
     assert.equal(writes, 3, 'Existing one-hop HTTPS proxy origin handling works without an auth rewrite');
   } finally { server.closeAllConnections(); await new Promise(resolve => server.close(resolve)); }
-  console.log('assistant-snapshot-routes: synthetic signed-admin guard/no-store,origin/type/raw byte hash/size rejection,private per-actor read,append-only writes,proxy HTTPS and safe storage errors passed;not registered in production');
+  console.log('assistant-snapshot-routes: synthetic signed-admin guard/no-store,origin/type/raw byte hash/size rejection,private per-actor read,append-only writes,proxy HTTPS and safe storage errors passed;local synthetic registration only');
 }
 main().catch(error => { console.error(error.stack); process.exitCode = 1; });

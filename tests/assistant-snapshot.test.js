@@ -73,6 +73,8 @@ assert.equal(second.buyers, source.buyers); assert.equal(second.reviewed_deals, 
 assert.equal(second.buyers[0].approval, 'pending', 'Reported approval/POF never changes canonical eligibility');
 assert.equal(latestSnapshot(second, options).id, second.assistant_snapshots[1].id);
 assert.equal(latestSnapshot(second, { operatorId: 'other-owner', now }), null);
+const opaqueActor = { ...options, operatorId: 'owner@example.test' };
+assert.equal(latestSnapshot(appendSnapshot(source, raw, opaqueActor), opaqueActor).operator_id, opaqueActor.operatorId, 'Existing opaque signed actor IDs are not reinterpreted as snapshot IDs');
 const olderGenerated = fixture(); olderGenerated.generated_at = '2026-10-25T13:00:00Z'; olderGenerated.deals[0].updated_at = '2026-10-25T12:40:00Z';
 const third = appendSnapshot(second, bytes(olderGenerated), { ...options, now: '2026-10-26T15:01:00Z' });
 assert.equal(latestSnapshot(third, { ...options, now: '2026-10-26T15:01:00Z' }).generated_at, olderGenerated.generated_at, 'Newest import wins,not newest generation time');
@@ -103,4 +105,10 @@ try {
   assert.equal(latestSnapshot(second, options).id, second.assistant_snapshots[1].id);
 } finally { restore.forEach(fn => fn()); }
 assert.deepEqual(blocked, []);
+const { performance } = require('node:perf_hooks');
+let history = source; const started = performance.now();
+for (let i = 0; i < 100; i++) history = appendSnapshot(history, raw, options);
+const built = performance.now(); assert.equal(latestSnapshot(history, options).id, history.assistant_snapshots[99].id);
+assert.equal(history.assistant_snapshots.length, 100);
+console.log(JSON.stringify({ synthetic_only: true, imports: 100, total_file_bytes: raw.length * 100, build_ms: Math.round((built - started) * 100) / 100, latest_ms: Math.round((performance.now() - built) * 100) / 100 }));
 console.log('assistant-snapshot: exact file hash,strict all-or-nothing v1,source/date/ID/reference/money negatives,append-only per-owner latest imports,canonical non-promotion,PII-safe errors and no clock/disk/network/writers passed');

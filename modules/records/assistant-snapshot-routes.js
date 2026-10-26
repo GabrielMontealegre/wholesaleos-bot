@@ -4,6 +4,12 @@ const { appendSnapshot, latestSnapshot, MAX_BYTES } = require('./assistant-snaps
 const CODES = new Set(['fields_invalid', 'field_invalid', 'id_invalid', 'date_invalid', 'clock_invalid', 'money_invalid',
   'source_file_invalid', 'source_url_invalid', 'schema_invalid', 'version_invalid', 'generated_at_invalid', 'duplicate_id',
   'reference_invalid', 'array_invalid', 'rank_invalid', 'file_invalid', 'file_too_large', 'store_invalid', 'actor_required', 'filename_invalid']);
+function requireSnapshotPayload(req, res, next) {
+  if (!['GET', 'POST'].includes(req.method)) return res.status(405).json({ ok: false, code: 'assistant_snapshot_method_invalid' });
+  if (req.method === 'GET' && (req.get('transfer-encoding') || Number(req.get('content-length') || 0) !== 0)) return res.status(400).json({ ok: false, code: 'assistant_snapshot_file_invalid' });
+  if (req.method === 'POST' && !req.is('application/octet-stream')) return res.status(415).json({ ok: false, code: 'assistant_snapshot_content_type_required' });
+  next();
+}
 function registerAssistantSnapshotRoutes(app, { db, requireAdmin, now = () => new Date().toISOString() }) {
   if (typeof requireAdmin !== 'function' || typeof db?.readDBStrict !== 'function' || typeof db?.writeDB !== 'function') throw Error('assistant_snapshot_dependencies_required');
   const route = '/api/dashboard/assistant-snapshots';
@@ -41,4 +47,4 @@ function registerAssistantSnapshotRoutes(app, { db, requireAdmin, now = () => ne
     error(res, failure);
   });
 }
-module.exports = { registerAssistantSnapshotRoutes };
+module.exports = { registerAssistantSnapshotRoutes, requireSnapshotPayload };

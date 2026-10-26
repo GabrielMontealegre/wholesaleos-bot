@@ -10,10 +10,36 @@ is .wholesaleos-release-proof/pr456-final-synthetic (47.9/50.2/38.8ms,Lighthouse
 98/98,notlive). Do not rerun/push a docs-only candidate just to churn CI.
 This branch starts from deployed f7a7977,not456. No snapshot contents,
 private assistant files,credentials or business records were read for this trace.
-Local pure validation/import and unregistered route candidates now exist;no
-production registration,private storage,real import,full gate or release claimed.
+Local pure validation/import and registered server route candidates now exist;
+no production import,full gate or release claimed. Today UI remains separate.
 
-## 2026-10-26 Bounded Local Candidate
+## Actual Boundary Integration / Privacy Audit
+
+The server now mounts a narrow private namespace protection BEFORE generic
+parsers:existing requireAdmin,no-store and method/content-type guard. Actual
+GET/POST registrations remain AFTER the shared session gate and repeat admin
+authorization. No shared parser/session/auth behavior is rewritten. This also
+prevents generic parser errors reflecting malformed private JSON before auth.
+
+The scoped serializer/export/privacy audit is recorded in
+issue-454-private-snapshot-audit.md. Actual-server api-session-gate regression
+passes signed owner upload/read,header-only/forged/nonadmin refusal,no-store,
+pre-parser bad-type/method refusal,exact byte hash and non-leakage to eight
+existing read projections. An existing canonical DELETE still preserves the
+new snapshot history. Sentry is disabled in that isolated synthetic server.
+No production upload or private file inspection occurred. Runtime DB files,
+untracked but previously not ignored,are now explicitly ignored.
+
+Pure synthetic growth probe retains100imports/157400total file bytes;local
+build190.17ms/latest2.72ms. This is a small test point,NOT production latency,
+maximum-file performance or unlimited-history evidence. Preserve O(history)
+validation risk and existing separate scaling work;never delete imports.
+
+Next full final-head gate/self-review and exact automatic deployment/read-only
+proof apply to this backend prerequisite. Today upload/sheet remains the next
+ordered454 slice;neither the whole feature nor owner acceptance is complete.
+
+## Historical 2026-10-26 Unregistered Preparation
 
 `modules/records/assistant-snapshot.js` decodes at most1MB of exact UTF8 file
 bytes,hashes those bytes (not re-serialized JSON),strictly validates v1 and

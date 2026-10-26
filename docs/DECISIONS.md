@@ -1,5 +1,13 @@
 # Decisions
 
+2026-10-26:454 backend privacy audit now covers runtime static/export/aggregate
+readers,error telemetry and actual-session synthetic regressions. Mount only
+the new snapshot namespace's existing admin/no-store/payload guard before
+generic parsers;keep its routes behind the unchanged shared API session gate.
+Reject unsupported upload types before parser errors can reflect private bytes.
+Canonical projections/writers remain independent and preserve import history;
+no new token,shared auth change or production import --454/AGENTS privacy.
+
 ASSUMED:454 snapshot uploads remain a separate assistant-reported collection,
 not canonical buyer/deal/POF/value/readiness updates. Validate/hash exact bounded
 UTF8 bytes with injected backend clock,retain every import and choose newest
