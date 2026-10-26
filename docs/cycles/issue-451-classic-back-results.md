@@ -1,5 +1,11 @@
 # Issue451: Classic Back to Results - Local Candidate Only
 
+RELEASE UPDATE:452 is now merged/deployed/VERIFIED at51a7caf. Final PR and main
+full suites each254/0/0;actual signed19cards->exact1record->Back->same19 with
+filters preserved and0consoleerrors. Full evidence and honest historical local
+notes:docs/screens/2026-10-26-pr452-release/README.md. The preparation wording
+below is historical,not the current release status. Count450 stays blocked.
+
 Current live/main remains verified rollback449 ca483e7. This branch starts from
 that main and preserves proof-only ccdd997 as9a68e05. No PR,full-suite green,
 merge,deployment or live fix is claimed. Count repair450 remains BLOCKED.
