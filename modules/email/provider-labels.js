@@ -1,9 +1,10 @@
 'use strict';
+const setSize = Object.getOwnPropertyDescriptor(Set.prototype, 'size').get;
 
 function providerLabels(value, origin) {
   let values;
   if (origin === 'imap_gmail_labels' && value instanceof Set && Object.getPrototypeOf(value) === Set.prototype) {
-    if (value.size > 100) return null;
+    if (setSize.call(value) > 100) return null;
     values = Array.from(Set.prototype.values.call(value));
   } else if (origin === 'gmail_label_ids' && Array.isArray(value) && value.length <= 100) {
     values = [];

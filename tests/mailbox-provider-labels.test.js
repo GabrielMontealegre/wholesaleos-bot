@@ -50,6 +50,10 @@ async function main() {
     ['gmail_label_ids', [undefined, null, new Set(), sparse, accessor, [coercible], ['INBOX', 'INBOX'], ['WOS/Reports'], ['bad\nlabel'], [''], Array.from({ length: 101 }, (_, i) => 'Label_' + i)]]
   ]) for (const value of values) assert.equal(providerLabels(value, origin), null);
   assert.equal(providerLabels(['INBOX'], 'derived_workflow'), null);
+  const setWithOverrides = new Set(['WOS/Reports']);
+  Object.defineProperty(setWithOverrides, 'size', { get() { callbacks++; throw Error('Own size getter forbidden'); } });
+  setWithOverrides[Symbol.iterator] = () => { callbacks++; throw Error('Own iterator forbidden'); };
+  assert.deepEqual(providerLabels(setWithOverrides, 'imap_gmail_labels'), { origin: 'imap_gmail_labels', scope: 'message', names: ['WOS/Reports'] });
   assert.equal(callbacks, 0);
   const oldNow = Date.now;
   try {
