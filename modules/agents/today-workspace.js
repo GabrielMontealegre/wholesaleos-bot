@@ -64,10 +64,10 @@ function buildTodayWorkspace(store,{now,timeZone='America/Mazatlan',releases=[]}
   const pending=buildPending(store,view.items,{now,today});
   return {source_kind:'derived_workflow',now,today,actions,pending,pipeline_summary:pipelineSummary,counts:{replies:view.incoming_count,approvals:pendingBuyers.length+pendingDeals.length,followups:view.followup_count,deadlines:deadlineRows.length},best_deals:best,grade_status:'interim_rules',grade_issue:344,interim_grades:reviewed.map(({d,g})=>({id:d.id,ref:activity.reference(d),...g})),last_24h:events,coverage:{pipeline:pipelineSummary?'recorded_workflow':'unavailable',records_requests:'not_connected',routine_results:'not_connected',email:'recorded_reports_only',releases:'verified_release_records_only'}};
 }
-function registerTodayWorkspace(app,{db,requireAdmin,now=()=>new Date().toISOString(),releases=[]}) {
+function registerTodayWorkspace(app,{db,requireAdmin,now=()=>new Date().toISOString(),releases=[],assistantSnapshotImport=false}) {
   app.get('/api/dashboard/today-workspace',requireAdmin,(req,res)=>{
     res.set('Cache-Control','no-store');
-    try{res.json(buildTodayWorkspace(db.readDBStrict(),{now:now(),releases}));}
+    try{const view=buildTodayWorkspace(db.readDBStrict(),{now:now(),releases});if(assistantSnapshotImport===true)view.capabilities={assistant_snapshot_import:true};res.json(view);}
     catch{res.status(503).json({code:'today_store_unavailable'});}
   });
 }

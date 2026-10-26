@@ -4,6 +4,7 @@ const { TextDecoder } = require('node:util');
 const MAX_BYTES = 1024 * 1024;
 const STAGES = ['finding_buyer', 'offer_out', 'under_contract', 'buyer_assigned', 'closed', 'dead'];
 const MONEY = ['ask', 'seller_number', 'our_offer', 'target', 'value_fixed', 'repairs', 'buyer_number', 'fee_estimate_low', 'fee_estimate_high'];
+const REQUEST_ID = /^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/;
 function fail(code, status = code === 'store_invalid' ? 503 : 400) { throw Object.assign(Error('assistant_snapshot_' + code), { code: 'assistant_snapshot_' + code, status }); }
 function object(value, keys) {
   if (!value || typeof value !== 'object' || Array.isArray(value) || Object.keys(value).length !== keys.length ||
@@ -17,6 +18,11 @@ function text(value, max = 500, { nullable = false, multiline = false } = {}) {
 }
 function id(value) { if (typeof value !== 'string' || !/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/.test(value)) fail('id_invalid'); }
 function validActor(value) { return typeof value === 'string' && value.length > 0 && value.length <= 128 && value.trim() === value && !/[\x00-\x1f\x7f]/.test(value); }
+function requestReceiptId(operatorId, requestId) {
+  if (!validActor(operatorId)) fail('actor_required', 403);
+  if (typeof requestId !== 'string' || !REQUEST_ID.test(requestId)) fail('request_invalid');
+  return crypto.createHash('sha256').update(JSON.stringify(['assistant_snapshot_transport_v1', operatorId, requestId])).digest('hex');
+}
 function time(value, limit = Infinity, code = 'date_invalid') {
   if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z$/.test(value)) fail(code);
   const at = Date.parse(value);
@@ -115,12 +121,20 @@ function receipts(store) {
   }
   return value;
 }
-function appendSnapshot(store, bytes, { now, operatorId, filename } = {}) {
+function appendSnapshot(store, bytes, { now, operatorId, filename, requestId } = {}) {
   if (!validActor(operatorId)) fail('actor_required', 403);
   if (typeof filename !== 'string' || !/^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}\.json$/.test(filename) || filename.includes('..')) fail('filename_invalid');
+  const transportId = requestId === undefined ? null : requestReceiptId(operatorId, requestId);
   const previous = receipts(store), decoded = decodeSnapshot(bytes, { now }), imported_at = new Date(time(now)).toISOString();
+  if (requestId !== undefined) {
+    const prior = previous.find(row => row.id === transportId);
+    if (prior) {
+      if (prior.operator_id !== operatorId || prior.file_sha256 !== decoded.file_sha256 || prior.filename !== filename) fail('request_conflict', 409);
+      return store;
+    }
+  }
   if (previous.some(row => time(row.imported_at, Infinity, 'store_invalid') > Date.parse(imported_at))) fail('clock_invalid', 409);
-  const receipt = { id: crypto.createHash('sha256').update(JSON.stringify([previous.length, imported_at, operatorId, decoded.file_sha256])).digest('hex'),
+  const receipt = { id: transportId || crypto.createHash('sha256').update(JSON.stringify([previous.length, imported_at, operatorId, decoded.file_sha256])).digest('hex'),
     source_kind: 'assistant_snapshot_import', imported_at, file_sha256: decoded.file_sha256, generated_at: decoded.snapshot.generated_at, filename, operator_id: operatorId, snapshot: decoded.snapshot };
   return { ...store, assistant_snapshots: previous.concat(receipt) };
 }
@@ -131,4 +145,4 @@ function latestSnapshot(store, { operatorId, now } = {}) {
   if (rows.some(row => time(row.imported_at) > clock)) fail('store_invalid');
   return rows.length ? rows[rows.length - 1] : null;
 }
-module.exports = { decodeSnapshot, appendSnapshot, latestSnapshot, MAX_BYTES };
+module.exports = { decodeSnapshot, appendSnapshot, latestSnapshot, requestReceiptId, MAX_BYTES };

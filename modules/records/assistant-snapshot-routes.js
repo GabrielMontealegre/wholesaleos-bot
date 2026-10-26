@@ -1,9 +1,10 @@
 'use strict';
 const express = require('express');
-const { appendSnapshot, latestSnapshot, MAX_BYTES } = require('./assistant-snapshot');
+const crypto = require('node:crypto');
+const { appendSnapshot, latestSnapshot, requestReceiptId, MAX_BYTES } = require('./assistant-snapshot');
 const CODES = new Set(['fields_invalid', 'field_invalid', 'id_invalid', 'date_invalid', 'clock_invalid', 'money_invalid',
   'source_file_invalid', 'source_url_invalid', 'schema_invalid', 'version_invalid', 'generated_at_invalid', 'duplicate_id',
-  'reference_invalid', 'array_invalid', 'rank_invalid', 'file_invalid', 'file_too_large', 'store_invalid', 'actor_required', 'filename_invalid']);
+  'reference_invalid', 'array_invalid', 'rank_invalid', 'file_invalid', 'file_too_large', 'store_invalid', 'actor_required', 'filename_invalid', 'request_invalid', 'request_conflict']);
 function requireSnapshotPayload(req, res, next) {
   if (!['GET', 'POST'].includes(req.method)) return res.status(405).json({ ok: false, code: 'assistant_snapshot_method_invalid' });
   if (req.method === 'GET' && (req.get('transfer-encoding') || Number(req.get('content-length') || 0) !== 0)) return res.status(400).json({ ok: false, code: 'assistant_snapshot_file_invalid' });
@@ -30,16 +31,18 @@ function registerAssistantSnapshotRoutes(app, { db, requireAdmin, now = () => ne
     next();
   }
   app.get(route, noStore, requireAdmin, (req, res) => {
-    try { res.json({ ok: true, latest: latestSnapshot(db.readDBStrict(), { now: now(), operatorId: req.currentUser?.id }),
+    try { const latest = latestSnapshot(db.readDBStrict(), { now: now(), operatorId: req.currentUser?.id }); res.json({ ok: true, latest,
+      viewer_scope: crypto.createHash('sha256').update(JSON.stringify(['assistant-device-scope-v1', req.currentUser.id])).digest('hex'),
       capabilities: { can_import: true, schema: 'wos-assistant-snapshot', version: 1, max_bytes: MAX_BYTES } }); }
     catch (failure) { error(res, failure); }
   });
   app.post(route, noStore, requireAdmin, uploadGuard, express.raw({ type: 'application/octet-stream', limit: MAX_BYTES }), (req, res) => {
     try {
       const at = now(), operatorId = req.currentUser?.id, before = db.readDBStrict();
-      const after = appendSnapshot(before, req.body, { now: at, operatorId, filename: req.get('X-WOS-Assistant-Filename') });
-      db.writeDB(after);
-      const receipt = after.assistant_snapshots[after.assistant_snapshots.length - 1];
+      const requestId = req.get('X-WOS-Assistant-Request') || undefined;
+      const after = appendSnapshot(before, req.body, { now: at, operatorId, filename: req.get('X-WOS-Assistant-Filename'), requestId });
+      if (after !== before) db.writeDB(after);
+      const receipt = after === before ? after.assistant_snapshots.find(row => row.id === requestReceiptId(operatorId, requestId)) : after.assistant_snapshots[after.assistant_snapshots.length - 1];
       res.json({ ok: true, id: receipt.id, imported_at: receipt.imported_at, generated_at: receipt.generated_at, file_sha256: receipt.file_sha256 });
     } catch (failure) { error(res, failure); }
   }, (failure, req, res, next) => {

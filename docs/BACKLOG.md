@@ -2,6 +2,42 @@
 
 ## Latest Run Summary
 
+2026-10-26 owner454 integrated Today CANDIDATE:explicit file selection/import,
+source-labeled assistant sheet before separate canonical work,calls/Messages/
+Email links,stage/detail drawer,reported buyer list/search/POF+approval,device-
+only scoped checks. Real-importer UI1366/400/412 and existing canonicalToday/
+navigation/mailbox regressions PASS;synthetic FCP<2s/Lighthouse100/100,NOTlive.
+Dropped-response experiment found Chromium POST replay;optional actor-scoped
+request UUID now returns identical receipt without second write,new clicks
+still append. Private GET viewer_scope avoids generic browseradmin identity;
+hashed boolean-only local keys,no PII. Legacy receipts/no-ID API preserved.
+No auth/token/provider/paid/canonical-gate changes. Whole454 NOTdone:457 latest-
+reply evidence unresolved,phoneapproval follows finished live surface. Full
+final-head600s/file/selfreview/PR/merge/exactdeploy/435proof still required.
+Trace docs/cycles/issue-454-today-assistant-sheet.md.455after454,456deferred.
+
+2026-10-26 next454 Today LOCAL preparation only:unwired assistant-model pure
+projection consumes actual synthetic importer receipts,keeps provenance/unknown
+money/reported POF/approval separate,ranked calls/text links/stage groups,buyer
+list without fabricated reply rank. Source/identity/date/ref/accessor/link/purity
+negatives and existing snapshot/Today model focused tests PASS. No HTML/app/CSS/
+cache/route/provider/read/upload/storage/UI/fullgate/PR/deploy change. Trace
+docs/cycles/issue-454-today-assistant-sheet.md. NEXT actual Today controller and
+escaped phone-first sheet;454NOTdone,457onlyreplyrank unanswered,455after454,
+456deferred. Live verified458dd04d98 unchanged;reserve release/rollback budget.
+
+2026-10-26 owner454 backend prerequisite DONE/VERIFIED via458;whole454 OPEN.
+Tested03bd898 full40370638496/job121740123029=257/0/0,600s/file;mergedmain
+dd04d989ebf74fe7c208554024b93f6a5bc4fd90 identicaltree,main40385719994/
+job121793323299=257/0/0. AutomaticRailwaye4da6bfb exactsourceActive/successful.
+Public12true3sizesGET/health200,unsignedsnapshot401/no-store;existing signed
+ChromeGET capabilities true/latestabsent only,NO real upload/privatecontents.
+Native emptyReply disabled/Close and classic19->1->BackLoading->19 preserved;
+exactmerge synthetic5size mailbox/3size navigation pass. Safeproof/all257+257
+timings docs/screens/2026-10-26-pr458-release. No settings/send/businesswrites.
+NEXT454 Todayupload/source-labeled8AMsheet;not delivered by this backend PR.
+457 replyranking only unanswered;450 counts blocked;455after454,456deferred.
+
 2026-10-26 owner454 BACKEND prerequisite candidate now registers private admin
 upload/read routes behind existing session gate and early no-store/admin/body
 protection. Scoped privacy/export audit and actual-server synthetic auth/import/

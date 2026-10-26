@@ -1,5 +1,32 @@
 # Decisions
 
+ASSUMED:454 manual upload is one logical action with a fresh client UUID.
+Chromium transparently replays POST after a dropped response (reproduced in
+the actual local route),so an optional actor-scoped request UUID returns the
+same exact SHA/filename receipt without another write. New clicks remain new
+append-only imports;conflicts reject,legacy receipts/calls stay valid. Encode
+identity in the existing opaque id,NOT an extra receipt field;the original
+eight-field schema remains readable by verified458 on rollback. Add only
+private GET viewer_scope derived from the actual signed actor for anonymous
+device-check keys,because the existing browser helper uses generic admin ID.
+No authentication rewrite/token/provider authority or private text in storage
+--454 append-only truth/privacy and observed transport evidence--2026-10-26.
+
+ASSUMED:454 Do this next orders nonempty reported needs_gabriel by newest
+reported deal updated_at,stable source order on ties;no missing urgency inferred.
+Calls/emails preserve reported rank;contact is never reply evidence (457 open).
+Rows without a source_file use the truthful snapshot filename,not an inferred
+related deal file. Private Today projection remains separate from canonical
+workflows and uses within-receipt server dates,not a cross-machine future test
+--owner454/AGENTS provenance and unchanged safety gates--2026-10-26.
+
+2026-10-26:454 backend prerequisite458 verified on exactmaindd04d98 with
+PR257/0/0+MAIN257/0/0 and approved435 GET-only mixedproof. Signed-admin private
+assistant receipts remain separate from canonical buyers/deals/POF/value gates.
+No real production upload used as verification;latest is absent until explicit
+owner import. Todayupload/sheet is next;whole454/designapproval not complete.
+457 contact-versus-reply gap blocks only that ranking,not independent sections.
+
 2026-10-26:454 backend privacy audit now covers runtime static/export/aggregate
 readers,error telemetry and actual-session synthetic regressions. Mount only
 the new snapshot namespace's existing admin/no-store/payload guard before
