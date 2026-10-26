@@ -1,5 +1,12 @@
 # Decisions
 
+2026-10-26:454 backend prerequisite458 verified on exactmaindd04d98 with
+PR257/0/0+MAIN257/0/0 and approved435 GET-only mixedproof. Signed-admin private
+assistant receipts remain separate from canonical buyers/deals/POF/value gates.
+No real production upload used as verification;latest is absent until explicit
+owner import. Todayupload/sheet is next;whole454/designapproval not complete.
+457 contact-versus-reply gap blocks only that ranking,not independent sections.
+
 2026-10-26:454 backend privacy audit now covers runtime static/export/aggregate
 readers,error telemetry and actual-session synthetic regressions. Mount only
 the new snapshot namespace's existing admin/no-store/payload guard before

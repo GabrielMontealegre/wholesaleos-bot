@@ -2,6 +2,18 @@
 
 ## Latest Run Summary
 
+2026-10-26 owner454 backend prerequisite DONE/VERIFIED via458;whole454 OPEN.
+Tested03bd898 full40370638496/job121740123029=257/0/0,600s/file;mergedmain
+dd04d989ebf74fe7c208554024b93f6a5bc4fd90 identicaltree,main40385719994/
+job121793323299=257/0/0. AutomaticRailwaye4da6bfb exactsourceActive/successful.
+Public12true3sizesGET/health200,unsignedsnapshot401/no-store;existing signed
+ChromeGET capabilities true/latestabsent only,NO real upload/privatecontents.
+Native emptyReply disabled/Close and classic19->1->BackLoading->19 preserved;
+exactmerge synthetic5size mailbox/3size navigation pass. Safeproof/all257+257
+timings docs/screens/2026-10-26-pr458-release. No settings/send/businesswrites.
+NEXT454 Todayupload/source-labeled8AMsheet;not delivered by this backend PR.
+457 replyranking only unanswered;450 counts blocked;455after454,456deferred.
+
 2026-10-26 owner454 BACKEND prerequisite candidate now registers private admin
 upload/read routes behind existing session gate and early no-store/admin/body
 protection. Scoped privacy/export audit and actual-server synthetic auth/import/
