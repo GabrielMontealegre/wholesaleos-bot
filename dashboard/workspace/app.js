@@ -228,8 +228,10 @@
     });
     if (data.capabilities && data.capabilities.assistant_snapshot_import === true && root.WOSAssistantSheet) {
       if (!assistantHost) {
+        content.querySelector('.ws-today').hidden = true;
         assistantHost = document.createElement('div'); assistantHost.id = 'assistant-slot'; content.prepend(assistantHost);
-        assistantSheet = root.WOSAssistantSheet.create({ host: assistantHost, actorId: app.userId, onUnauthorized: function () { locked('Your session expired. Unlock to continue.'); } });
+        function revealRecorded(scroll) { var recorded = content.querySelector('.ws-today'); if (recorded) { recorded.hidden = false; if (scroll) recorded.scrollIntoView({ block: 'start' }); } }
+        assistantSheet = root.WOSAssistantSheet.create({ host: assistantHost, onReady: function () { revealRecorded(false); }, onRecordedWork: function () { revealRecorded(true); }, onUnauthorized: function () { locked('Your session expired. Unlock to continue.'); } });
         assistantSheet.refresh();
       } else content.prepend(assistantHost);
     }

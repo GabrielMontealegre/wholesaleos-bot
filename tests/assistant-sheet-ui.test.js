@@ -31,7 +31,11 @@ async function main(){
   await page.route('**/*',route=>{const r=route.request(),u=new URL(r.url());if(u.origin!==base){external.push(u.origin);return route.abort();}if(r.method()!=='GET'&&!(r.method()==='POST'&&u.pathname==='/api/dashboard/assistant-snapshots')){otherWrites.push(r.method());return route.abort();}return route.continue();});
   const choose=async(value,name='assistant.json')=>page.locator('#assistant-file').setInputFiles({name,mimeType:'application/json',buffer:Buffer.from(JSON.stringify(value))});
   try{
-   await page.goto(base+'/app?preview=1');await page.getByText('No file imported yet.',{exact:true}).waitFor();
+   hold=true;await page.goto(base+'/app?preview=1');await page.getByRole('heading',{name:'Your assistant sheet',exact:true}).waitFor();
+   assert(!(await page.getByRole('heading',{name:'Your action queue',exact:true}).isVisible()),'Canonical work is placed after initial primary-sheet load,not visibly shifted');
+   await page.getByRole('button',{name:'Open recorded work',exact:true}).click();assert(await page.getByRole('heading',{name:'Your action queue',exact:true}).isVisible(),'Slow assistant reads never block explicit access to recorded work');
+   while(!release)await new Promise(r=>setTimeout(r,10));release();release=undefined;
+   await page.getByText('No file imported yet.',{exact:true}).waitFor();
    assert.equal(writes,0);assert.equal(reads,1);assert(await page.locator('#assistant-import').isDisabled());
    assert(await page.getByRole('heading',{name:'Your action queue',exact:true}).isVisible(),'Canonical recorded work remains separate');
    const data=fixture();data.deals[0].name='Synthetic property <img src=x onerror=alert(1)>';data.calls[0].questions.push('What is next?');data.buyers[0].name='Synthetic buyer '+ 'x'.repeat(180);

@@ -22,7 +22,7 @@
       if(!active||!host.isConnected)return;
       if(drawer){drawer.close();drawer=null;}
       if(buyerDrawer){buyerDrawer.close();buyerDrawer=null;}
-      host.innerHTML='<section class="ws-assistant" aria-label="Assistant sheet"><header class="ws-assistant-header"><div><h2>Your assistant sheet</h2>'+(view?'<p>Imported '+c.escape(stamp(view.imported_at))+'</p>':'')+'</div>'+c.button({label:'Refresh assistant sheet',icon:'refresh-cw',iconOnly:true,id:'assistant-refresh'})+'</header>'+
+      host.innerHTML='<section class="ws-assistant" aria-label="Assistant sheet"><header class="ws-assistant-header"><div><h2>Your assistant sheet</h2>'+(view?'<p>Imported '+c.escape(stamp(view.imported_at))+'</p>':'')+'</div><div class="ws-assistant-tools">'+c.button({label:'Open recorded work',icon:'list-checks',iconOnly:true,id:'assistant-recorded-open'})+c.button({label:'Refresh assistant sheet',icon:'refresh-cw',iconOnly:true,id:'assistant-refresh'})+'</div></header>'+
         '<form class="ws-assistant-import"><label for="assistant-file">Assistant JSON file</label><input id="assistant-file" type="file" accept=".json,application/json" aria-describedby="assistant-status">'+c.button({label:"Import today's assistant file",icon:'folder',tone:'green',id:'assistant-import',disabled:true})+'</form><p id="assistant-status" data-assistant-status role="status">'+c.escape(message)+'</p>'+
         (reading?c.skeleton('Loading assistant sheet'):view?sheet():loaded?'<p class="ws-muted">No assistant file has been imported. Choose today\'s file to see your next moves.</p>':'')+'</section>'+c.drawer('assistant-detail','Assistant-reported deal')+c.drawer('assistant-buyers','Reported buyers');
       drawer=c.bindDialog(host.querySelector('#assistant-detail'));
@@ -34,6 +34,8 @@
       input.addEventListener('change',function(){selected=input.files&&input.files[0]||null;status(selected?'File selected. Import it when ready.':'');actionsDisabled();});
       button.addEventListener('click',upload);
       host.querySelector('#assistant-refresh').addEventListener('click',function(){if(!busy)refresh();});
+      host.querySelector('#assistant-recorded-open').title='Open recorded work';
+      host.querySelector('#assistant-recorded-open').addEventListener('click',function(){if(typeof options.onRecordedWork==='function')options.onRecordedWork();});
       host.querySelectorAll('[data-assistant-deal]').forEach(function(b){b.addEventListener('click',function(){detail(b.dataset.assistantDeal);});});
       host.querySelectorAll('[data-assistant-check]').forEach(function(b){b.addEventListener('change',function(){mark(b);});});
       var search=host.querySelector('#assistant-buyer-search');if(search){search.value=query;search.addEventListener('input',function(){query=search.value.slice(0,200);buyers();});}
@@ -75,8 +77,8 @@
         if(data.ok!==true||data.capabilities?.can_import!==true||data.capabilities.schema!=='wos-assistant-snapshot'||data.capabilities.version!==1||data.capabilities.max_bytes!==1048576||typeof data.viewer_scope!=='string'||!/^[a-f0-9]{64}$/.test(data.viewer_scope))throw Error();
         var next=model.project(data.latest);if(expected&&(!next||next.receipt_id!==expected.id||next.file_sha256!==expected.sha||next.filename!==expected.filename))throw Error();
         view=next;viewerScope=data.viewer_scope;canImport=true;loaded=true;uncertain=false;reading=false;message=expected?'Assistant file imported.':view?'':'No file imported yet.';
-        await restoreChecks(t);if(alive(t))draw();
-      }catch(_){if(!alive(t))return;reading=false;canImport=false;loaded=false;view=null;message=expected?'The import may be saved, but the sheet could not be verified. Refresh before importing again.':'Assistant data is unavailable. Refresh to try again.';draw();}
+        await restoreChecks(t);if(alive(t)){draw();if(typeof options.onReady==='function')options.onReady();}
+      }catch(_){if(!alive(t))return;reading=false;canImport=false;loaded=false;view=null;message=expected?'The import may be saved, but the sheet could not be verified. Refresh before importing again.':'Assistant data is unavailable. Refresh to try again.';draw();if(typeof options.onReady==='function')options.onReady();}
     }
     async function upload(){
       if(!active||busy||uncertain||!selected||!canImport)return;

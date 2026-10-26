@@ -46,6 +46,17 @@ the first digest,finishes the second toggle,then releases the old result;only
 the latest state survives. This changes the candidate head and requires a new
 exact-head full gate,not reuse of the earlier run.
 
+Performance gate correction:head77e3a5c's full functional gate passed,but a
+broader Lighthouse performance audit measured82desktop/80phone despite100
+accessibility. CLS0.468 came from painting canonical work before asynchronous
+assistant expansion,not network/CPU latency. Do NOT call that head release
+eligible. Place canonical work after the first assistant result (or error),with
+an always-available explicit Open recorded work command during slow loading.
+No fixed blank-height spacer or blocked canonical access. Three-size held-read
+test proves the command works before the private response. Corrected phone
+CLS0.120/performance95/accessibility100;full final-head audit and gate required.
+Existing shell's smaller layout shift remains;do not claim zero CLS.
+
 Phone-first unframed section precedes canonical work:Do this next,calls,explicit
 Messages links,Email fallback,stage cards and full reported detail drawer,
 reported buyer counts and a separate full/searchable buyer drawer. Source labels,
