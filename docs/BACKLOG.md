@@ -2,7 +2,37 @@
 
 ## Latest Run Summary
 
-2026-10-26 independent451 LOCAL CANDIDATE ONLY on item/451-classic-back-results
+2026-10-26 D-063B provider-label BACKEND prerequisite local candidate:bounded
+message names (capability-gated existing IMAP fetch) versus opaque REST IDs,
+real adapter/MIME/annotation parity and malformed/unknown/empty/requestcount
+negatives pass,new test plus seven existing regressions. No new requests,
+registry lookup,storage/auth/send/count/writer/native consumer or cache change.
+Native Reports/wholeB/designapproval NOTdone. Full final-head gate/PR/live
+proof still pending;production452 unchanged and count450 remainsBLOCKED.
+
+2026-10-26 next D-063B label provenance TRACE ONLY on local
+item/412-provider-label-provenance from main51a7caf,452 proof preserved.
+Actual adapter does not emit the raw labels used by Reports fixtures;Gmail
+message label IDs require exact mapping,IMAP flags are not custom labels.
+Trace docs/cycles/issue-412-provider-label-provenance.md defines bounded
+adapter/annotation/projection negatives before implementation. No runtime
+change,new PR/provider call/test gate/deploy or live label failure claimed.
+450 still unanswered/BLOCKED;no clock/count repair or C writer begun.
+
+2026-10-26 issue451 DONE/VERIFIED via452. Testedbbbbb5e full40274204079/
+job121413572633=254/0/0,600s/file,15m02s job,sum842.48s NOTwall. Currentmain
+51a7cafdd2a9741ae0ce217854b4f488d552c53a tree identical;automaticRailway
+d7fde76e-6fdf-45d0-9480-eef63f903ff8 Active/successful,Details exactsource.
+Merged-main40276301165 also254/0/0. Public12true1366/400/412GEThealth200/
+unsigned401;actual signedChrome1280x58519cards->exact1record->Loading->same
+19cards/0workbench,filters preserved,0consoleerrors/no overflow. Exactmerge
+actual-route Back3size and navigation/exact-record/locked/nonadmin pass.
+Synthetic baselineca483e7 leaves1card;candidate restores2,FCP79.3/69.6/69.7ms,
+Lighthouse98/98 NOTlive. No businesswrites/settings/authtransfer/manualbuild.
+Safe proof/all254+254 timings docs/screens/2026-10-26-pr452-release. Native
+Deals/designapproval still gated by412;count450 remains unanswered/BLOCKED.
+
+Historical local preparation:2026-10-26 independent451 LOCAL CANDIDATE ONLY on item/451-classic-back-results
 from verifiedca483e7,prior proof preserved. Actual production route fixture
 reproduces Back racing a pending record-only read;old helper ignored record_id
 and masked it. Minimal existing request-ticket/loading/data/focus reset passes

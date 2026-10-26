@@ -1,13 +1,23 @@
 # Decisions
 
+ASSUMED: D-063B provider labels first preserve bounded per-message IMAP names
+versus opaque REST label IDs in a separate provider_labels receipt. Add only
+the existing IMAP fetch's capability-gated label attribute; no registry request,
+native category consumer, writer, scope, storage or clock contract changes.
+Missing/malformed stays null, not empty; thread unions cannot certify all
+members. Native source-label consumption remains a separately gated slice --
+D-063, AGENTS source truth and verified ImapFlow2.3/Gmail contracts --2026-10-26.
+
 OPEN needs-architect450:choose authoritative clock for count snapshots after
 448's failed live gate. Strict browser-vs-server future comparison rejects a
 genuine backend capture measured117ms ahead after response. Recommend same-
 server capture/load authority plus receipt-relative age and existing tickets,
 not silently accepting arbitrary future values. NO repair approved/implemented
 yet. AGENTS7 rollback449 restored/verified exact pre448 tree FIRST. Count
-repair BLOCKED;independent451 acquisition Back observation requires separate
-trace/reproduction. No writer/send/auth-scope/settings change is authorized.
+repair BLOCKED;independent451 acquisition Back race is now traced,reproduced
+against the actual route and fixed/verified via452 with existing request tickets.
+This is not a native Deals migration. No writer/send/auth-scope/settings change
+is authorized.
 
 ASSUMED: D-063B attachment manifests first expose only allowlisted metadata
 from an already explicit bounded MIME read. No download/content/base64/headers

@@ -3,6 +3,7 @@ const { ImapFlow } = require('imapflow');
 const { simpleParser } = require('mailparser');
 const { google } = require('googleapis');
 const { manifest } = require('./attachment-manifest');
+const { providerLabels } = require('./provider-labels');
 const FOLDERS = { inbox:'INBOX',sent:'\\Sent',drafts:'\\Drafts',starred:'\\Flagged',buyers:'WOS/Buyers',jv_deals:'WOS/JV Deals',lead_alerts:'WOS/Lead Alerts',title:'WOS/Title',templates:'WOS/Templates',bounced:'WOS/Bounced',billing:'WOS/Billing' };
 const MAX_BYTES = 2 * 1024 * 1024;
 function textOrigin(value, max, origin) {
@@ -48,11 +49,11 @@ function createMailboxReader({env=process.env,Client=ImapFlow,parse=simpleParser
   async function test() {const mode=provider();if(mode==='app_password')return imap(async c=>{await c.list();return {ok:true,mode,status:'Connected (App Password)'};});await oauth().users.getProfile({userId:'me'});return {ok:true,mode,status:'Connected (Google login)'};}
   async function list(folder='inbox',limit=30) {
     if(!Object.hasOwn(FOLDERS,folder))fail('email_folder_invalid',400);limit=Math.min(50,Math.max(1,Number.isInteger(Number(limit))?Number(limit):30));const mode=provider();
-    if(mode==='app_password')return imap(async c=>{const box=await boxPath(c,folder);const lock=await c.getMailboxLock(box,{readOnly:true});try{const messages=[];const total=c.mailbox.exists;if(total)for await(const m of c.fetch(Math.max(1,total-limit+1)+':'+total,{uid:true,envelope:true,flags:true,size:true}))messages.push(metadata(m,box,c.mailbox.uidValidity));return {ok:true,mode,status:'Connected (App Password)',messages:messages.reverse()};}finally{lock.release();}});
+    if(mode==='app_password')return imap(async c=>{const box=await boxPath(c,folder);const lock=await c.getMailboxLock(box,{readOnly:true});try{const messages=[];const total=c.mailbox.exists;if(total)for await(const m of c.fetch(Math.max(1,total-limit+1)+':'+total,{uid:true,envelope:true,flags:true,size:true,labels:true}))messages.push({...metadata(m,box,c.mailbox.uidValidity),provider_labels:providerLabels(c.capabilities?.has('X-GM-EXT-1')===true?m.labels:undefined,'imap_gmail_labels')});return {ok:true,mode,status:'Connected (App Password)',messages:messages.reverse()};}finally{lock.release();}});
     const gmail=oauth();const labels={inbox:'INBOX',sent:'SENT',drafts:'DRAFT',starred:'STARRED'};let label=labels[folder];
     if(!label){const data=await gmail.users.labels.list({userId:'me'});label=(data.data.labels||[]).find(l=>l.name===FOLDERS[folder])?.id;if(!label)fail('email_folder_unavailable',404);}
     const rows=await gmail.users.messages.list({userId:'me',maxResults:limit,labelIds:[label]});const messages=[];
-    for(const row of rows.data.messages||[]){const msg=(await gmail.users.messages.get({userId:'me',id:row.id,format:'metadata',metadataHeaders:['From','To','Cc','Subject','Date','Message-ID','In-Reply-To']})).data;const get=k=>(msg.payload?.headers||[]).find(h=>h.name.toLowerCase()===k.toLowerCase())?.value||'';messages.push({source_kind:'connected_mailbox',id:msg.id,threadId:msg.threadId,message_id:get('Message-ID'),in_reply_to:get('In-Reply-To'),direction:Array.isArray(msg.labelIds)&&msg.labelIds.includes('SENT')?'out':get('From')?'in':'unknown',from:get('From'),to:get('To'),cc:get('Cc'),subject:get('Subject'),date:get('Date'),snippet:msg.snippet||'',snippet_origin:textOrigin(msg.snippet,4096,'gmail_provider_snippet'),...readState(msg.labelIds,'gmail_label_ids')});}
+    for(const row of rows.data.messages||[]){const msg=(await gmail.users.messages.get({userId:'me',id:row.id,format:'metadata',metadataHeaders:['From','To','Cc','Subject','Date','Message-ID','In-Reply-To']})).data;const get=k=>(msg.payload?.headers||[]).find(h=>h.name.toLowerCase()===k.toLowerCase())?.value||'';messages.push({source_kind:'connected_mailbox',id:msg.id,threadId:msg.threadId,message_id:get('Message-ID'),in_reply_to:get('In-Reply-To'),direction:Array.isArray(msg.labelIds)&&msg.labelIds.includes('SENT')?'out':get('From')?'in':'unknown',from:get('From'),to:get('To'),cc:get('Cc'),subject:get('Subject'),date:get('Date'),snippet:msg.snippet||'',snippet_origin:textOrigin(msg.snippet,4096,'gmail_provider_snippet'),...readState(msg.labelIds,'gmail_label_ids'),provider_labels:providerLabels(msg.labelIds,'gmail_label_ids')});}
     for(const message of messages){
       Object.assign(message, participantFields());
       if([message.from,message.to,message.cc].every(value=>typeof value==='string'&&value.length<=4096&&!/[\r\n]/.test(value))){
@@ -68,7 +69,7 @@ function createMailboxReader({env=process.env,Client=ImapFlow,parse=simpleParser
   async function message(value) {
     const mode=provider();
     if(mode==='app_password')return (await messages([value]))[0];
-    if(!/^[a-zA-Z0-9_-]{1,200}$/.test(value))fail('email_message_invalid',400);const m=(await oauth().users.messages.get({userId:'me',id:value,format:'raw'})).data;const raw=Buffer.from(m.raw||'','base64url');if(raw.length>MAX_BYTES)fail('email_message_too_large',413);const parsed=await parse(raw,{skipImageLinks:true,skipTextToHtml:true,maxHtmlLengthToParse:MAX_BYTES});const own=(parsed.from?.value||[]).some(a=>String(a.address).toLowerCase()===String(env.GMAIL_USER).toLowerCase());return {source_kind:'connected_mailbox',id:m.id,threadId:m.threadId,message_id:parsed.messageId||'',direction:own||(Array.isArray(m.labelIds)&&m.labelIds.includes('SENT'))?'out':parsed.from?.value?.length?'in':'unknown',from:parsed.from?.text||'',to:parsed.to?.text||'',cc:parsed.cc?.text||'',...participantFields({from:parsed.from?.value,to:parsed.to?.value,cc:parsed.cc?.value}),...readState(m.labelIds,'gmail_label_ids'),...manifest(parsed.attachments),subject:parsed.subject||'',date:parsed.date?.toISOString()||'',body:parsed.text||'(No readable text)',body_origin:textOrigin(parsed.text,MAX_BYTES,'parsed_mime_text'),in_reply_to:parsed.inReplyTo||'',mode};
+    if(!/^[a-zA-Z0-9_-]{1,200}$/.test(value))fail('email_message_invalid',400);const m=(await oauth().users.messages.get({userId:'me',id:value,format:'raw'})).data;const raw=Buffer.from(m.raw||'','base64url');if(raw.length>MAX_BYTES)fail('email_message_too_large',413);const parsed=await parse(raw,{skipImageLinks:true,skipTextToHtml:true,maxHtmlLengthToParse:MAX_BYTES});const own=(parsed.from?.value||[]).some(a=>String(a.address).toLowerCase()===String(env.GMAIL_USER).toLowerCase());return {source_kind:'connected_mailbox',id:m.id,threadId:m.threadId,message_id:parsed.messageId||'',direction:own||(Array.isArray(m.labelIds)&&m.labelIds.includes('SENT'))?'out':parsed.from?.value?.length?'in':'unknown',from:parsed.from?.text||'',to:parsed.to?.text||'',cc:parsed.cc?.text||'',...participantFields({from:parsed.from?.value,to:parsed.to?.value,cc:parsed.cc?.value}),...readState(m.labelIds,'gmail_label_ids'),provider_labels:providerLabels(m.labelIds,'gmail_label_ids'),...manifest(parsed.attachments),subject:parsed.subject||'',date:parsed.date?.toISOString()||'',body:parsed.text||'(No readable text)',body_origin:textOrigin(parsed.text,MAX_BYTES,'parsed_mime_text'),in_reply_to:parsed.inReplyTo||'',mode};
   }
   async function messages(values) {
     if(!Array.isArray(values)||!values.length||values.length>30||values.some(v=>typeof v!=='string'||!v||v.length>1000)||new Set(values).size!==values.length)fail('email_thread_invalid',400);
@@ -82,11 +83,11 @@ function createMailboxReader({env=process.env,Client=ImapFlow,parse=simpleParser
       try{
         if(String(c.mailbox.uidValidity)!==first.validity)fail('email_message_stale',409);
         for(const p of parsed){
-          const header=await c.fetchOne(p.uid,{uid:true,envelope:true,size:true,flags:true},{uid:true});
+          const header=await c.fetchOne(p.uid,{uid:true,envelope:true,size:true,flags:true,labels:true},{uid:true});
           if(!header)fail('email_message_missing',404);if(header.size>MAX_BYTES)fail('email_message_too_large',413);
           const m=await c.fetchOne(p.uid,{source:true},{uid:true});if(!m?.source||m.source.length>MAX_BYTES)fail('email_message_too_large',413);
           const content=await parse(m.source,{skipImageLinks:true,skipTextToHtml:true,maxHtmlLengthToParse:MAX_BYTES});
-          keep({...metadata(header,p.box,p.validity),...manifest(content.attachments),body:String(content.text||'(No readable text)').slice(0,MAX_BYTES),body_origin:textOrigin(content.text,MAX_BYTES,'parsed_mime_text'),in_reply_to:content.inReplyTo||'',mode});
+          keep({...metadata(header,p.box,p.validity),provider_labels:providerLabels(c.capabilities?.has('X-GM-EXT-1')===true?header.labels:undefined,'imap_gmail_labels'),...manifest(content.attachments),body:String(content.text||'(No readable text)').slice(0,MAX_BYTES),body_origin:textOrigin(content.text,MAX_BYTES,'parsed_mime_text'),in_reply_to:content.inReplyTo||'',mode});
         }
         return output;
       }finally{lock.release();}
