@@ -1,5 +1,12 @@
 # D-063B: Provider Label Provenance Trace
 
+Released/verified backend prerequisite453 atmainf7a7977,PR255/0/0 andMAIN255/0/0,
+automatic14777ce0 exactsource. Actual signed metadata/body primitive receipt
+parity and unchanged native/default-OFF reply/classic Back passed under435.
+See ../screens/2026-10-26-pr453-release for sanitized full proof/timings.
+The native label projection and REST custom-name mapping remain separate.
+
+Historical candidate trace follows:
 2026-10-26. Backend prerequisite candidate, from main51a7caf after verified452.
 No PR, full gate, deployment or completed native label feature claimed yet.
 Count repair450 remains independently blocked pending its clock decision.

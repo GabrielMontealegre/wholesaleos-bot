@@ -2,6 +2,60 @@
 
 ## Latest Run Summary
 
+2026-10-26 owner454 BACKEND prerequisite candidate now registers private admin
+upload/read routes behind existing session gate and early no-store/admin/body
+protection. Scoped privacy/export audit and actual-server synthetic auth/import/
+eight-surface non-leakage/canonical-writer preservation PASS;two focused snapshot
+files also pass. Runtime DB now ignored;no private files or production data used.
+No auth/parser rewrite,provider send/token/settings change. Full final-head gate,
+PR/deploy/live proof pending. Today upload/sheet not implemented;454NOTdone.
+Trace/audit docs/cycles/issue-454-*.md.457replyrankonly still separate,456deferred,
+455notstarted. Live453unchanged;no dependency/lock changes.
+
+2026-10-26 owner454 LOCAL CANDIDATE now has pure v1 byte decoder/validator,
+immutable append-only per-actor import/latest projection and an UNREGISTERED
+admin upload/read route module. Two synthetic unit files PASS exact hash,
+schema/date/ID/path/size/PII-safe atomic rejection/history/nonpromotion/purity
+and local auth/origin/no-store/proxy/storage failures. No server registration,
+private file inspection,real persistence/upload,UI/fullgate/PR/deploy claimed.
+Finish privacy/export audit and actual admin integration next,then Today sheet.
+457onlyreplyrank gap remains unanswered;454otherwise unblocked.456draftgreen
+256/0/0 stays unmerged. Live453f7a7977 unchanged;no dependency/lock changes.
+
+2026-10-26 NEW OWNER PRIORITIES454FIRST(private assistant snapshot/Today8AM
+sheet),455SECOND(separate quick wins),ahead of Email polish except open safety
+fixes.456 native Reports candidate preserved DRAFT/UNMERGED/UNDEPLOYED;one
+final-head hosted gate allowed to finish,not a release. Current local454 branch
+starts deployedf7a7977,prior453proof preserved,NO456productcode. Trace
+docs/cycles/issue-454-assistant-snapshot-import.md covers raw-file hashing,
+existing admin/no-store/strict atomic store/Today boundaries and reported-only
+data separation. No private files or real snapshots read,implementation/import
+or454release claimed. Reply ranking needs actual reply evidence,notlast_contact.
+Count450stillBLOCKED;live453 unchanged. No login/credential/455work started.
+
+456 exacte114cd1 full40331220702/job121600826075 TERMINALGREEN256/0/0,
+600s/file,14m37s,sum816.95s NOTwall. Still DRAFT/UNMERGED,not release approval;
+no jobs running.457 asks ONLY454 buyer reply-ranking evidence vs contact wording;
+the importer and other sheet sections remain unblocked. Current454localtrace
+contains no runtime change,private snapshot data or production write.
+
+2026-10-26 provider-label BACKEND prerequisite453 DONE/VERIFIED. Tested91950fb
+full40315574581/job121547249062=255/0/0,600s/file,12m34s job,sum690.61s
+NOTwall;main40317308765/job121553036720 also255/0/0,12m54s,sum704.25s
+NOTwall. Currentmainf7a797781743f564d3a20db59be5826d0b2fb924 identical tested
+tree;automaticRailway14777ce0-8206-4695-9c77-d4b232f13b4a Active/exactsource.
+Public12true3sizeGETshealth200/unsigned401;exactsource pinned5size mail pass.
+Signed metadata1/exactbody receipt matches with only source/scope/count/boolean
+proof,private names/IDs/JSON never persisted. Native1280x52950rows/full3480char
+body/no defaultcomposer;emptyPreview/Senddisabled/finalunavailableGmail/Close
+restores,0consoleerrors;classic19->Open->Back->same19/0workbench. No writer,
+new request/registry lookup,auth/storage/count/native/cache/send/settings change.
+Safe proof/all255+255timings docs/screens/2026-10-26-pr453-release. WholeB,
+native source-label consumption and412designapproval NOTdone;450unanswered.
+Next bounded source-label projection must use genuine names vs opaque IDs and
+all-member/copy/identity/session negatives,not legacy raw-label guesses.
+
+Historical preparation:
 2026-10-26 D-063B provider-label BACKEND prerequisite local candidate:bounded
 message names (capability-gated existing IMAP fetch) versus opaque REST IDs,
 real adapter/MIME/annotation parity and malformed/unknown/empty/requestcount

@@ -69,6 +69,7 @@ async function request(base, method, route, options = {}) {
     env: Object.assign({}, process.env, {
       PORT: String(port), DB_PATH: dbPath, WOS_ADMIN_PIN: pin, WOS_SESSION_SECRET: secret,
       TWILIO_AUTH_TOKEN: providerToken, RAILWAY_PUBLIC_DOMAIN: '',
+      SENTRY_DSN: '',
       GMAIL_CLIENT_ID: '', GMAIL_CLIENT_SECRET: '', GDRIVE_REFRESH_TOKEN: '',
       WOS_ENABLE_BACKGROUND_INGESTION: 'false',
       DEAL_BOARD_SNAPSHOTS_PATH: path.join(tmp, 'snapshots.json'),
@@ -125,6 +126,39 @@ async function request(base, method, route, options = {}) {
     const cookie = (login.headers.get('set-cookie') || '').split(';')[0];
     assert.ok(cookie.startsWith('wos_session='));
     assert.strictEqual((await request(base, 'GET', '/api/leads', { headers: { Cookie: cookie } })).status, 200);
+
+    const snapshotPath = '/api/dashboard/assistant-snapshots';
+    const privateSnapshot = { schema: 'wos-assistant-snapshot', version: 1, generated_at: new Date(Date.now() - 60000).toISOString(), deals: [],
+      buyers: [{ id: 'snapshot-buyer', name: 'PRIVATE_SNAPSHOT_SENTINEL', company: null, areas: [], buy_box: null, pof: true, approval: 'approved', last_contact: null, deals_sent: [], phone: null, email: null, source_url: null }],
+      texts: [], calls: [], emails_waiting: [] };
+    const snapshotBytes = Buffer.from(JSON.stringify(privateSnapshot));
+    const uploadHeaders = { Cookie: cookie, Origin: base, 'Content-Type': 'application/octet-stream', 'X-WOS-Assistant-Import': '1', 'X-WOS-Assistant-Filename': 'assistant-fixture.json' };
+    for (const headers of [{ 'x-user-id': 'admin' }, { Cookie: `wos_session=${encodeURIComponent(forged)}` }]) {
+      const denied = await fetch(base + snapshotPath, { method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' }, body: 'PRIVATE_MALFORMED_JSON' });
+      assert.strictEqual(denied.status, 401); assert.strictEqual(denied.headers.get('cache-control'), 'no-store');
+      assert.ok(!(await denied.text()).includes('PRIVATE_'), 'Authorization precedes generic body parsing');
+    }
+    const regular = session.issueSession({ userId: 'regular-fixture', role: 'user', scope: 'dashboard' }, { secret }).token;
+    const regularRead = await fetch(base + snapshotPath, { headers: { Cookie: `wos_session=${encodeURIComponent(regular)}` } });
+    assert.strictEqual(regularRead.status, 403); assert.strictEqual(regularRead.headers.get('cache-control'), 'no-store');
+    const wrongType = await fetch(base + snapshotPath, { method: 'POST', headers: { ...uploadHeaders, 'Content-Type': 'application/json' }, body: 'PRIVATE_MALFORMED_JSON' });
+    assert.strictEqual(wrongType.status, 415); assert.ok(!(await wrongType.text()).includes('PRIVATE_'));
+    const wrongMethod = await fetch(base + snapshotPath, { method: 'PUT', headers: { ...uploadHeaders, 'Content-Type': 'application/json' }, body: 'PRIVATE_MALFORMED_JSON' });
+    assert.strictEqual(wrongMethod.status, 405); assert.strictEqual(wrongMethod.headers.get('cache-control'), 'no-store');
+    assert.ok(!(await wrongMethod.text()).includes('PRIVATE_'));
+    const upload = await fetch(base + snapshotPath, { method: 'POST', headers: uploadHeaders, body: snapshotBytes });
+    assert.strictEqual(upload.status, 200); assert.strictEqual(upload.headers.get('cache-control'), 'no-store');
+    const receipt = await upload.json(); assert.strictEqual(receipt.file_sha256, crypto.createHash('sha256').update(snapshotBytes).digest('hex'));
+    assert.strictEqual(receipt.snapshot, undefined);
+    const privateRead = await request(base, 'GET', snapshotPath, { headers: { Cookie: cookie } });
+    assert.strictEqual(privateRead.status, 200); assert.strictEqual(privateRead.body.latest.snapshot.buyers[0].name, 'PRIVATE_SNAPSHOT_SENTINEL');
+    const persisted = JSON.parse(fs.readFileSync(dbPath, 'utf8'));
+    assert.strictEqual(persisted.assistant_snapshots.length, 1); assert.ok(!(persisted.buyers || []).some(buyer => buyer.name === 'PRIVATE_SNAPSHOT_SENTINEL'));
+    for (const publicProjection of ['/api/stats', '/api/leads', '/api/buyers', '/api/dashboard/today-workspace', '/api/dashboard/operator-brief', '/api/dashboard/calendar-workspace', '/api/dashboard/approvals', '/api/dashboard/pipeline-workspace']) {
+      const projected = await request(base, 'GET', publicProjection, { headers: { Cookie: cookie } });
+      assert.strictEqual(projected.status, 200, publicProjection + ' remains available');
+      assert.ok(!JSON.stringify(projected.body).includes('PRIVATE_SNAPSHOT_SENTINEL'), 'Private snapshot is not serialized by ' + publicProjection);
+    }
 
     const pairing = await request(base, 'POST', '/api/auth/pairing-token', { headers: { Cookie: cookie }, body: {} });
     assert.strictEqual(pairing.status, 200);
@@ -199,6 +233,7 @@ async function request(base, method, route, options = {}) {
 
     assert.strictEqual((await request(base, 'DELETE', '/api/leads/seed-lead', { headers: { Cookie: cookie } })).status, 200);
     assert.strictEqual(JSON.parse(fs.readFileSync(dbPath, 'utf8')).leads.length, 0, 'signed-in DELETE still works');
+    assert.strictEqual(JSON.parse(fs.readFileSync(dbPath, 'utf8')).assistant_snapshots.length, 1, 'Existing canonical writers preserve private snapshot history');
     console.log(`api-session-gate: ok (${registrations.length} API registrations behind the gate)`);
   } finally {
     child.kill();

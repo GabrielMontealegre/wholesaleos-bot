@@ -1,5 +1,28 @@
 # Decisions
 
+2026-10-26:454 backend privacy audit now covers runtime static/export/aggregate
+readers,error telemetry and actual-session synthetic regressions. Mount only
+the new snapshot namespace's existing admin/no-store/payload guard before
+generic parsers;keep its routes behind the unchanged shared API session gate.
+Reject unsupported upload types before parser errors can reflect private bytes.
+Canonical projections/writers remain independent and preserve import history;
+no new token,shared auth change or production import --454/AGENTS privacy.
+
+ASSUMED:454 snapshot uploads remain a separate assistant-reported collection,
+not canonical buyer/deal/POF/value/readiness updates. Validate/hash exact bounded
+UTF8 bytes with injected backend clock,retain every import and choose newest
+import per actor. A source_file is only a reported safe relative reference,
+never opened or promoted to external evidence. Unknown nullable facts remain
+null;unknown structured fields reject. Real persistence waits for privacy/export
+audit and actual admin integration tests --454,AGENTS source/privacy invariants
+and existing strict atomic-store conventions --2026-10-26.
+
+2026-10-26: PR453 source-label backend prerequisite verified atmainf7a7977,
+automatic14777ce0 exactsource;PR255/0/0 andMAIN255/0/0. Actual bounded signed
+metadata/body provenance agrees without exporting private labels. Native label
+consumption remains separately gated;no writer/send/native-cache change. Count
+clock repair450 remains unanswered;do not reintroduce failed448 unchanged.
+
 ASSUMED: D-063B provider labels first preserve bounded per-message IMAP names
 versus opaque REST label IDs in a separate provider_labels receipt. Add only
 the existing IMAP fetch's capability-gated label attribute; no registry request,
