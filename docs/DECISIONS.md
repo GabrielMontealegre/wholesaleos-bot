@@ -6,8 +6,10 @@ genuine backend capture measured117ms ahead after response. Recommend same-
 server capture/load authority plus receipt-relative age and existing tickets,
 not silently accepting arbitrary future values. NO repair approved/implemented
 yet. AGENTS7 rollback449 restored/verified exact pre448 tree FIRST. Count
-repair BLOCKED;independent451 acquisition Back observation requires separate
-trace/reproduction. No writer/send/auth-scope/settings change is authorized.
+repair BLOCKED;independent451 acquisition Back race is now traced,reproduced
+against the actual route and fixed/verified via452 with existing request tickets.
+This is not a native Deals migration. No writer/send/auth-scope/settings change
+is authorized.
 
 ASSUMED: D-063B attachment manifests first expose only allowlisted metadata
 from an already explicit bounded MIME read. No download/content/base64/headers
