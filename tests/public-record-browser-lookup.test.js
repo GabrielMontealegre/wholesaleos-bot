@@ -36,7 +36,7 @@ function profileWith(searchResult) {
 }
 
 const ROW = { normalized_address: '3723 Barnabus Rd, Dallas, TX 75241', city: 'Dallas' };
-const KEY = '3723 barnabus rd, dallas, tx 75241';
+const KEY = '3723 barnabus rd, dallas, tx 75241'; // synthetic-secret-fixture
 
 (async () => {
   const basicPage = () => ({ setDefaultTimeout() {}, close: async () => {} });

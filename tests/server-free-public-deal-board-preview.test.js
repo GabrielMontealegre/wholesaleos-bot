@@ -99,7 +99,7 @@ function htmlResponse(body, url, status) {
     }, {
       ENABLE_SEARCH_PROVIDER: 'true',
       SEARCH_PROVIDER: 'serper',
-      SERPER_API_KEY: 'ready_secret_key_123456789',
+      SERPER_API_KEY: 'ready_secret_key_123456789', // synthetic-secret-fixture
       SEARCH_PROVIDER_TIMEOUT_MS: '50000'
     });
     assert.deepStrictEqual(capped, {

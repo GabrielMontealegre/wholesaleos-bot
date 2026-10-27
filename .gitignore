@@ -1,4 +1,12 @@
 node_modules/
+# Local configuration and credential containers never belong in Git.
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
 exports/*
 !exports/cycle-37-egress-proof.json
 !exports/cycle-37-local-proof.json

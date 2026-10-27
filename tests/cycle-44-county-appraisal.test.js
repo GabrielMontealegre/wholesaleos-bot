@@ -210,7 +210,7 @@ async function run() {
     assert(!/Authorization\s*:|Bearer\s+|api.key/i.test(adapterSource));
     assert(!/\bEllis\b/.test(adapterSource));
     const olderRecord = { ...matched.record, parcel_id: '100001', normalized_address: '100 Oak St, Ennis, TX 75119',
-      address_key: '100|OAK|ST|ENNIS|TX|75119', owner_of_record: 'OLDER OWNER', owner_occupied: false,
+      address_key: '100|OAK|ST|ENNIS|TX|75119', owner_of_record: 'OLDER OWNER', owner_occupied: false, // synthetic-secret-fixture
       deed_history: [{ date: '2010-01-01', grantee: 'OLDER OWNER', grantor: 'PREVIOUS OWNER' }], year_built: 1990 };
     const rankingIndex = { profile, by_address: new Map(index.by_address), by_parcel: index.by_parcel, by_geo: index.by_geo };
     rankingIndex.by_address.set(olderRecord.address_key, [olderRecord]);
