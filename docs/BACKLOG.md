@@ -2,6 +2,23 @@
 
 ## Latest Run Summary
 
+2026-10-27 PR465 ENGINEERING RELEASED/VERIFIED:main45da4ac identical tested9b39c00,
+automaticRailway9e867208-8538-41c5-8335-a621493b3f5d Active/successful exactDetails.
+PR40549445436/job122348884532267/0/0,600s/file,15m19job,sum851.28s NOTwall;
+MAIN40558101945/job122379491627267/0/0,10m35job,sum579.30s NOTwall,allrowsretained.
+Public12true3sizes/health200/unsignedidentity401/privatekeyGET401no-store;
+same-source Settings3size/CLI/keyPOST/mail5size synthetic PASS. Actual signed
+Settings0keys/Createenabled/emptyclosedreveal;GETcapsvalid/latestABSENT;Today
+chooser/recordedwork,Email49rows/full8509body/emptyReplydisabled/finalGmail/Close,
+classic19->1->BackLoading0->SAME19/0/nooverflow PASS. Browser control interruption
+recovered fresh SAMEbrowser;earlier tab logs unavailable,only retained classic
+applicationerrors0 claimed. Source/fields opaque BEFOREdisk. NO realkey/file/
+upload/import/POST/download/send/settings/businesswrites. Final synthetic
+performance97/100/access94/94 NOTlive;earlier failures retained. Proof/all267+267
+timings docs/screens/2026-10-27-pr465-release.454 owner privatekey/firstrealupload/
+routine integration remainsOPEN,not a phone gate or whole-backlog wait;455next,
+456deferred,463GitHubownerclickseparate. No new deployment for proof-only branch.
+
 2026-10-27 PR465 scoped uploader DRAFT/UNMERGED/UNDEPLOYED remote9b39c00,
 automatic full40549445436/job122348884532 in progress17:27Z,expected267/600s-file.
 No duplicate dispatch. Final serialized exact-product Settings audit PASS:
