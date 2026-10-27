@@ -19,8 +19,8 @@ function entropy(value) {
   return [...counts.values()].reduce((sum, n) => sum - n / value.length * Math.log2(n / value.length), 0);
 }
 function wordLike(value) {
-  return /^[a-z]+(?:[-_ .][a-z]+)*$/i.test(value) ||
-    /^(?:synthetic|dummy|fake|fixture|test|private|sentinel|redacted|placeholder|example)[-_][a-z0-9_. -]+$/i.test(value);
+  return /^[a-z]{1,23}$/i.test(value) ||
+    /^[a-z]{1,20}(?:[-_ .](?:[a-z]{1,20}|[0-9]{1,12}))+$/i.test(value);
 }
 function fixtureWords(rule, value) {
   if (rule === 'url-credentials') {
@@ -60,10 +60,11 @@ function scanText(filename, text) {
     const assignment = /(?:['"]\b([a-zA-Z_$][\w$]*)['"]|\b([a-zA-Z_$][\w$]*))\s*[:=]\s*(['"])([^'"\r\n]+)\3/g;
     for (const match of line.matchAll(assignment)) {
       const identifier = match[1] || match[2], value = match[4];
-      if (!/(?:key|secret|token|password|pin)/i.test(identifier) || quotedAt(line, match.index)) continue;
+      const words = identifier.replace(/([a-z0-9])([A-Z])/g, '$1_$2').toLowerCase().split('_');
+      if (!words.some(word => ['key', 'secret', 'token', 'password', 'pin'].includes(word)) || quotedAt(line, match.index)) continue;
       // These are public storage/record coordinates, not authentication material.
-      const coordinate = /^(?:ledger_key|queue_key|AI_DEAL_ANALYZER_STORAGE_KEY)$/i.test(identifier);
-      if (!coordinate && value.length >= 24 && entropy(value) >= 3.5 && !wordLike(value) && !allow) report('entropy-assignment');
+      const coordinate = /^(?:ledger_key|queue_key|source_key|AI_DEAL_ANALYZER_STORAGE_KEY)$/i.test(identifier);
+      if (!coordinate && value.length >= 24 && entropy(value) >= 3.5 && !(fixture && wordLike(value)) && !allow) report('entropy-assignment');
     }
   });
   return findings.filter((row, i, all) => all.findIndex(other => other.file === row.file && other.line === row.line && other.rule === row.rule) === i);

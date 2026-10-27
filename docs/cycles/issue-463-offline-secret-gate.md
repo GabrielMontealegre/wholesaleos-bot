@@ -20,11 +20,11 @@ test before a merge;no new workflow permissions/dependencies/services.
 Detector families:private-key/cloud/Google/GitHub/provider/Twilio/JWT/password
 URLs/Sentry/bearer and high-entropy credential assignments. Assignment identifiers
 include camelCase. Quotes inside expressions are not variable assignments.
-Known public ledger/queue/storage coordinates are not authentication assignments;
+Known public ledger/queue/source/one exact storage coordinate are not authentication assignments;
 provider detection still applies to their values. This is a conservative heuristic
 gate,not a whole-history audit or a guarantee against every encoding/obfuscation.
 
-Tests allow only word-like fake credentials or a same-line explicit
+Only tests allow word-like fake credentials or a same-line explicit
 synthetic-secret-fixture marker. Realistic unmarked provider tokens fail even in
 tests;no blanket test-directory exemption. Four existing synthetic data lines get
 markers:county appraisal213,public-record browser39,serper diagnostics7,server
@@ -35,7 +35,9 @@ free-board102. These are annotations only,no assertion/value behavior change.
 In-memory temporary forged provider fixtures fail with value-free coordinates;
 word-like fixtures pass;explicit markers never exempt served files. Each detector
 family,camelCase/quoted JSON assignment,UTF-16/legacy text,pure clock/network spy,determinism and
-escaped-expression false positives covered. Git ignore checks cover env/key files
+escaped-expression false positives covered. Long random letters are not word-like;
+human passphrases outside tests are not exempt. Exact credential-name tokens avoid
+matching assertion-label prose. Git ignore checks cover env/key files
 and keep .env.example trackable;Docker expected private-path list asserted.
 Focused gate passes current tracked source. Full262/600s-file,review,current-head
 and automatic deployment/read-only verification still required;NOT released yet.

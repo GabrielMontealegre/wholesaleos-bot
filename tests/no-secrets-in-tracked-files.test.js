@@ -47,7 +47,10 @@ assert(scanText('module.js', assignment.replace('password', 'apiKey')).some(row 
 assert(scanText('module.json', '{"apiKey":' + assignment.split('=')[1] + '}').some(row => row.rule === 'entropy-assignment'));
 assert.equal(scanText('module.js', 'const text = "pin: ' + "'" + ' + expression(value) : ' + "'" + '";').length, 0);
 assert(scanText('tests/fixture.js', 'token="synthetic-test-value-123456789"').length === 0);
+assert(scanText('module.js', 'password="made-up-test-password-with-words"').some(row => row.rule === 'entropy-assignment'), 'Word-like exceptions are tests-only');
+assert(scanText('tests/fixture.js', 'token="' + 'AbCdEfGhIjKlMnOpQrStUvWxYz' + '"').some(row => row.rule === 'entropy-assignment'), 'Long random letters are not a word-like fixture');
 assert(scanText('module.js', 'ledger_key="public-record-coordinate-123456789"').length === 0);
+assert(scanText('module.js', 'source_key="public-record-coordinate-123456789"').length === 0);
 assert.equal(scanText('tests/fixture.js', assignment + ' // synthetic-secret-fixture').length, 0);
 const sentinel = 'PRIVATE-VALUE-MUST-NOT-LEAK';
 assert.equal(formatFindings(scanText('module.js', sentinel)), '');
