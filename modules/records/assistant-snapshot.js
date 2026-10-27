@@ -49,7 +49,7 @@ function sourceURL(value) {
   try { const url = new URL(value); if (!['https:', 'http:'].includes(url.protocol) || url.username || url.password) fail('source_url_invalid'); }
   catch (_) { fail('source_url_invalid'); }
 }
-function validate(snapshot, now) {
+function validate(snapshot, now, { storedReplies = false } = {}) {
   object(snapshot, ['schema', 'version', 'generated_at', 'deals', 'buyers', 'texts', 'calls', 'emails_waiting']);
   if (snapshot.schema !== 'wos-assistant-snapshot') fail('schema_invalid');
   if (snapshot.version !== 1) fail('version_invalid');
@@ -69,7 +69,14 @@ function validate(snapshot, now) {
     array(deal.log, 1000, event => { object(event, ['at', 'text']); if (typeof event.at === 'string' && event.at.length === 10) day(event.at, generated); else time(event.at, generated); text(event.text, 4000, { multiline: true }); });
   });
   array(snapshot.buyers, 1000, buyer => {
-    object(buyer, ['id', 'name', 'company', 'areas', 'buy_box', 'pof', 'approval', 'last_contact', 'deals_sent', 'phone', 'email', 'source_url']);
+    if (storedReplies && buyer && ![Object.prototype, null].includes(Object.getPrototypeOf(buyer))) fail('fields_invalid');
+    const reply = storedReplies && buyer && typeof buyer === 'object' && Object.hasOwn(buyer, 'last_reply_at');
+    object(buyer, ['id', 'name', 'company', 'areas', 'buy_box', 'pof', 'approval', 'last_contact', 'deals_sent', 'phone', 'email', 'source_url', ...(reply ? ['last_reply_at'] : [])]);
+    if (reply) {
+      const descriptor = Object.getOwnPropertyDescriptor(buyer, 'last_reply_at');
+      if (!Object.hasOwn(descriptor, 'value')) fail('field_invalid');
+      time(descriptor.value, now);
+    }
     unique(buyer.id); text(buyer.name, 200); text(buyer.company, 300, { nullable: true }); text(buyer.buy_box, 4000, { nullable: true, multiline: true });
     array(buyer.areas, 100, area => text(area, 200)); if (buyer.pof !== null && typeof buyer.pof !== 'boolean') fail('field_invalid');
     choice(buyer.approval, ['approved', 'pending', 'rejected'], true); day(buyer.last_contact, generated, true);
@@ -115,7 +122,8 @@ function receipts(store) {
         typeof row.file_sha256 !== 'string' || !/^[a-f0-9]{64}$/.test(row.file_sha256) ||
         !validActor(row.operator_id) ||
         typeof row.filename !== 'string' || !/^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}\.json$/.test(row.filename) || row.filename.includes('..')) fail('store_invalid');
-    try { validate(row.snapshot, time(row.imported_at)); if (row.generated_at !== row.snapshot.generated_at) fail('store_invalid'); }
+    // Read compatibility ships before a later writer accepts the additive D064 field.
+    try { validate(row.snapshot, time(row.imported_at), { storedReplies: true }); if (row.generated_at !== row.snapshot.generated_at) fail('store_invalid'); }
     catch (_) { fail('store_invalid'); }
     seen.add(row.id);
   }
