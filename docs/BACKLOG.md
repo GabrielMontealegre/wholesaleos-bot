@@ -1,5 +1,17 @@
 # Backlog
 
+2026-10-27 PR466 DRAFT/unmerged/undeployed:initial8861a5d full40600660469/
+job122527652316 completed269/2/0,all271 timings retained,600s/file,15m10sjob,
+sum852.30s NOTwall. All4 new remember-device tests PASS;existing shell/Today
+single-stylesheet guards caught the extra native CSS dependency. First actual
+fix preserves those original assertions:classic-only device CSS,native existing
+ws-check/design-system CSS13/app9. Both failed tests+actual signed-server UI
+PASS locally;corrected-native before/after FCP34.9/32.6/34.3ms,performance100/
+access100 PASS,synthetic NOTlive. New exact-source full271/release proof pending;
+do not rerun unchanged8861/reuse its failed gate. Main/live46545da4ac unchanged,
+no real PIN/device/key/settings/business writes. Budget reserve required before
+any merge;455.1 remains in progress,455.2+ and456 deferred,owner463Notyet separate.
+
 2026-10-27 LOCAL455 item1 candidate,NOT released:on item/455-remember-device
 from verified45da4ac plus owned465 proof only. Actual opt-in30day hash-only
 remembered-device ledger,strict current-user/credential-bound verification,

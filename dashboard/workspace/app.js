@@ -48,7 +48,7 @@
     auth.lockIdentity(app);
     host.innerHTML = '<main class="ws-login"><h1>WholesaleOS</h1><h2>Unlock your workspace</h2>' +
       '<form id="login"><label for="pin">Dashboard PIN</label><input id="pin" type="password" inputmode="numeric" autocomplete="current-password" required>' +
-      '<label class="wos-remember-choice" for="remember-device"><input id="remember-device" type="checkbox" autocomplete="off"><span>Remember this device for 30 days</span></label>' +
+      '<label class="ws-check wos-remember-choice" for="remember-device"><input id="remember-device" type="checkbox" autocomplete="off"><span>Remember this device for 30 days</span></label>' +
       c.button({ label: 'Unlock', icon: 'check', tone: 'green', id: 'unlock' }) +
       '<p role="alert" class="ws-error" id="login-error">' + c.escape(message || '') + '</p></form>' +
       '<a href="' + nav.home + '">Open classic dashboard</a></main>';

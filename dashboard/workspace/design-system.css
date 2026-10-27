@@ -80,7 +80,7 @@ h3 { font-size: var(--ws-type-base); line-height: 1.4; }
 .ws-dialog-header { display: flex; align-items: center; justify-content: space-between; gap: var(--ws-space-3); flex: 0 0 auto; padding: var(--ws-space-3) var(--ws-space-4); border-bottom: 1px solid var(--ws-line); }
 .ws-dialog-body { min-height: 0; overflow-y: auto; padding: var(--ws-space-4); display: grid; gap: var(--ws-space-4); }
 .ws-composer { display: grid; gap: var(--ws-space-2); min-width: 0; }
-.ws-composer input:not([type="checkbox"]), .ws-composer textarea, .ws-login input { min-width: 0; width: 100%; min-height: 44px; border: 1px solid var(--ws-line); border-radius: 4px; background: var(--ws-surface); padding: var(--ws-space-3); }
+.ws-composer input:not([type="checkbox"]), .ws-composer textarea, .ws-login input:not([type="checkbox"]) { min-width: 0; width: 100%; min-height: 44px; border: 1px solid var(--ws-line); border-radius: 4px; background: var(--ws-surface); padding: var(--ws-space-3); }
 .ws-composer textarea { resize: vertical; }
 .ws-composer footer { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: var(--ws-space-3); }
 .ws-check { display: flex; align-items: center; gap: var(--ws-space-2); min-height: 44px; }

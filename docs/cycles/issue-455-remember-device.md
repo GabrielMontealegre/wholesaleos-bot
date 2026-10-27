@@ -37,8 +37,8 @@ verification. Owner463GitHubprotection Notyet,already acknowledged/no repeat ask
 ## Local Candidate Checkpoint
 
 The candidate now registers actual signed-user device metadata/revocation and
-30day opt-in PIN issuance. Production remains45da4ac;NO455PR/fullsuite/merge or
-deployment yet. No real PIN/key/cookie/device/settings action was used.
+30day opt-in PIN issuance. PR466 is DRAFT/unmerged/undeployed. Production remains
+45da4ac. No real PIN/key/cookie/device/settings action was used.
 
 Seven-field remembered_devices records contain id/source_kind/user_id/
 token_sha256/created_at/expires_at/revoked_at only. The token digest also binds
@@ -76,8 +76,9 @@ No one-login/navigation/card/date scope bundled. PIN duplicate-submit guard
 prevents automatic-four-digit plus OK creating distinct credentials. The shared
 auth client reports uncertain logout rather than claiming server revocation.
 Session-ended event clears the existing transient key dialog without resetting
-other Settings state. Native app9/auth3/key-settings2;isolated device CSS/JS1;
-all Email/Today/layout/component caches otherwise unchanged. Root legacy HTML
+other Settings state. Native design-system CSS13/app9/auth3/key-settings2;
+classic-only device CSS/JS1;Email12/layout3/components6/assistantmodel2/sheet3
+unchanged. Root legacy HTML
 gets only the shared auth3 cache tag. Cycle29's literal cache2 assertion becomes
 cache3;identity/header assertions retained and option/uncertain-logout added.
 
@@ -91,7 +92,21 @@ runtime-error fields null/error arrays empty;no overflow. Synthetic NOT live.
 Initial low-contrast functional screenshots remain locally retained as prior
 evidence,not relabeled final. Final masked audit/screens are in
 docs/screens/2026-10-27-remember-device-candidate. Full271-file suite/release
-still pending. Restricted startup and virtual-host redirect
+still pending for the corrected source. Initial full40600660469/job122527652316
+at8861a5d completed269/2/0 with all271 timings retained,600s/file,job15m10s,
+sum852.30s NOTwall. All four new tests passed;the failures were the unchanged
+workspace-shell and Today tests' exact single-design-system stylesheet guards.
+This caught real cross-surface CSS coupling,not a flaky/environment failure.
+The first correction removes the extra native stylesheet,uses existing ws-check,
+excludes checkboxes from generic login text-input sizing,and bumps CSS13.
+Both failing tests and the actual signed-server UI journey now PASS locally
+with original assertions UNCHANGED. Corrected native-only serialized before/
+after audit FCP34.9/32.6/34.3ms at1366/400/412,performance100/100 andaccess100/100,
+null runtime errors/empty audit-error arrays/no overflow,synthetic NOTlive.
+Other changed screens' runtime styles are unaffected by this correction;
+initial all-screen audit remains historical alongside final native audit in
+docs/screens/2026-10-27-remember-device-native-final. A new full271 gate is
+required,not reuse of failed8861. Restricted startup and virtual-host redirect
 harness issues were isolated;canonical slash URL and cancellation-safe routing
 corrected the fixture,not production auth. No real owner close-window cause
 has been established. No credential/lock/dependency/settings changes or hidden
