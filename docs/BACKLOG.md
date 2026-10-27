@@ -2,6 +2,17 @@
 
 ## Latest Run Summary
 
+2026-10-27 PR461 stored reply reader prerequisite RELEASED/VERIFIED:mainac3b147,
+automatic594d075e exactsourceActive/successful;PR+MAIN260/0/0each600s/file,
+all260+260timings docs/screens/2026-10-27-pr461-release. Approved435 public
+true3size/signedprivateGET/Today/Email/classic/same-source5sizejourney pass.
+Backend-only,no new UI/Lighthouseclaim or production import/key/write. Raw
+last_reply_at uploads STILLreject;stored additive history validates/preserves.
+NEXT454 enable genuine optional reply writer/projection/top10shortlist using
+this verified rollback reader;then scoped-key/CLI.457answered/notdone,phone
+feedback notgate,455/456deferred,450blocked. Older reader-candidate wording below
+is historical,superseded. No original assertions weakened.
+
 2026-10-27 D064 reply reader compatibility CANDIDATE on current82ce792:
 stored-only optional own/nonfutureISO last_reply_at;raw uploads still reject
 the field until next writer/ranking slice. Actual82ce792 synthetic baseline

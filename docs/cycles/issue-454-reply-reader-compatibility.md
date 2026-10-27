@@ -52,7 +52,9 @@ Synthetic future fixture retains current hash/id algorithm,not a claim that the
 still-disabled new writer accepts it. Existing snapshot and routes tests pass;
 all original assertions retained. No dependency/lock changes.
 
-Pending frozen-head full600s/file,self-review,currentmain,greenmerge,automatic
-exact-source Details,approved435 read-only proof and merged-main full gate.
-Backend-only: no new FCP/Lighthouse or visual redesign claim.454/457 stay OPEN;
-no real production import/write/private file/key/send verification.
+Verified461:test802c149 full40459680869/job122041059682260/0/0,mainac3b147
+full40461430183/job122046738157260/0/0each600s/file;identical trees. Automatic
+594d075e exactsourceActive/successful;approved435 public/signed/same-source proof
+and all260+260timings docs/screens/2026-10-27-pr461-release. Backend-only:no new
+FCP/Lighthouse/visual claim.454/457 stayOPEN,writer/ranking NEXT;no production
+import/write/private file/key/send verification. Eight-field envelope unchanged.
