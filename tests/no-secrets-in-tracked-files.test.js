@@ -3,12 +3,17 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const { execFileSync } = require('node:child_process');
-const { scanText, formatFindings } = require('../modules/security/offline-secret-scan');
+const { scanText, formatFindings, decodeText } = require('../modules/security/offline-secret-scan');
 const root = path.resolve(__dirname, '..');
 const forged = 'AIza' + 'Ab2Cd3Ef4Gh5Ij6Kl7Mn8Op9Qr0St1Uv2Wx';
 assert.equal(forged.length, 39);
 assert(scanText('temporary-fixture.txt', forged).some(row => row.rule === 'google-key'));
 assert(!formatFindings(scanText('temporary-fixture.txt', forged)).includes(forged));
+const utf16 = Buffer.from(forged, 'utf16le');
+for (const bytes of [Buffer.concat([Buffer.from([0xff, 0xfe]), utf16]), Buffer.concat([Buffer.from([0xfe, 0xff]), Buffer.from(utf16).swap16()]), Buffer.concat([Buffer.from([0xe9]), Buffer.from(forged)])]) {
+  assert(scanText('temporary-fixture.txt', decodeText(bytes)).some(row => row.rule === 'google-key'));
+}
+assert.equal(decodeText(Buffer.from([0x89, 0, 0x50, 0x4e, 0x47])), null);
 const providerFixtures = [
   ['private-key', '-----BEGIN ' + 'PRIVATE KEY-----'],
   ['cloud-key', 'AKIA' + 'A2'.repeat(8)],
@@ -67,9 +72,8 @@ for (const name of tracked) {
   const target = path.resolve(root, name);
   assert(target.startsWith(root + path.sep), 'Tracked path escaped checkout');
   const bytes = fs.readFileSync(target);
-  if (bytes.includes(0)) continue;
-  let text;
-  try { text = new TextDecoder('utf-8', { fatal: true }).decode(bytes); } catch (_) { continue; }
+  const text = decodeText(bytes);
+  if (text === null) continue;
   findings.push(...scanText(name, text));
 }
 if (findings.length) {

@@ -69,4 +69,14 @@ function scanText(filename, text) {
   return findings.filter((row, i, all) => all.findIndex(other => other.file === row.file && other.line === row.line && other.rule === row.rule) === i);
 }
 function formatFindings(findings) { return findings.map(row => `${row.file}:${row.line} ${row.rule}`).join('\n'); }
-module.exports = { scanText, formatFindings };
+function decodeText(bytes) {
+  if (bytes[0] === 0xff && bytes[1] === 0xfe) return bytes.subarray(2).toString('utf16le');
+  if (bytes[0] === 0xfe && bytes[1] === 0xff) {
+    const copy = Buffer.from(bytes.subarray(2));
+    return copy.length % 2 ? null : copy.swap16().toString('utf16le');
+  }
+  if (bytes.includes(0)) return null;
+  // Preserve ASCII detector input even in legacy non-UTF8 text, rather than skip it.
+  return bytes.toString('utf8');
+}
+module.exports = { scanText, formatFindings, decodeText };

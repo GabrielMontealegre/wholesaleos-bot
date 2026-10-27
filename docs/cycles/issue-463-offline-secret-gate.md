@@ -9,7 +9,8 @@ credentials;this change does not rotate/read/change credentials or settings.
 Writers:local operator files remain local;Git add observes .gitignore,local Docker
 COPY context observes .dockerignore. No runtime data writer/auth/schema changes.
 Readers:git ls-files -z supplies only tracked file paths;test reads their bytes,
-skips binary/NUL/non-UTF8 content,and passes text to pure offline-secret-scan.
+decodes UTF-16 BOM text/legacy ASCII-compatible text,skips other binary/NUL
+content,and passes text to pure offline-secret-scan.
 Served dashboard files and courthouse-tab.js get process.env/provider rules with
 no synthetic exemptions. drive-uploader.js is not a served browser file.
 Pure scanner has no filesystem/network/clock. Returned diagnostics contain ONLY
@@ -33,7 +34,7 @@ free-board102. These are annotations only,no assertion/value behavior change.
 
 In-memory temporary forged provider fixtures fail with value-free coordinates;
 word-like fixtures pass;explicit markers never exempt served files. Each detector
-family,camelCase/quoted JSON assignment,pure clock/network spy,determinism and
+family,camelCase/quoted JSON assignment,UTF-16/legacy text,pure clock/network spy,determinism and
 escaped-expression false positives covered. Git ignore checks cover env/key files
 and keep .env.example trackable;Docker expected private-path list asserted.
 Focused gate passes current tracked source. Full262/600s-file,review,current-head
