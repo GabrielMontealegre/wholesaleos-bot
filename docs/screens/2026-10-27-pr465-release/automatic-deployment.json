@@ -1,0 +1,10 @@
+{
+  "active": true,
+  "source": "https://github.com/GabrielMontealegre/wholesaleos-bot/commit/45da4ac36c79ce4c560429698d52685d04293a16",
+  "successful": true,
+  "deployment_id": "9e867208-8538-41c5-8335-a621493b3f5d",
+  "source_sha": "45da4ac36c79ce4c560429698d52685d04293a16",
+  "manual_build": false,
+  "retry": false,
+  "settings_changed": false
+}
