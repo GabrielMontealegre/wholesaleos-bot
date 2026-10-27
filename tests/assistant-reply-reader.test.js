@@ -21,13 +21,14 @@ const before = JSON.stringify(futureStore);
 assert.equal(latestSnapshot(original, options).snapshot.buyers[0].last_reply_at, undefined, 'Old omitted fields stay omitted');
 assert.equal(latestSnapshot(futureStore, options).snapshot.buyers[0].last_reply_at, '2026-10-26T14:00:00Z', 'Stored reply is checked against imported server time,not browser or contact time');
 assert.equal(latestSnapshot(futureStore, { ...options, operatorId: 'other-owner' }), null);
-assert.equal(model.project(receipt).recent_replies, null, 'Compatibility alone does not invent ranking');
+assert.deepEqual(model.project(receipt).recent_replies.map(b => b.id), ['demo-buyer'], 'D064 ranks only the explicit reported reply');
 assert.equal(model.project(receipt).buyers[0].last_contact, '2026-10-25');
-assert.equal(model.project(receipt).buyers[0].last_reply_at, undefined, 'Current native projection deliberately does not claim the next feature');
-assert.throws(() => decodeSnapshot(Buffer.from(JSON.stringify(receipt.snapshot)), options), error => error.code === 'assistant_snapshot_fields_invalid', 'Writer remains closed to the new field until a separate rollout');
-assert.throws(() => decodeSnapshot(Buffer.from(JSON.stringify(receipt.snapshot)), { ...options, storedReplies: true }), error => error.code === 'assistant_snapshot_fields_invalid', 'Caller cannot turn the internal reader mode into upload authority');
-assert.throws(() => appendSnapshot(futureStore, Buffer.from(JSON.stringify(receipt.snapshot)), options), error => error.code === 'assistant_snapshot_fields_invalid');
-assert.equal(JSON.stringify(futureStore), before, 'Rejected upload never changes future-compatible history');
+assert.equal(model.project(receipt).buyers[0].last_reply_at, receipt.snapshot.buyers[0].last_reply_at);
+assert.deepEqual(decodeSnapshot(Buffer.from(JSON.stringify(receipt.snapshot)), options).snapshot, receipt.snapshot, 'D064 writer follows the already-deployed compatible reader');
+const forged = structuredClone(receipt.snapshot); forged.buyers[0].last_reply_at_origin = 'forged';
+assert.throws(() => decodeSnapshot(Buffer.from(JSON.stringify(forged)), { ...options, storedReplies: true }), error => error.code === 'assistant_snapshot_fields_invalid', 'A caller option never authorizes unrelated fields');
+assert.equal(appendSnapshot(futureStore, Buffer.from(JSON.stringify(receipt.snapshot)), options).assistant_snapshots.length, 2);
+assert.equal(JSON.stringify(futureStore), before, 'Valid additive import is immutable and never overwrites history');
 const appended = appendSnapshot(futureStore, raw, { ...options, now: '2026-10-26T15:01:00Z' });
 assert.equal(appended.assistant_snapshots.length, 2);
 assert.deepEqual(appended.assistant_snapshots[0], receipt, 'Old-format explicit upload preserves all prior additive reply evidence');
@@ -74,4 +75,4 @@ async function routeProof() {
     assert.equal(writes, 0);
   } finally { server.closeAllConnections(); await new Promise(resolve => server.close(resolve)); }
 }
-routeProof().then(() => console.log('assistant-reply-reader: old/additive stored receipts,strict new-field write hold,server-clock negatives,accessor purity,history preservation and actual private route ownership passed')).catch(error => { console.error(error.stack); process.exitCode = 1; });
+routeProof().then(() => console.log('assistant-reply-reader: old/additive stored receipts,authorized D064 writer,server-clock negatives,accessor purity,history preservation and actual private route ownership passed')).catch(error => { console.error(error.stack); process.exitCode = 1; });

@@ -22,7 +22,7 @@ assert.equal(output.reported_approved_buyers,1);
 assert.equal(output.buyers[0].reported_pof,null);
 assert.equal(output.buyers[0].reported_approval,'approved');
 assert.equal(output.buyers[0].last_contact,'2026-10-25');
-assert.equal(output.recent_replies,null,'Contact never becomes reply evidence or reply ordering');
+assert.deepEqual(output.recent_replies,[],'Contact never becomes reply evidence or reply ordering');
 assert.deepEqual(output.calls[0].provenance,{source_kind:'assistant_snapshot_import',generated_at:receipt.generated_at,source_file:'snapshot.json',reported:true});
 assert.equal(output.stages[0].deals[0].provenance.source_file,'deal-brains/demo.md');
 assert.equal(store.buyers.length,0);

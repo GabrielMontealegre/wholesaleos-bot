@@ -1,5 +1,14 @@
 # Decisions
 
+ASSUMED:D064 reply shortlist includes only explicit own last_reply_at values,
+descending timestamp/source-order ties,max10;all other buyers remain searchable.
+Timestamp truth is assistant-reported,not independently provider-verified;approval/
+POF remain reported. Compare to recorded server import clock as authorized,not
+last_contact/browser clock/generation clock. Unknown optional field is omitted
+on disk and null only in projection. Compatible461 reader already deployed;
+new writer retains8field envelopes and old-reader history preservation proof.
+--D064/457 optionA and AGENTS data truth--2026-10-27.
+
 ASSUMED:D064 optional reply timestamp rolls out reader-first then writer/ranking,
 because actual82ce792 rejects additive stored buyer fields and cannot safely
 read future imports on rollback. Unknown means omitted;present value must be an
