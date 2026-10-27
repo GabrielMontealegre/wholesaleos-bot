@@ -1,5 +1,32 @@
 # Issue455 - Remember This Device
 
+## Final Candidate Gate
+
+PR466 remains DRAFT/unmerged/undeployed. Exact remote tested product head
+d6b65b3b66024ccb7b16752d5423dcac2d03668e,full40603196905/job122536158786
+SUCCESS271/0/0,600s/file,all271 timings in final-native/full-gate-timings.json,
+job15m05s,sum843.38s NOTwall. Contract0.09s/controller0.36s/actual integration
+7.23s/UI10.34s. Earlier8861 actual269/2/0 is retained,not relabeled or reused.
+Original shell/Today stylesheet guards remain unchanged and now pass. Native
+uses only existing design-system CSS13/ws-check;no classic device CSS dependency.
+Candidate backend is identical8861;style boundary is the only runtime correction.
+
+Final functional/privacy/old45da4ac rollback and synthetic performance/access
+evidence passes. This is not production version2 credential proof or release.
+Usage84%primary/89%secondary means preserve full release AND rollback reserve,
+not a product blocker/needs-architect question. Main/live46545da4ac unchanged.
+No real PIN/cookie/device/key/file/settings/business actions and no new owner ask.
+Any local proof-only commit after d6b65b3 must not trigger unchanged CI or be
+misrepresented as a tested product head. Next:reuse466,current main/head check,
+release only with adequate reserve,exact automatic source,public pinned new
+devices401/no-store and checkbox3size,existing signed Chrome GET-only metadata
+and Today/Email/classicBack plus same-merge synthetic positivejourneys/main271.
+Never real remembered-device creation/revoke/logout/PIN entry as live proof.
+Own technical live failure ->rollbackFIRST45da4ac,whose old verifier rejectsv2.
+
+The trace and earlier preparation/failure checkpoints below remain historical;
+this final gate supersedes their pending-suite/No-PR wording.
+
 ## Scope And Trace
 
 First455 slice only: opt-in30day persistent device cookie and own-device
