@@ -1,5 +1,13 @@
 # Decisions
 
+2026-10-27 PR459 implementation checkpoint: assistant imports remain private,
+source-reported intelligence, never canonical buyer/deal/POF/readiness authority.
+Actor-bound request UUID encodes replay identity in the existing opaque receipt
+id; persisted receipts retain the original eight fields for458 rollback compatibility.
+Explicit new imports append; transport replay returns its original receipt.
+Viewer-scoped device checks are not delivery receipts.454 owner phone acceptance
+and457 reply-ranking evidence remain outstanding; no fabricated reply timestamps.
+
 ASSUMED:454 manual upload is one logical action with a fresh client UUID.
 Chromium transparently replays POST after a dropped response (reproduced in
 the actual local route),so an optional actor-scoped request UUID returns the

@@ -126,7 +126,20 @@ dates),never browser Date.now versus server capture. No ambient clock/network/
 disk/storage/callbacks;accessor/prototype/sparse/malformed/oversize guards reject
 with static private-safe error. Projection does not replace backend v1 validation.
 
-## Focused Tests / Remaining Work
+## Verified Release Checkpoint
+
+PR459 merged7f3a326, automatic7e35879b Active/successful exact source; identical
+tested aa28ddb tree. PR40420110916 and MAIN40421982834 each259/0/0,600s/file.
+Public pinned true3size and signed read-only Today/Email/classic passed; same
+19 classic cards restored after Back. Positive uploads only in real synthetic
+local importer; no production uploads or private files. Final synthetic performance
+99/96,accessibility100/100; corrected earlier82/80 CLS failure before merge.
+Eight-field receipts preserve458 rollback compatibility; actor-bound opaque
+receipt id dedupes transparent transport replay. See complete evidence in
+docs/screens/2026-10-26-pr459-release.454 remains OPEN for owner phone review
+and457 reply-evidence decision. Following implementation TODOs are historical.
+
+## Historical Focused Tests / Remaining Work
 
 assistant-sheet-model.test.js PASS:actual importer/actor receipt fixture,
 provenance/money null/zero/reported POF/approval,unknown/empty,rank/dead retention,
