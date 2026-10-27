@@ -7,6 +7,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const session = require('../modules/security/dashboard-session');
+const uploadKeys = require('../modules/records/assistant-upload-keys');
 const { probeProcessSpawn, processSpawnDenied } = require('./helpers/process-capability');
 
 const root = path.resolve(__dirname, '..');
@@ -59,11 +60,15 @@ async function request(base, method, route, options = {}) {
   const secret = crypto.randomBytes(48).toString('base64url');
   const providerToken = crypto.randomBytes(32).toString('hex');
   const dbPath = path.join(tmp, 'db.json');
-  fs.writeFileSync(dbPath, JSON.stringify({
+  const syntheticKey = uploadKeys.createKey({
     leads: [{ id: 'seed-lead', address: '123 Test St', status: 'New Lead' }],
     users: [{ id: 'admin', name: 'Admin', role: 'admin', firstLogin: false },
       { id: 'regular-fixture', name: 'SYNTHETIC USER', role: 'user', firstLogin: false }]
-  }));
+  }, { operatorId: 'admin', now: new Date(Date.now() - 60000).toISOString(), entropy: Buffer.from(Array.from({ length: 48 }, (_, i) => i)) });
+  const syntheticKeyRows = JSON.stringify(syntheticKey.store.assistant_upload_keys);
+  const syntheticKeyHash = syntheticKey.store.assistant_upload_keys[0].secret_sha256;
+  const syntheticKeyId = syntheticKey.store.assistant_upload_keys[0].id;
+  fs.writeFileSync(dbPath, JSON.stringify(syntheticKey.store));
   const child = childProcess.spawn(process.execPath, ['server.js'], {
     cwd: root,
     env: Object.assign({}, process.env, {
@@ -152,13 +157,18 @@ async function request(base, method, route, options = {}) {
     assert.strictEqual(receipt.snapshot, undefined);
     const privateRead = await request(base, 'GET', snapshotPath, { headers: { Cookie: cookie } });
     assert.strictEqual(privateRead.status, 200); assert.strictEqual(privateRead.body.latest.snapshot.buyers[0].name, 'PRIVATE_SNAPSHOT_SENTINEL');
+    assert.ok(!JSON.stringify(privateRead.body).includes(syntheticKeyHash), 'Private snapshot GET does not expose key hashes');
     const persisted = JSON.parse(fs.readFileSync(dbPath, 'utf8'));
     assert.strictEqual(persisted.assistant_snapshots.length, 1); assert.ok(!(persisted.buyers || []).some(buyer => buyer.name === 'PRIVATE_SNAPSHOT_SENTINEL'));
-    for (const publicProjection of ['/api/stats', '/api/leads', '/api/buyers', '/api/dashboard/today-workspace', '/api/dashboard/operator-brief', '/api/dashboard/calendar-workspace', '/api/dashboard/approvals', '/api/dashboard/pipeline-workspace']) {
+    for (const publicProjection of ['/api/stats', '/api/leads', '/api/buyers', '/api/dashboard/today-workspace', '/api/dashboard/operator-brief', '/api/dashboard/calendar-workspace', '/api/dashboard/approvals', '/api/dashboard/pipeline-workspace', '/api/settings', '/api/debug/env']) {
       const projected = await request(base, 'GET', publicProjection, { headers: { Cookie: cookie } });
       assert.strictEqual(projected.status, 200, publicProjection + ' remains available');
       if (publicProjection === '/api/dashboard/today-workspace') assert.strictEqual(projected.body.capabilities.assistant_snapshot_import, true, 'The actual server advertises its registered private importer');
       assert.ok(!JSON.stringify(projected.body).includes('PRIVATE_SNAPSHOT_SENTINEL'), 'Private snapshot is not serialized by ' + publicProjection);
+      assert.ok(!JSON.stringify(projected.body).includes(syntheticKeyHash), 'Private hash is not serialized by ' + publicProjection);
+      assert.ok(!JSON.stringify(projected.body).includes(syntheticKeyId), 'Private key identity is not serialized by ' + publicProjection);
+      assert.ok(!JSON.stringify(projected.body).includes(syntheticKey.key), 'Synthetic credential is not serialized by ' + publicProjection);
+      assert.ok(!JSON.stringify(projected.body).includes('assistant_upload_keys'), 'Private collection is not serialized by ' + publicProjection);
     }
 
     const pairing = await request(base, 'POST', '/api/auth/pairing-token', { headers: { Cookie: cookie }, body: {} });
@@ -235,6 +245,8 @@ async function request(base, method, route, options = {}) {
     assert.strictEqual((await request(base, 'DELETE', '/api/leads/seed-lead', { headers: { Cookie: cookie } })).status, 200);
     assert.strictEqual(JSON.parse(fs.readFileSync(dbPath, 'utf8')).leads.length, 0, 'signed-in DELETE still works');
     assert.strictEqual(JSON.parse(fs.readFileSync(dbPath, 'utf8')).assistant_snapshots.length, 1, 'Existing canonical writers preserve private snapshot history');
+    assert.ok(JSON.stringify(JSON.parse(fs.readFileSync(dbPath, 'utf8')).assistant_upload_keys) === syntheticKeyRows, 'Existing canonical writers preserve hash-only key records');
+    assert.ok(!output.includes(syntheticKey.key) && !output.includes(syntheticKeyHash) && !output.includes(syntheticKeyId), 'Server logs omit synthetic upload credentials/hashes/identities');
     console.log(`api-session-gate: ok (${registrations.length} API registrations behind the gate)`);
   } finally {
     child.kill();

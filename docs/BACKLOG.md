@@ -2,6 +2,21 @@
 
 ## Latest Run Summary
 
+2026-10-27 D064/454 LOCAL controller/audit progress on SAME scoped-upload branch:
+UNREGISTERED key GET/create/revoke handlers now exist;injected-admin synthetic
+tests PASS for no-store/pre-parser/origin/createUUID/domain identity/one-time
+response/replay409/metadata/actor/revoke/read+write failures. Actual existing
+signed-server test seeded fake hash collection:10 outward reads omit fake key/
+hash/id/collection,canonical writer preserves records,logs omit them. Telemetry
+privacy test extended,original assertions retained,PASS/zero SDK network. Scoped
+audit documented;not wholeapp certification or actual management endpoint proof.
+Local Docker guard now excludes private-record-backups identified in source,
+no private contents/presence inspected,no live leak asserted. No server import/
+registration/keyPOST/Settings/CLI/fullsuite/PR/deploy or realkey/production writes.
+Current live/main464a2dc46e unchanged. NEXT actual admin wiring + narrow keyPOST/
+SHA replay/Settings/CLI when implementation+release+rollback budget permits;
+reusebranch,455/456 deferred,463owner click separate. No standalone unwired release.
+
 2026-10-27 D064/454 scoped upload LOCAL PREPARATION,NOT released:branch
 item/454-scoped-assistant-upload from currentmaina2dc46e+owned464proofbe20df2.
 Pure assistant-upload-keys helper implements injected fake entropy/serverclock,
