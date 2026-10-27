@@ -67,7 +67,7 @@ for (const name of ignored) {
 const { status: exampleStatus } = require('node:child_process').spawnSync('git', ['check-ignore', '--no-index', '.env.example'], { cwd: root });
 assert.equal(exampleStatus, 1, 'Example env template must remain trackable');
 const dockerIgnore = fs.readFileSync(path.join(root, '.dockerignore'), 'utf8').split(/\r?\n/);
-for (const name of ['exports', 'data/db.json', 'helper.json', '.local-comp-agent.json', '.wholesaleos', '.git', '.env', '.env.*', 'node_modules', 'tests/.tmp', 'docs/screens']) assert(dockerIgnore.includes(name));
+for (const name of ['exports', 'data/db.json', '**/private-record-backups', 'helper.json', '.local-comp-agent.json', '.wholesaleos', '.git', '.env', '.env.*', 'node_modules', 'tests/.tmp', 'docs/screens']) assert(dockerIgnore.includes(name));
 const findings = [];
 const tracked = execFileSync('git', ['ls-files', '-z'], { cwd: root, encoding: 'utf8', maxBuffer: 8 * 1024 * 1024 }).split('\0').filter(Boolean);
 assert(tracked.length > 0, 'Missing tracked inventory is not a clean scan');

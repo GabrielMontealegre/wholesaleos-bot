@@ -163,7 +163,10 @@ function getDallasCompIntelligenceAgent() {
 const enrichQ = require('./enrichment-queue'); // Phase 3A
 // Authorize private file traffic before generic parsers can inspect or echo it.
 app.use('/api/dashboard/assistant-snapshots', (req, res, next) => { res.set('Cache-Control', 'no-store'); next(); },
+  require('./modules/records/assistant-key-upload').createAssistantKeyUpload({ db, limiter: (req, res, next) => apiLimiter(req, res, next) }),
   requireAdmin, require('./modules/records/assistant-snapshot-routes').requireSnapshotPayload);
+app.use('/api/dashboard/assistant-upload-keys', require('./modules/records/assistant-upload-key-routes').noStore,
+  requireAdmin, require('./modules/records/assistant-upload-key-routes').requireKeyPayload);
 app.use(express.json({ strict: false, limit: '1mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use(express.text({ limit: '100mb', type: 'text/plain' }));
@@ -2765,6 +2768,7 @@ require('./modules/deals/reviewed-deal-routes').registerReviewedDealRoutes(app, 
 require('./modules/records/record-activity-routes').registerRecordActivityRoutes(app, { db, requireAdmin });
 require('./modules/records/conversation-routes').registerConversationRoutes(app, { db, requireAdmin, assistantSnapshotImport: true });
 require('./modules/records/assistant-snapshot-routes').registerAssistantSnapshotRoutes(app, { db, requireAdmin });
+require('./modules/records/assistant-upload-key-routes').registerAssistantUploadKeyRoutes(app, { db, requireAdmin });
 
 app.get('/api/buyers', requireAuth, (req, res) => {
   try {

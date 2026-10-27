@@ -3,6 +3,7 @@ node_modules
 exports
 data/db.json
 data/db.json.*
+**/private-record-backups
 helper.json
 helper.json.*
 .local-comp-agent.json

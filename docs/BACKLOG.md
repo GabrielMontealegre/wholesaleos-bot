@@ -2,6 +2,72 @@
 
 ## Latest Run Summary
 
+2026-10-27 D064/454 LOCAL integrated scoped uploader candidate,NOT released:
+SAME owned branch now wires actual signed-admin create/list/revoke and narrow
+snapshot POST-only key authentication before generic parsers,current issuer
+eligibility/revocation recheck,exactSHA replay/ORIGINAL8field receipts. No generic
+session authority from key. Settings once-only transient key/download with
+session/navigation/late-result clearing;local fixed-endpoint bounded CLI with
+redirect rejection/no retries/counts-time-only output. Actual temp-server admin
+integration,local CLI and Settings1366/400/412 journeys PASS;old a2dc46e rollback
+reader/manual append accepts/preserves new receipts and key history. Synthetic
+LH after100/99 performance,94/94 accessibility;earlier89 failure corrected with
+visible-label-derived accessible names,not hidden. Offline source gate PASS.
+LATEST final-source repeat measured desktop performance76/phone97,access94/94:
+NOT green. Preserve report/diagnose value-free Lighthouse audit errors and
+serialized benchmark contention before merge;earlier100/99 is historical only.
+No real key/file/upload/import/POST/download/send/settings/business writes.
+Full267/current-head/merge/main/automatic deployment/mixed proof still required.
+Main/live464a2dc46e unchanged. Trace issue-454-scoped-assistant-upload.md has
+writer/reader/privacy/rollback/changed assertion details.454OPEN,455/456deferred.
+
+2026-10-27 D064/454 LOCAL controller/audit progress on SAME scoped-upload branch:
+UNREGISTERED key GET/create/revoke handlers now exist;injected-admin synthetic
+tests PASS for no-store/pre-parser/origin/createUUID/domain identity/one-time
+response/replay409/metadata/actor/revoke/read+write failures. Actual existing
+signed-server test seeded fake hash collection:10 outward reads omit fake key/
+hash/id/collection,canonical writer preserves records,logs omit them. Telemetry
+privacy test extended,original assertions retained,PASS/zero SDK network. Scoped
+audit documented;not wholeapp certification or actual management endpoint proof.
+Local Docker guard now excludes private-record-backups identified in source,
+no private contents/presence inspected,no live leak asserted. No server import/
+registration/keyPOST/Settings/CLI/fullsuite/PR/deploy or realkey/production writes.
+Current live/main464a2dc46e unchanged. NEXT actual admin wiring + narrow keyPOST/
+SHA replay/Settings/CLI when implementation+release+rollback budget permits;
+reusebranch,455/456 deferred,463owner click separate. No standalone unwired release.
+
+2026-10-27 D064/454 scoped upload LOCAL PREPARATION,NOT released:branch
+item/454-scoped-assistant-upload from currentmaina2dc46e+owned464proofbe20df2.
+Pure assistant-upload-keys helper implements injected fake entropy/serverclock,
+hash-only store/exact append scope/owner metadata/revoke/collision/auth and static
+error codes. Synthetic unit PASS incl wrong/revoked/corrupt/accessor/future/actor/
+immutability/network-clock-random-write spies. UNREGISTERED/no server imports,
+no actual store/route/Settings/CLI/key creation/privatefiles/production writes.
+NO fullgate/PR/deploy;not independently releasable. New-collection export/privacy
+audit,actual admin/key POST boundary/SHA replay/Settings/local CLI remain next;
+trace docs/cycles/issue-454-scoped-assistant-upload.md. Reuse branch/no duplicate.
+Main/live464a2dc46e remains verified,463owner protection click separate/notwhole
+454block;455/456 deferred. Preserve full release AND rollback reserve before wiring.
+
+2026-10-27 PR464/463 ENGINEERING RELEASED/VERIFIED:maina2dc46e2e125a4e9c340f0934693346a34134024
+full tree identical finaltested99ceb75. AutomaticRailwaye5a29d49-0ccd-49b5-855b-3c7554174074
+Active/successful exactsource Details verified,no manual build/retry/settings.
+PR40490468008/job122143342544262/0/0,600s/file,14m25job/13m28teststep,
+sum806.59s NOTwall,newscanner2.18s. MAIN40492803077/job122150687766262/0/0,
+13m00job/11m49teststep,sum708.56s NOTwall,newscanner1.73s. All262+262 rows
+docs/screens/2026-10-27-pr464-release. Exact merge offline gate+mail5size PASS;
+public pinned12 true1366/400/412/health200/private401no-store. SignedToday latest
+ABSENT/capsvalid;Email48rows/full2117body/emptyReply disabled/finalGmail/Close;
+classic19->1->visibleBackLoading0->same19/0/nooverflow. Zero application errors;
+two pre-merge Grammarly chrome-extension entries recorded separately,not hidden.
+Opaque screenshots BEFOREdisk inspected. No real keys/privatefiles/imports/writes.
+463 implementation DONE;issue remains OPEN ONLY for owner Secret Protection +
+Push protection click. Read-only API still reports both disabled;owner asked once.
+Do not duplicate hardening or make whole454 wait. NEXT454 scoped-key/local uploader
+actual implementation,synthetic only;455 after454,456 deferred. No new key slice
+started without adequate implementation/full release/rollback verification reserve.
+Older463 candidate/462 pending paragraphs are historical,superseded.
+
 2026-10-27 NEXT463 local candidate from verified462/main04c83b6:env/key Git
 ignore,Docker private-context exclusions,pure offline tracked-text/provider/
 entropy/client-env gate with value-free diagnostics. Four fixture annotation

@@ -1,5 +1,26 @@
 # Decisions
 
+ASSUMED:D064 upload credential is accepted ONLY by the existing private snapshot
+POST with its dedicated custom header;Cookie/Origin/Authorization mixtures reject,
+never fall back to signed admin. Key identity never becomes req.currentUser.
+Current issuer admin eligibility/revocation checked again after raw body intake.
+Separate actor+fileSHA receipt domain preserves original eight fields/manual UUID
+contract and original replay provenance. Local CLI endpoint is fixed HTTPS with
+redirect:error,not configurable from a key file/CLI URL. No retries or hidden
+scheduler;owner alone creates/saves real key. Settings wraps existing renderer;
+label-only accessibility repair never reads or changes legacy field values.
+--D064 scoped import/one-time disclosure,AGENTS safety/architecture--2026-10-27.
+
+ASSUMED:D064 key creation must not generate a second active secret on transparent
+POST replay or redisplay a stored secret. Before HTTP wiring,derive the public
+key identity from signed actor+fresh create-action UUID in a separate domain,
+inject fresh32byte secret,and reject repeated identity rather than overwrite.
+This is only key-creation transport safety;uploader request identity remains exact
+fileSHA,browser import UUID/origin guards and existing8field receipts unchanged.
+Current pure helper is local/unregistered;new collection privacy/audited route/
+Settings/CLI/full release proof still pending. No actual keys/settings touched.
+--D064 one-time disclosure,AGENTS privacy/history and known Chromium POST replay--2026-10-27.
+
 ASSUMED:D064 reply shortlist includes only explicit own last_reply_at values,
 descending timestamp/source-order ties,max10;all other buyers remain searchable.
 Timestamp truth is assistant-reported,not independently provider-verified;approval/
