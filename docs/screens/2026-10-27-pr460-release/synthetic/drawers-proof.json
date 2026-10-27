@@ -1,0 +1,36 @@
+{
+  "synthetic_only": true,
+  "baseline_sha": "7f3a32627f8d54a0df7f6e178716747c27a9aefb",
+  "current_product": "working candidate",
+  "production_writes": 0,
+  "sizes": [
+    {
+      "mode": "after",
+      "width": 1366,
+      "height": 768,
+      "first_contentful_paint_ms": 143.2999999821186,
+      "overflow": false,
+      "blocked_requests": 0,
+      "page_errors": 0
+    },
+    {
+      "mode": "after",
+      "width": 400,
+      "height": 915,
+      "first_contentful_paint_ms": 54,
+      "overflow": false,
+      "blocked_requests": 0,
+      "page_errors": 0
+    },
+    {
+      "mode": "after",
+      "width": 412,
+      "height": 915,
+      "first_contentful_paint_ms": 47.80000001192093,
+      "overflow": false,
+      "blocked_requests": 0,
+      "page_errors": 0
+    }
+  ],
+  "accessibility": []
+}

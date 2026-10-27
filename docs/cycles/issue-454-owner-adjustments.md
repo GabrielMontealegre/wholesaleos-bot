@@ -43,7 +43,19 @@ New copy exact/failure/latecompletion,44px control,hidden chooser,main POF,
 missing/zero/mixed fee and positive range negatives. Real clipboard is replaced
 inside isolated synthetic browser;no host clipboard or production content touched.
 
-Pending exact-head full600s/file/self-review/current-main/mergegreen/autoDeploy/
-approved435 public true3size+actual signedChrome+same-source synthetic proof.
-Before-after FCP<2s/Lighthouse performance/accessibility90+ required. No finished
-454/457/automatic uploader claim from this partial but aligned correction.
+Delivered via460:tested7542320 full40448803422/job122006365266259/0/0,
+600s/file;main82ce792 full40450434889/job122011624052259/0/0. Identical trees.
+Automaticf5f73806 Active/successful exactsourceDetails,approved435 public12
+true3size and signed Today/Email/classic proof. Full evidence/timings at
+docs/screens/2026-10-27-pr460-release. Synthetic performance99/96/access100/100,
+FCP148.4/71.5/122.3ms,notlive. No production imports/Copy/send/settings/writes.
+No finished454/457/automatic uploader claim from this partial aligned correction.
+
+Next actual-reader trace:receipts() calls strict validate(snapshot,imported_at)
+and rejects any extra buyer field today. Before writer accepts last_reply_at,
+deploy reader-only optional-field compatibility with actual old/new synthetic
+receipts;then a later writer/projection/ranking slice can rollback safely to that
+reader. Do not persist a new field and assume the old strict history reader can
+load it. Both stages remain454 implementation,not a new architect hold. The
+scoped-key CLI's SHA request identity also differs from current UUIDv4 header;
+trace/extend the narrow upload boundary deliberately,never weaken browser auth.

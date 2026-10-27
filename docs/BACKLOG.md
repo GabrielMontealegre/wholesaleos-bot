@@ -2,6 +2,18 @@
 
 ## Latest Run Summary
 
+2026-10-27 PR460 first D064 Today correction RELEASED/VERIFIED:main82ce792,
+automaticf5f73806 Active/successful exactsource,PR+MAIN259/0/0 each600s/file.
+Public pinned true3size+signed Today/Email/classic+same-source synthetic pass.
+Plain chooser/secondary manual import,Copy text,hidden filenames,Why/phone,
+zero fee notestimated,reported POF summary shipped. Full evidence/all259+259
+timings docs/screens/2026-10-27-pr460-release. No real imports/copy/send/settings.
+D064/457 ANSWERED;NO phone-wait gate.454 remains OPEN:next compatible optional
+reply timestamp/ranked shortlist,then scoped key/local uploader. Current strict
+rollback reader rejects new buyer fields:stage reader compatibility before
+enabling new-field imports;never corrupt/delete history or infer reply from contact.
+455after454;456deferred;450countsblocked. Older candidate/wait wording superseded.
+
 2026-10-27 D064/454 owner correction CANDIDATE:plain hidden-native chooser,
 secondary manual import,no visible filenames,explicit Copy text with safe failure,
 Why before phone,zero/missing fee Not estimated yet,reported POF summary on Today.
