@@ -118,11 +118,15 @@ h3 { font-size: var(--ws-type-base); line-height: 1.4; }
 .ws-stats strong { color: var(--ws-text); }
 .ws-today { display: grid; gap: var(--ws-space-4); padding-block: var(--ws-space-4); }
 .ws-assistant { padding-block: 16px; display: grid; gap: 16px; }
+.ws-assistant [hidden] { display: none; }
 .ws-assistant-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .ws-assistant-tools { display: flex; flex: 0 0 auto; gap: 8px; }
 .ws-assistant-header p, .ws-assistant-source { color: var(--ws-muted); font-size: 12px; }
 .ws-assistant-import { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
 .ws-assistant-import input { max-width: 100%; min-width: 0; min-height: 44px; }
+.ws-assistant-text-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.ws-assistant-text-actions .ws-button { flex: 0 1 auto; }
+.ws-assistant-import .ws-assistant-secondary { border-color: transparent; background: transparent; color: var(--ws-blue); padding-inline: 0; }
 .ws-assistant-group { min-width: 0; border-top: 1px solid var(--ws-line); padding-top: 12px; }
 .ws-assistant-group > h3 { margin-bottom: 12px; }
 .ws-assistant-role, .ws-assistant-source { display: block; overflow-wrap: anywhere; }

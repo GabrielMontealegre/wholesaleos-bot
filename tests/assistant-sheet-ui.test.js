@@ -39,7 +39,8 @@ async function main(){
    assert.equal(writes,0);assert.equal(reads,1);assert(await page.locator('#assistant-import').isDisabled());
    assert(await page.getByRole('heading',{name:'Your action queue',exact:true}).isVisible(),'Canonical recorded work remains separate');
    const data=fixture();data.deals[0].name='Synthetic property <img src=x onerror=alert(1)>';data.calls[0].questions.push('What is next?');data.buyers[0].name='Synthetic buyer '+ 'x'.repeat(180);
-   await choose(data);assert.equal(writes,0,'Selecting a file does not upload it');
+   for(const [index,fees] of [[1,[null,null]],[2,[0,null]],[3,[0,15000]]]){const deal=structuredClone(data.deals[0]);deal.id='fee-example-'+index;deal.name='Synthetic fee example '+index;deal.needs_gabriel=null;deal.numbers.fee_estimate_low=fees[0];deal.numbers.fee_estimate_high=fees[1];data.deals.push(deal);}
+   const chooserPromise=page.waitForEvent('filechooser');await page.getByRole('button',{name:'Choose assistant file',exact:true}).click();const chooser=await chooserPromise;await chooser.setFiles({name:'assistant.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(data))});assert.equal(writes,0,'Selecting a file does not upload it');
    await page.locator('#assistant-import').click();await page.getByText('Assistant file imported.',{exact:true}).waitFor();
    assert.equal(writes,1);assert.equal(store.assistant_snapshots.length,1);assert.equal(store.buyers.length,0);assert.equal(store.reviewed_deals.length,0);
    const text=await page.locator('#assistant-slot').innerText();
@@ -48,7 +49,19 @@ async function main(){
    assert(await page.getByRole('dialog',{name:'Reported buyers',exact:true}).isVisible());
    assert((await page.locator('#assistant-buyers').innerText()).includes('Proof of funds reported: Unknown'));
    await page.getByRole('button',{name:'Close Reported buyers',exact:true}).click();
-   assert(text.includes('From the assistant'));assert(text.includes('deal-brains/demo.md'));assert(text.includes('assistant.json'));assert(text.includes('You make about $0–$0 (estimate)'));
+   assert(text.includes('From the assistant'));assert(!text.includes('deal-brains/demo.md'));assert(!text.includes('assistant.json'));assert(text.includes('Not estimated yet'),'D064 zero fees are not an earnings claim');
+   assert.equal((text.match(/Not estimated yet/g)||[]).length,3,'Both missing,mixed zero/unknown,and both zero remain unestimated');assert(text.includes('You make about $0–$15,000 (estimate)'),'An explicit nonzero bound still displays the reported estimate');
+   assert(!(await page.locator('#assistant-file').isVisible()),'D064 browser-localized raw picker is not rendered');
+   assert(await page.getByRole('button',{name:'Import a file instead',exact:true}).isVisible());
+   assert(!(await page.locator('#assistant-import').isVisible()),'Populated sheet does not lead with a disabled primary import command');
+   assert(text.includes('Why: Confirm status.'));assert(text.includes('Why: Not reported in this file.'),'Schema has no text reason; never invent one');
+   assert(text.includes('Proof of funds reported: 0 yes · 1 unknown'),'POF summary is visible on Today,not only inside the drawer');
+   await page.evaluate(()=>{Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async value=>{window.syntheticClipboard=value;}}});});
+   await page.getByRole('button',{name:'Copy text',exact:true}).click();await page.getByText('Text copied. Nothing was sent.',{exact:true}).waitFor();
+   assert.equal(await page.evaluate(()=>window.syntheticClipboard),data.texts[0].text,'Exact source text copied,not markup');assert.equal(writes,1);
+   await page.evaluate(()=>{navigator.clipboard.writeText=async()=>{throw Error('denied');};});
+   await page.getByRole('button',{name:'Copy text',exact:true}).click();await page.getByText('Text could not be copied. Nothing was sent.',{exact:true}).waitFor();assert.equal(writes,1);
+   const touch=await page.getByRole('button',{name:'Copy text',exact:true}).boundingBox();assert(touch.height>=44);
    assert(!text.includes('2026-10-26T'));assert(!text.includes('demo-deal'));assert(!text.includes('demo-buyer'));assert(!text.includes('most recent reply'));
    assert.equal(await page.locator('#assistant-slot script,#assistant-slot img[src=x]').count(),0,'Imported markup is text,not executable DOM');
    assert.equal(await page.getByRole('link',{name:'Call Synthetic person',exact:true}).getAttribute('href'),'tel:+15551234567');
@@ -86,8 +99,10 @@ async function main(){
    failRead=false;await page.getByRole('button',{name:'Refresh assistant sheet',exact:true}).click();await check.waitFor();
    const geometry=await page.evaluate(()=>({overflow:document.documentElement.scrollWidth>innerWidth,fcp:performance.getEntriesByName('first-contentful-paint')[0]?.startTime}));assert.equal(geometry.overflow,false);assert(geometry.fcp<2000);
    if(process.env.WOS_ASSISTANT_PROOF_DIR){fs.mkdirSync(process.env.WOS_ASSISTANT_PROOF_DIR,{recursive:true});await page.locator('#assistant-slot').scrollIntoViewIfNeeded();await page.screenshot({path:path.join(process.env.WOS_ASSISTANT_PROOF_DIR,'synthetic-sheet-'+width+'.png')});}
+   await page.evaluate(()=>{navigator.clipboard.writeText=()=>new Promise(resolve=>{window.finishCopy=resolve;});});
+   await page.getByRole('button',{name:'Copy text',exact:true}).click();
    hold=true;await page.getByRole('button',{name:'Refresh assistant sheet',exact:true}).click();await page.waitForFunction(()=>document.querySelector('#assistant-status')?.textContent!==undefined);while(!release)await new Promise(r=>setTimeout(r,10));
-   authenticated=false;await page.getByRole('button',{name:'Refresh recorded work',exact:true}).click();await page.getByRole('heading',{name:'Unlock your workspace',exact:true}).waitFor();release();
+   authenticated=false;await page.getByRole('button',{name:'Refresh recorded work',exact:true}).click();await page.getByRole('heading',{name:'Unlock your workspace',exact:true}).waitFor();release();await page.evaluate(()=>window.finishCopy());
    await page.waitForTimeout(30);assert.equal(await page.locator('#assistant-slot').count(),0,'Late private response after401 cannot restore data');
    assert.equal(writes,4);assert.deepEqual(errors,[]);assert.deepEqual(external,[]);assert.deepEqual(otherWrites,[]);
    proof.cases.push({width,height,first_contentful_paint_ms:geometry.fcp,local_synthetic_imports:writes,external_requests:external.length,page_errors:errors.length});

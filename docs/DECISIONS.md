@@ -1,5 +1,28 @@
 # Decisions
 
+## D-064 - Assistant Today Follow-Through (Architect, 2026-10-27)
+
+Authoritative answers:454 architect comment at2026-10-27T01:35:37Z and457
+comment6431546292. Phone feedback is not
+a release gate; continue1366/400/412 technical proof without repeated questions.
+Replace native file-picker chrome with a plain chooser; hide internal filenames
+on cards but retain stored provenance. Add explicit Copy text; show no earnings
+claim when both fee bounds are missing/zero. Calls/texts put reason before number.
+Optional buyer last_reply_at must be a genuine non-future ISO reply timestamp,
+never derived from last_contact; old v1 files remain valid,missing means unranked.
+Automatic imports are separately ordered work in454: owner-created/revocable,
+hash-only scoped upload key in Settings; local exact-byte capped uploader; latest
+Today receipt auto-read;manual import secondary. No real key creation/inspection,
+private file reads,production upload or scheduling as technical verification.
+
+ASSUMED: split D064 into reviewable ordered sub-PRs under AGENTS section2:
+first existing-schema Today corrections,then compatible reply-evidence support,
+then scoped-key/uploader integration.454 stays OPEN until all delivered. Text
+v1 has no reason field; say Why: Not reported in this file rather than invent
+a motivation or reuse draft text as evidence. No temporary contact-based buyer
+rank. POF summary is explicitly reported/unknown,not independently verified.
+--454/D064 truth and privacy precedence--2026-10-27.
+
 2026-10-27 PR459 implementation checkpoint: assistant imports remain private,
 source-reported intelligence, never canonical buyer/deal/POF/readiness authority.
 Actor-bound request UUID encodes replay identity in the existing opaque receipt

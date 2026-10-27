@@ -2,6 +2,15 @@
 
 ## Latest Run Summary
 
+2026-10-27 D064/454 owner correction CANDIDATE:plain hidden-native chooser,
+secondary manual import,no visible filenames,explicit Copy text with safe failure,
+Why before phone,zero/missing fee Not estimated yet,reported POF summary on Today.
+Actual-importer3size negatives/component UI pass;full final-head gate/live pending.
+D064 at454/457 ANSWERED:phone feedback is not a stop/release gate;optional genuine
+last_reply_at and scoped upload-key/local uploader remain ordered454 next slices.
+No invented reply ranking or automatic-upload claim.455/456 still deferred.
+Prior phone-wait/unanswered457 wording below is historical,superseded byD064.
+
 2026-10-27 PR459 Today assistant surface RELEASED/VERIFIED on main7f3a326,
 automatic7e35879b exact-source Active/successful. PR and merged-main full gates
 each259/0/0,600s/file; public true3size GET-only and signed Today/Email/classic
