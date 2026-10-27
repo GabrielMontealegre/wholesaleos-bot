@@ -1,0 +1,92 @@
+{
+  "synthetic_only": true,
+  "baseline_sha": "ac3b1476770527d0d6e6e3e34de4f48d622fad35",
+  "current_product": "working candidate",
+  "production_writes": 0,
+  "sizes": [
+    {
+      "mode": "before",
+      "width": 1366,
+      "height": 768,
+      "first_contentful_paint_ms": 414.2999999821186,
+      "overflow": false,
+      "blocked_requests": 0,
+      "page_errors": 0
+    },
+    {
+      "mode": "before",
+      "width": 400,
+      "height": 915,
+      "first_contentful_paint_ms": 108.7000000178814,
+      "overflow": false,
+      "blocked_requests": 0,
+      "page_errors": 0
+    },
+    {
+      "mode": "before",
+      "width": 412,
+      "height": 915,
+      "first_contentful_paint_ms": 78.7000000178814,
+      "overflow": false,
+      "blocked_requests": 0,
+      "page_errors": 0
+    },
+    {
+      "mode": "after",
+      "width": 1366,
+      "height": 768,
+      "first_contentful_paint_ms": 136,
+      "overflow": false,
+      "blocked_requests": 0,
+      "page_errors": 0
+    },
+    {
+      "mode": "after",
+      "width": 400,
+      "height": 915,
+      "first_contentful_paint_ms": 209.2999999821186,
+      "overflow": false,
+      "blocked_requests": 0,
+      "page_errors": 0
+    },
+    {
+      "mode": "after",
+      "width": 412,
+      "height": 915,
+      "first_contentful_paint_ms": 111.59999999403954,
+      "overflow": false,
+      "blocked_requests": 0,
+      "page_errors": 0
+    }
+  ],
+  "accessibility": [
+    {
+      "mode": "before",
+      "width": 1366,
+      "score": 100,
+      "performance_score": 99,
+      "version": "13.5.0"
+    },
+    {
+      "mode": "before",
+      "width": 412,
+      "score": 100,
+      "performance_score": 96,
+      "version": "13.5.0"
+    },
+    {
+      "mode": "after",
+      "width": 1366,
+      "score": 100,
+      "performance_score": 99,
+      "version": "13.5.0"
+    },
+    {
+      "mode": "after",
+      "width": 412,
+      "score": 100,
+      "performance_score": 96,
+      "version": "13.5.0"
+    }
+  ]
+}

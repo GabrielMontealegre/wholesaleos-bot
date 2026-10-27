@@ -45,9 +45,13 @@ projection intentionally absent -> explicit reported field/rank positive.
 assistant-sheet-model recent_replies null -> empty list for old file:unchanged
 intent that contact never becomes reply evidence. No safety assertion weakened.
 
-Focused new+reader+model PASS;actual deployed461 rollback reader PASS. Pending
-frozen full261files/600sfile,before-after performance+accessibility90+/3size
-screens,selfreview/currentmain/mergegreen/exactautoDeploy/approved435proof.
+Focused new+reader+model PASS;actual deployed461 rollback reader PASS. Final
+remote0b08b3e full40465256100/job122058978344261/0/0,600s/file. Frozen same-product
+FCP136/209.3/111.6ms,performance99/96/access100/100,NOTlive. Earlierf759a6c green
+historical only;final adds actual rawPOST->GET/future-reject coverage,not a product
+failure/fix or unchanged-head rerun. All261timings/localcandidate proof at
+docs/screens/2026-10-27-pr462-candidate. Still DRAFT/UNMERGED/UNDEPLOYED. Pending
+selfreview/currentmain/mergegreen/exactautoDeploy/approved435proof/mainfull.
 NO product completion/release claim. Budget must leave full release+rollback
 reserve before merge;candidate may remain draft until enough usage returns.
 No real file/import/private data/key/copy/send/settings/business writes used.

@@ -2,6 +2,17 @@
 
 ## Latest Run Summary
 
+2026-10-27 PR462 reply writer/shortlist DRAFT/UNMERGED/UNDEPLOYED:remote
+0b08b3e1f9a414afab042f8f5ded8261282f177e full40465256100/job122058978344
+SUCCESS261/0/0,600s/file,14m39job,sum814.08s NOTwall,newtest2.97s. Actual
+rawPOST->GET/safe future rejection and3size source-only top10/fullsearch tests
+pass. Frozen same-product syntheticFCP136/209.3/111.6ms,performance99/96,
+access100/100 NOTlive. Actual461 rollback reader accepts/preserves new receipts.
+Alltimings/proof docs/screens/2026-10-27-pr462-candidate LOCAL proof-only;doNOT
+push docs-only to churnCI. Preserve release+rollback reserve,no newmerge near
+ceiling. Live remains verified461/ac3b147;454/457OPEN,no owner phone gate.
+Next resume this exact candidate,not duplicate;automatic upload-key/CLI after.
+
 2026-10-27 NEXT454 reply writer/shortlist LOCAL CANDIDATE from verifiedac3b147:
 actual optional nonfuture reply decoder+pure top10reply-only stableprojection+
 reported POF buyer cards/full area-search;old files unknown/unranked. New real
