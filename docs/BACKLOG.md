@@ -2,6 +2,18 @@
 
 ## Latest Run Summary
 
+2026-10-27 PR465 scoped uploader DRAFT/UNMERGED/UNDEPLOYED remote9b39c00,
+automatic full40549445436/job122348884532 in progress17:27Z,expected267/600s-file.
+No duplicate dispatch. Final serialized exact-product Settings audit PASS:
+FCP398.3/236.6/204.5ms,performance97/100/access94/94,no runtime/audit errors.
+Earlier concurrent76/97 report retained,not relabeled passed;harness now preserves
+null scores/value-free error IDs and benchmark ran without overlapping tests.
+All synthetic,NOT live. Functional/auth/CLI/rollback negatives pass;main/live464
+unchanged. Owned final proof LOCAL-only atop tested remote,do not push docs-only
+CI churn or mistake proofHEAD for product. Fullgate/actual release proof still
+required;no realkey/file/upload/import/POST/settings/business writes or new owner
+question.454OPEN,455/456deferred,463owner GitHub click separate.
+
 2026-10-27 D064/454 LOCAL integrated scoped uploader candidate,NOT released:
 SAME owned branch now wires actual signed-admin create/list/revoke and narrow
 snapshot POST-only key authentication before generic parsers,current issuer

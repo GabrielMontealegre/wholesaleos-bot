@@ -1,5 +1,13 @@
 # Scoped Upload Candidate - Not Released
 
+Latest serialized-final-valid.json supersedes pending performance status below:
+exact9b39c00 product,performance97/100/access94/94,all runtime/audit error arrays
+empty. FCP398.3/236.6/204.5ms,no overflow. Null scores now remain null and only
+safe audit error IDs are retained. This single controlled diagnostic had no
+overlapping local tests. Earlier failed report remains preserved and is NOT
+relabeled passed. DRAFT PR465/full40549445436 still in progress at17:27Z;
+expected267 files,600s/file. Main/live remains unchanged verifiedPR464.
+
 Synthetic localhost Settings1366/400/412 screenshots. Legacy fields/header/sidebar
 and fake credential textarea are OPAQUE before disk;dialog detail crops contain
 only the tool and a fully masked credential. No real key/private file was used.
