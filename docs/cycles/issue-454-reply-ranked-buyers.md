@@ -58,3 +58,30 @@ No real file/import/private data/key/copy/send/settings/business writes used.
 
 454 still includes automatic scoped-key/uploader after this;455/456 deferred.
 457 closes only after actual writer/shortlist release verifies,not candidate green.
+
+## Verified Release 2026-10-27
+
+PR462 merged as04c83b6242179ef34b7077fb0d1d21e7a5e6708b,full tree identical
+to final tested0b08b3e. Automatic Railway5c68d8e3-927f-4d4e-b631-f27505a3312e
+Active/successful;authoritative Details exact commit link verified. No manual
+build/retry/settings. PR40465256100/job122058978344261/0/0,600s/file,14m39job,
+sum814.08s NOTwall;MAIN40486154251/job122128322778261/0/0,14m15job,
+13m20teststep,sum798.82s NOTwall,newreply2.99s. All261+261 timing rows retained.
+
+Approved435 public12 pinned1.44/Chromium1117 true1366/400/412 GET-only,
+health200,unsignedidentity401/privateGET401no-store. Exact merged-source
+synthetic actual importer/reply journey3size + mailbox5size PASS. Existing signed
+ChromeToday1280x585 shows latestABSENT/empty chooser/disabled hidden confirm,
+model2/sheet3/Open recorded work works. Signed privateGET caps/booleans only:
+canImporttrue/schema1/max1048576/viewerScopevalid/latestABSENT. Email1280x529
+47rows/full894body/no defaultcomposer;emptyReply PreviewEditSenddisabled,
+final unavailable Gmail/allfieldsfit/Close restores. Classic1280x52919cards->
+exact1workbench->visibleBackLoading0->same19/0,no unrelated navigate mask.
+Zero console errors/overflow across3tabs. Opaque screenshots BEFOREdisk inspected.
+No production upload/import/POST/Copy/telSMS/check/draft/send/key/settings or
+business-data writes. Synthetic positive reply evidence is NOT live private
+snapshot proof. Frozen same-product audit FCP136/209.3/111.6ms,performance99/96,
+access100/100 is synthetic,not live. Proof docs/screens/2026-10-27-pr462-release.
+
+457 acceptance fulfilled;454 remains OPEN for automatic scoped-key/local uploader.
+Next463 independent security hardening is owner-ordered after this slice/before455.

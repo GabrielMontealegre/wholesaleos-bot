@@ -2,6 +2,23 @@
 
 ## Latest Run Summary
 
+2026-10-27 PR462 RELEASED/VERIFIED:main04c83b6242179ef34b7077fb0d1d21e7a5e6708b,
+automatic5c68d8e3-927f-4d4e-b631-f27505a3312e Active/successful exactsource
+Details verified. Tested0b08b3e full tree identical to merge. PR40465256100/
+job122058978344261/0/0,600s/file,14m39job,sum814.08s NOTwall. MAIN40486154251/
+job122128322778261/0/0,14m15job/13m20teststep,sum798.82s NOTwall,newtest2.99s.
+All261 rows each retained docs/screens/2026-10-27-pr462-release. Public12 pinned
+true1366/400/412 GET-only/health200/unsigned401/private401no-store;exactmerged
+reply-importer3size and mailbox5size passed. SignedToday1280x585 latestABSENT,
+empty chooser/hidden disabled import,assistantmodel2/sheet3;caps-only GET valid.
+Email47rows/full894body/emptyReply PreviewEditSenddisabled/finalGmail/Closerestored;
+classic19->1->visibleBackLoading0->SAME19/0,zero console errors/overflow. Opaque
+screens before disk,inspected. No real imports/keys/settings/business writes.
+457 fulfilled by this release;454 remains OPEN for scoped-key/local uploader.
+NEXT463 security hardening explicitly after this454 slice/before455;no exposed
+secrets claimed by its audit,no rotation or security-settings changes by Codex.
+455 after454;456 deferred. Older candidate paragraphs below are historical.
+
 2026-10-27 PR462 reply writer/shortlist DRAFT/UNMERGED/UNDEPLOYED:remote
 0b08b3e1f9a414afab042f8f5ded8261282f177e full40465256100/job122058978344
 SUCCESS261/0/0,600s/file,14m39job,sum814.08s NOTwall,newtest2.97s. Actual
