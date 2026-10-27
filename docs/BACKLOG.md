@@ -1,5 +1,21 @@
 # Backlog
 
+2026-10-27 FINAL PR466 candidate d6b65b3b66024ccb7b16752d5423dcac2d03668e
+full40603196905/job122536158786 SUCCESS271/0/0,600s/file,all271 timings retained,
+job15m05s,sum843.38s NOTwall. DRAFT/UNMERGED/UNDEPLOYED,not feature live.
+Initial8861 real269/2 guard regression corrected without changing original
+single-stylesheet assertions;failed timings retained separately,not reused.
+Current nativeCSS13/app9/auth3/key-settings2 and classic-only device JS/CSS1;
+other Email/Today/component versions preserved. Same-source pinned functional,
+privacy/rollback negatives and synthetic before/after performance/access gates
+PASS. Latest usage84%primary/89%secondary:hold release to preserve actual release
+AND rollback verification reserve,no reset credit/purchase. Main/live46545da4ac
+UNCHANGED. Local proof-only checkpoint may be ahead of tested remote:do not push
+docs-only CI churn or mistake it for a newly tested product. Reuse466 when budget
+supports release,check current main/head before ready/merge/automatic exact source/
+GET-only mixed proof/main full271. No real PIN/device/key/settings/business writes,
+no new release/live failure/owner question.455 remainsOPEN;455.2+ and456 deferred.
+
 2026-10-27 PR466 DRAFT/unmerged/undeployed:initial8861a5d full40600660469/
 job122527652316 completed269/2/0,all271 timings retained,600s/file,15m10sjob,
 sum852.30s NOTwall. All4 new remember-device tests PASS;existing shell/Today
