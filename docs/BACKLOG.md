@@ -2,6 +2,14 @@
 
 ## Latest Run Summary
 
+2026-10-27 NEXT454 reply writer/shortlist LOCAL CANDIDATE from verifiedac3b147:
+actual optional nonfuture reply decoder+pure top10reply-only stableprojection+
+reported POF buyer cards/full area-search;old files unknown/unranked. New real
+importer/GET3size test and reader/model focused PASS;actual461 rollback reader
+accepts new8field receipts and preserves history. NOfullgate/PR/merge/deploy
+yet. No privatefiles/keys/production imports/writes. Reserve release+rollback
+budget before merge;457notclosed,automatic scoped-key/uploader next,455/456deferred.
+
 2026-10-27 PR461 stored reply reader prerequisite RELEASED/VERIFIED:mainac3b147,
 automatic594d075e exactsourceActive/successful;PR+MAIN260/0/0each600s/file,
 all260+260timings docs/screens/2026-10-27-pr461-release. Approved435 public

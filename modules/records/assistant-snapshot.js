@@ -104,7 +104,7 @@ function decodeSnapshot(bytes, { now } = {}) {
   if (bytes.length > MAX_BYTES) fail('file_too_large', 413);
   let snapshot;
   try { snapshot = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes)); } catch (_) { fail('file_invalid'); }
-  validate(snapshot, clock);
+  validate(snapshot, clock, { storedReplies: true });
   return { snapshot, file_sha256: crypto.createHash('sha256').update(bytes).digest('hex') };
 }
 function receipts(store) {
@@ -122,7 +122,7 @@ function receipts(store) {
         typeof row.file_sha256 !== 'string' || !/^[a-f0-9]{64}$/.test(row.file_sha256) ||
         !validActor(row.operator_id) ||
         typeof row.filename !== 'string' || !/^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}\.json$/.test(row.filename) || row.filename.includes('..')) fail('store_invalid');
-    // Read compatibility ships before a later writer accepts the additive D064 field.
+    // The compatible reader shipped before the additive D064 writer.
     try { validate(row.snapshot, time(row.imported_at), { storedReplies: true }); if (row.generated_at !== row.snapshot.generated_at) fail('store_invalid'); }
     catch (_) { fail('store_invalid'); }
     seen.add(row.id);
