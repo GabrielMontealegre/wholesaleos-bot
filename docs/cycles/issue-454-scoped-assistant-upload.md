@@ -1,5 +1,28 @@
 # D064 Scoped Assistant Upload
 
+## Latest Draft Checkpoint 2026-10-27
+
+PR465 DRAFT/UNMERGED/UNDEPLOYED,remote9b39c0094ac25b6ada4e4772d150ff8f09c1910a.
+Automatic full40549445436/job122348884532 in progress at17:27Z;expected267 files,
+600s/file,every file must be accounted0fail0skip. No duplicate dispatch/retry.
+Current main/live remains verified464/a2dc46e. No local jobs or real key/import.
+
+Final serialized exact-product audit now PASS:before FCP659.8/327.6/374.5ms,
+after398.3/236.6/204.5ms;desktop/phone performance97/100,accessibility94/94,
+no overflow/runtime errors/audit errors. Updated external harness preserves null
+scores and records only value-free error IDs;no overlapping local tests during
+this one controlled diagnostic. Earlier concurrent76/97 remains retained in
+failed report,not relabeled passed or discarded. No threshold/product change
+was used to obtain this result. All measurements SYNTHETIC,not live claims.
+Source safety/functional review complete;full267 gate/release review/currentmain/
+automatic exact deployment/read-only proof still required. Do not mark ready or
+merge until exact head is green and release AND rollback reserve is available.
+
+Owned final numeric proof/docs are retained in a LOCAL proof-only commit atop
+the tested remote product;do not push docs-only CI churn or mistake local proof
+HEAD for the tested product head. After actual merge,carry only owned proof onto
+that real merge deliberately.454 staysOPEN,455/456deferred;no new owner question.
+
 ## Integrated Local Candidate 2026-10-27
 
 This section supersedes the historical unwired checkpoints below. Main/live
