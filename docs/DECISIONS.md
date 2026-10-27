@@ -1,5 +1,13 @@
 # Decisions
 
+ASSUMED:D064 optional reply timestamp rolls out reader-first then writer/ranking,
+because actual82ce792 rejects additive stored buyer fields and cannot safely
+read future imports on rollback. Unknown means omitted;present value must be an
+own primitive ISO timestamp <=recorded server imported_at. Upload remains strict
+until the later writer slice. Existing8field envelopes/history/actors unchanged.
+No migration,deletion,contact-to-reply inference or new operator gate.
+--AGENTS safety/data truth and D064/457--2026-10-27.
+
 ## D-064 - Assistant Today Follow-Through (Architect, 2026-10-27)
 
 Authoritative answers:454 architect comment at2026-10-27T01:35:37Z and457

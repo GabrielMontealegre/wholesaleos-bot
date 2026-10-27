@@ -2,6 +2,14 @@
 
 ## Latest Run Summary
 
+2026-10-27 D064 reply reader compatibility CANDIDATE on current82ce792:
+stored-only optional own/nonfutureISO last_reply_at;raw uploads still reject
+the field until next writer/ranking slice. Actual82ce792 synthetic baseline
+rejects additive history503;new reader preserves it across own-actor GET and
+old-format append/replay. New synthetic reader/route negatives and original
+snapshot/routes PASS. Full frozen-head gate/release pending,no UI/keys/real
+imports/writes/deploy.454/457 remain OPEN,not waiting for architect or phone.
+
 2026-10-27 PR460 first D064 Today correction RELEASED/VERIFIED:main82ce792,
 automaticf5f73806 Active/successful exactsource,PR+MAIN259/0/0 each600s/file.
 Public pinned true3size+signed Today/Email/classic+same-source synthetic pass.
