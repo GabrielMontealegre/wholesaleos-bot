@@ -48,6 +48,7 @@
     auth.lockIdentity(app);
     host.innerHTML = '<main class="ws-login"><h1>WholesaleOS</h1><h2>Unlock your workspace</h2>' +
       '<form id="login"><label for="pin">Dashboard PIN</label><input id="pin" type="password" inputmode="numeric" autocomplete="current-password" required>' +
+      '<label class="wos-remember-choice" for="remember-device"><input id="remember-device" type="checkbox" autocomplete="off"><span>Remember this device for 30 days</span></label>' +
       c.button({ label: 'Unlock', icon: 'check', tone: 'green', id: 'unlock' }) +
       '<p role="alert" class="ws-error" id="login-error">' + c.escape(message || '') + '</p></form>' +
       '<a href="' + nav.home + '">Open classic dashboard</a></main>';
@@ -59,7 +60,7 @@
       button.disabled = true;
       var value = input.value;
       input.value = '';
-      var result = await auth.authenticate(value);
+      var result = await auth.authenticate(value, { remember_device: document.getElementById('remember-device').checked });
       value = '';
       if (result.ok && result.user.role === 'admin') {
         auth.applyAuthenticatedUser(app, result.user);
@@ -97,8 +98,8 @@
     document.getElementById('account-open').addEventListener('click', user.open);
     document.getElementById('signout').addEventListener('click', async function () {
       clearPrivate();
-      await auth.logout(app);
-      locked();
+      var result = await auth.logout(app);
+      locked(result.ok ? 'Signed out.' : 'Signed out here. Device revocation could not be confirmed. Sign in to review remembered devices.');
     });
     document.getElementById('refresh').addEventListener('click', load);
     var mailSearch = document.getElementById('mail-search');

@@ -1,0 +1,327 @@
+{
+  "synthetic_only": true,
+  "baseline": "45da4ac36c79ce4c560429698d52685d04293a16",
+  "sizes": [
+    {
+      "mode": "before",
+      "view": "classic-login",
+      "width": 1366,
+      "fcp": 757.1999999880791,
+      "overflow": false
+    },
+    {
+      "mode": "before",
+      "view": "classic-login",
+      "width": 400,
+      "fcp": 214.30000001192093,
+      "overflow": false
+    },
+    {
+      "mode": "before",
+      "view": "classic-login",
+      "width": 412,
+      "fcp": 307.30000001192093,
+      "overflow": false
+    },
+    {
+      "mode": "before",
+      "view": "native-login",
+      "width": 1366,
+      "fcp": 317.69999998807907,
+      "overflow": false
+    },
+    {
+      "mode": "before",
+      "view": "native-login",
+      "width": 400,
+      "fcp": 118.19999998807907,
+      "overflow": false
+    },
+    {
+      "mode": "before",
+      "view": "native-login",
+      "width": 412,
+      "fcp": 66.90000000596046,
+      "overflow": false
+    },
+    {
+      "mode": "before",
+      "view": "settings",
+      "width": 1366,
+      "fcp": 217.09999999403954,
+      "overflow": false
+    },
+    {
+      "mode": "before",
+      "view": "settings",
+      "width": 400,
+      "fcp": 195.09999999403954,
+      "overflow": false
+    },
+    {
+      "mode": "before",
+      "view": "settings",
+      "width": 412,
+      "fcp": 182.19999998807907,
+      "overflow": false
+    },
+    {
+      "mode": "after",
+      "view": "classic-login",
+      "width": 1366,
+      "fcp": 219.60000002384186,
+      "overflow": false
+    },
+    {
+      "mode": "after",
+      "view": "classic-login",
+      "width": 400,
+      "fcp": 236,
+      "overflow": false
+    },
+    {
+      "mode": "after",
+      "view": "classic-login",
+      "width": 412,
+      "fcp": 284.5,
+      "overflow": false
+    },
+    {
+      "mode": "after",
+      "view": "native-login",
+      "width": 1366,
+      "fcp": 188.19999998807907,
+      "overflow": false
+    },
+    {
+      "mode": "after",
+      "view": "native-login",
+      "width": 400,
+      "fcp": 65.69999998807907,
+      "overflow": false
+    },
+    {
+      "mode": "after",
+      "view": "native-login",
+      "width": 412,
+      "fcp": 120.80000001192093,
+      "overflow": false
+    },
+    {
+      "mode": "after",
+      "view": "settings",
+      "width": 1366,
+      "fcp": 237.69999998807907,
+      "overflow": false
+    },
+    {
+      "mode": "after",
+      "view": "settings",
+      "width": 400,
+      "fcp": 201.19999998807907,
+      "overflow": false
+    },
+    {
+      "mode": "after",
+      "view": "settings",
+      "width": 412,
+      "fcp": 218.09999999403954,
+      "overflow": false
+    }
+  ],
+  "lighthouse": [
+    {
+      "mode": "before",
+      "view": "classic-login",
+      "width": 1366,
+      "version": "13.5.0",
+      "performance": 100,
+      "accessibility": 90,
+      "runtimeErrorCode": null,
+      "auditErrors": [],
+      "metrics": {
+        "first-contentful-paint": 351.914,
+        "largest-contentful-paint": 351.914,
+        "total-blocking-time": 26.043999999999926,
+        "cumulative-layout-shift": 0
+      }
+    },
+    {
+      "mode": "before",
+      "view": "classic-login",
+      "width": 412,
+      "version": "13.5.0",
+      "performance": 100,
+      "accessibility": 90,
+      "runtimeErrorCode": null,
+      "auditErrors": [],
+      "metrics": {
+        "first-contentful-paint": 236.879,
+        "largest-contentful-paint": 236.879,
+        "total-blocking-time": 14.665999999999997,
+        "cumulative-layout-shift": 0
+      }
+    },
+    {
+      "mode": "before",
+      "view": "native-login",
+      "width": 1366,
+      "version": "13.5.0",
+      "performance": 100,
+      "accessibility": 100,
+      "runtimeErrorCode": null,
+      "auditErrors": [],
+      "metrics": {
+        "first-contentful-paint": 136.415,
+        "largest-contentful-paint": 198.347,
+        "total-blocking-time": 0,
+        "cumulative-layout-shift": 0
+      }
+    },
+    {
+      "mode": "before",
+      "view": "native-login",
+      "width": 412,
+      "version": "13.5.0",
+      "performance": 100,
+      "accessibility": 100,
+      "runtimeErrorCode": null,
+      "auditErrors": [],
+      "metrics": {
+        "first-contentful-paint": 74.399,
+        "largest-contentful-paint": 131.706,
+        "total-blocking-time": 0,
+        "cumulative-layout-shift": 0
+      }
+    },
+    {
+      "mode": "before",
+      "view": "settings",
+      "width": 1366,
+      "version": "13.5.0",
+      "performance": 100,
+      "accessibility": 94,
+      "runtimeErrorCode": null,
+      "auditErrors": [],
+      "metrics": {
+        "first-contentful-paint": 196.975,
+        "largest-contentful-paint": 691.896,
+        "total-blocking-time": 44.468000000000075,
+        "cumulative-layout-shift": 0.001954427114036987
+      }
+    },
+    {
+      "mode": "before",
+      "view": "settings",
+      "width": 412,
+      "version": "13.5.0",
+      "performance": 97,
+      "accessibility": 94,
+      "runtimeErrorCode": null,
+      "auditErrors": [],
+      "metrics": {
+        "first-contentful-paint": 328.532,
+        "largest-contentful-paint": 1292.836,
+        "total-blocking-time": 198.71200000000005,
+        "cumulative-layout-shift": 0.05738499846493574
+      }
+    },
+    {
+      "mode": "after",
+      "view": "classic-login",
+      "width": 1366,
+      "version": "13.5.0",
+      "performance": 100,
+      "accessibility": 91,
+      "runtimeErrorCode": null,
+      "auditErrors": [],
+      "metrics": {
+        "first-contentful-paint": 238.331,
+        "largest-contentful-paint": 238.331,
+        "total-blocking-time": 24.153999999999996,
+        "cumulative-layout-shift": 0
+      }
+    },
+    {
+      "mode": "after",
+      "view": "classic-login",
+      "width": 412,
+      "version": "13.5.0",
+      "performance": 100,
+      "accessibility": 91,
+      "runtimeErrorCode": null,
+      "auditErrors": [],
+      "metrics": {
+        "first-contentful-paint": 500.458,
+        "largest-contentful-paint": 500.458,
+        "total-blocking-time": 17.551000000000045,
+        "cumulative-layout-shift": 0
+      }
+    },
+    {
+      "mode": "after",
+      "view": "native-login",
+      "width": 1366,
+      "version": "13.5.0",
+      "performance": 100,
+      "accessibility": 100,
+      "runtimeErrorCode": null,
+      "auditErrors": [],
+      "metrics": {
+        "first-contentful-paint": 84.988,
+        "largest-contentful-paint": 156.442,
+        "total-blocking-time": 0,
+        "cumulative-layout-shift": 0
+      }
+    },
+    {
+      "mode": "after",
+      "view": "native-login",
+      "width": 412,
+      "version": "13.5.0",
+      "performance": 100,
+      "accessibility": 100,
+      "runtimeErrorCode": null,
+      "auditErrors": [],
+      "metrics": {
+        "first-contentful-paint": 64.492,
+        "largest-contentful-paint": 125.142,
+        "total-blocking-time": 0,
+        "cumulative-layout-shift": 0
+      }
+    },
+    {
+      "mode": "after",
+      "view": "settings",
+      "width": 1366,
+      "version": "13.5.0",
+      "performance": 100,
+      "accessibility": 98,
+      "runtimeErrorCode": null,
+      "auditErrors": [],
+      "metrics": {
+        "first-contentful-paint": 180.841,
+        "largest-contentful-paint": 685.792,
+        "total-blocking-time": 22.68300000000005,
+        "cumulative-layout-shift": 0.005886727768500436
+      }
+    },
+    {
+      "mode": "after",
+      "view": "settings",
+      "width": 412,
+      "version": "13.5.0",
+      "performance": 100,
+      "accessibility": 98,
+      "runtimeErrorCode": null,
+      "auditErrors": [],
+      "metrics": {
+        "first-contentful-paint": 260.72,
+        "largest-contentful-paint": 738.43,
+        "total-blocking-time": 32.196999999999946,
+        "cumulative-layout-shift": 0.03249499835766968
+      }
+    }
+  ],
+  "notes": "Exact source,read-only synthetic APIs,self-only CSP/font stub;no real credentials or production traffic;no raw Lighthouse report persisted."
+}

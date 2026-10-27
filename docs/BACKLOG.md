@@ -1,5 +1,19 @@
 # Backlog
 
+2026-10-27 LOCAL455 item1 candidate,NOT released:on item/455-remember-device
+from verified45da4ac plus owned465 proof only. Actual opt-in30day hash-only
+remembered-device ledger,strict current-user/credential-bound verification,
+own Settings revocation/logout,unchecked PIN controls and browser-session optout
+implemented. Focused actual server/privacy/legacy/key Settings and pinned browser
+restart/3size+shortdesktop/own revocation/session-loss/late-dialog safety PASS.
+Visual contrast corrected;serialized before/after FCP<2s for all3screens/3sizes,
+Lighthouseperformance100/100 each/access91classic,100native,98Settings PASS,
+synthetic NOTlive. Full271/currenthead/merge/main/exactautomaticdeploy/approved
+read-only proof still pending. No455PR
+or production changes yet,no real credentials/devices/key/files/settings actions.
+454 owner key/firstupload/routine and463 owner GitHub protection remain separate
+pending actions,not backlog-wide waits.455 item2+ and456 still deferred.
+
 ## Latest Run Summary
 
 2026-10-27 PR465 ENGINEERING RELEASED/VERIFIED:main45da4ac identical tested9b39c00,
