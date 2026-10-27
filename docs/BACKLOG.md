@@ -2,6 +2,19 @@
 
 ## Latest Run Summary
 
+2026-10-27 D064/454 scoped upload LOCAL PREPARATION,NOT released:branch
+item/454-scoped-assistant-upload from currentmaina2dc46e+owned464proofbe20df2.
+Pure assistant-upload-keys helper implements injected fake entropy/serverclock,
+hash-only store/exact append scope/owner metadata/revoke/collision/auth and static
+error codes. Synthetic unit PASS incl wrong/revoked/corrupt/accessor/future/actor/
+immutability/network-clock-random-write spies. UNREGISTERED/no server imports,
+no actual store/route/Settings/CLI/key creation/privatefiles/production writes.
+NO fullgate/PR/deploy;not independently releasable. New-collection export/privacy
+audit,actual admin/key POST boundary/SHA replay/Settings/local CLI remain next;
+trace docs/cycles/issue-454-scoped-assistant-upload.md. Reuse branch/no duplicate.
+Main/live464a2dc46e remains verified,463owner protection click separate/notwhole
+454block;455/456 deferred. Preserve full release AND rollback reserve before wiring.
+
 2026-10-27 PR464/463 ENGINEERING RELEASED/VERIFIED:maina2dc46e2e125a4e9c340f0934693346a34134024
 full tree identical finaltested99ceb75. AutomaticRailwaye5a29d49-0ccd-49b5-855b-3c7554174074
 Active/successful exactsource Details verified,no manual build/retry/settings.

@@ -1,5 +1,15 @@
 # Decisions
 
+ASSUMED:D064 key creation must not generate a second active secret on transparent
+POST replay or redisplay a stored secret. Before HTTP wiring,derive the public
+key identity from signed actor+fresh create-action UUID in a separate domain,
+inject fresh32byte secret,and reject repeated identity rather than overwrite.
+This is only key-creation transport safety;uploader request identity remains exact
+fileSHA,browser import UUID/origin guards and existing8field receipts unchanged.
+Current pure helper is local/unregistered;new collection privacy/audited route/
+Settings/CLI/full release proof still pending. No actual keys/settings touched.
+--D064 one-time disclosure,AGENTS privacy/history and known Chromium POST replay--2026-10-27.
+
 ASSUMED:D064 reply shortlist includes only explicit own last_reply_at values,
 descending timestamp/source-order ties,max10;all other buyers remain searchable.
 Timestamp truth is assistant-reported,not independently provider-verified;approval/
