@@ -2,6 +2,25 @@
 
 ## Latest Run Summary
 
+2026-10-27 PR464/463 ENGINEERING RELEASED/VERIFIED:maina2dc46e2e125a4e9c340f0934693346a34134024
+full tree identical finaltested99ceb75. AutomaticRailwaye5a29d49-0ccd-49b5-855b-3c7554174074
+Active/successful exactsource Details verified,no manual build/retry/settings.
+PR40490468008/job122143342544262/0/0,600s/file,14m25job/13m28teststep,
+sum806.59s NOTwall,newscanner2.18s. MAIN40492803077/job122150687766262/0/0,
+13m00job/11m49teststep,sum708.56s NOTwall,newscanner1.73s. All262+262 rows
+docs/screens/2026-10-27-pr464-release. Exact merge offline gate+mail5size PASS;
+public pinned12 true1366/400/412/health200/private401no-store. SignedToday latest
+ABSENT/capsvalid;Email48rows/full2117body/emptyReply disabled/finalGmail/Close;
+classic19->1->visibleBackLoading0->same19/0/nooverflow. Zero application errors;
+two pre-merge Grammarly chrome-extension entries recorded separately,not hidden.
+Opaque screenshots BEFOREdisk inspected. No real keys/privatefiles/imports/writes.
+463 implementation DONE;issue remains OPEN ONLY for owner Secret Protection +
+Push protection click. Read-only API still reports both disabled;owner asked once.
+Do not duplicate hardening or make whole454 wait. NEXT454 scoped-key/local uploader
+actual implementation,synthetic only;455 after454,456 deferred. No new key slice
+started without adequate implementation/full release/rollback verification reserve.
+Older463 candidate/462 pending paragraphs are historical,superseded.
+
 2026-10-27 NEXT463 local candidate from verified462/main04c83b6:env/key Git
 ignore,Docker private-context exclusions,pure offline tracked-text/provider/
 entropy/client-env gate with value-free diagnostics. Four fixture annotation
