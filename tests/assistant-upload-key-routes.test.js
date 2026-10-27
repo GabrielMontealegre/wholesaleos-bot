@@ -60,7 +60,7 @@ async function run() {
       const denied = await read(method, suffix, headers); assert.equal(denied.status, 503); assert(!denied.text.includes('PRIVATE_')); assert(!denied.text.includes(receipt.key));
     }
     assert.equal(writes, 2);
-    console.log('assistant-upload-key-routes: synthetic injected-admin/no-store/preparser/origin/one-time replay/hash-only metadata/revoke/storage negatives passed;production unregistered');
+    console.log('assistant-upload-key-routes: isolated injected-admin/no-store/preparser/origin/one-time replay/hash-only metadata/revoke/storage negatives passed');
   } finally { await new Promise(resolve => server.close(resolve)); }
 }
 run().catch(() => { console.error('assistant-upload-key-routes failed;private fixture details withheld'); process.exitCode = 1; });

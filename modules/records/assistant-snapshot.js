@@ -129,15 +129,22 @@ function receipts(store) {
   }
   return value;
 }
-function appendSnapshot(store, bytes, { now, operatorId, filename, requestId } = {}) {
+function keyReceiptId(operatorId, fileSha256) {
+  if (!validActor(operatorId)) fail('actor_required', 403);
+  if (typeof fileSha256 !== 'string' || !/^[a-f0-9]{64}$/.test(fileSha256)) fail('request_invalid');
+  return crypto.createHash('sha256').update(JSON.stringify(['assistant_snapshot_key_transport_v1', operatorId, fileSha256])).digest('hex');
+}
+function appendWithTransport(store, bytes, { now, operatorId, filename }, { requestId, uploadSha } = {}) {
   if (!validActor(operatorId)) fail('actor_required', 403);
   if (typeof filename !== 'string' || !/^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}\.json$/.test(filename) || filename.includes('..')) fail('filename_invalid');
-  const transportId = requestId === undefined ? null : requestReceiptId(operatorId, requestId);
+  const transportId = uploadSha !== undefined ? keyReceiptId(operatorId, uploadSha) : requestId === undefined ? null : requestReceiptId(operatorId, requestId);
   const previous = receipts(store), decoded = decodeSnapshot(bytes, { now }), imported_at = new Date(time(now)).toISOString();
-  if (requestId !== undefined) {
+  if (uploadSha !== undefined && uploadSha !== decoded.file_sha256) fail('request_conflict', 409);
+  if (transportId) {
     const prior = previous.find(row => row.id === transportId);
     if (prior) {
-      if (prior.operator_id !== operatorId || prior.file_sha256 !== decoded.file_sha256 || prior.filename !== filename) fail('request_conflict', 409);
+      if (prior.operator_id !== operatorId || prior.file_sha256 !== decoded.file_sha256 || (uploadSha === undefined && prior.filename !== filename)) fail('request_conflict', 409);
+      if (uploadSha !== undefined && time(prior.imported_at) > Date.parse(imported_at)) fail('clock_invalid', 409);
       return store;
     }
   }
@@ -146,6 +153,13 @@ function appendSnapshot(store, bytes, { now, operatorId, filename, requestId } =
     source_kind: 'assistant_snapshot_import', imported_at, file_sha256: decoded.file_sha256, generated_at: decoded.snapshot.generated_at, filename, operator_id: operatorId, snapshot: decoded.snapshot };
   return { ...store, assistant_snapshots: previous.concat(receipt) };
 }
+function appendSnapshot(store, bytes, options = {}) {
+  return appendWithTransport(store, bytes, options, { requestId: options.requestId });
+}
+function appendKeySnapshot(store, bytes, options = {}) {
+  keyReceiptId(options.operatorId, options.fileSha256);
+  return appendWithTransport(store, bytes, options, { uploadSha: options.fileSha256 });
+}
 function latestSnapshot(store, { operatorId, now } = {}) {
   if (!validActor(operatorId)) fail('actor_required', 403);
   const clock = time(now, Infinity, 'clock_invalid');
@@ -153,4 +167,4 @@ function latestSnapshot(store, { operatorId, now } = {}) {
   if (rows.some(row => time(row.imported_at) > clock)) fail('store_invalid');
   return rows.length ? rows[rows.length - 1] : null;
 }
-module.exports = { decodeSnapshot, appendSnapshot, latestSnapshot, requestReceiptId, MAX_BYTES };
+module.exports = { decodeSnapshot, appendSnapshot, appendKeySnapshot, latestSnapshot, requestReceiptId, keyReceiptId, MAX_BYTES };

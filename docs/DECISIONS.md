@@ -1,5 +1,16 @@
 # Decisions
 
+ASSUMED:D064 upload credential is accepted ONLY by the existing private snapshot
+POST with its dedicated custom header;Cookie/Origin/Authorization mixtures reject,
+never fall back to signed admin. Key identity never becomes req.currentUser.
+Current issuer admin eligibility/revocation checked again after raw body intake.
+Separate actor+fileSHA receipt domain preserves original eight fields/manual UUID
+contract and original replay provenance. Local CLI endpoint is fixed HTTPS with
+redirect:error,not configurable from a key file/CLI URL. No retries or hidden
+scheduler;owner alone creates/saves real key. Settings wraps existing renderer;
+label-only accessibility repair never reads or changes legacy field values.
+--D064 scoped import/one-time disclosure,AGENTS safety/architecture--2026-10-27.
+
 ASSUMED:D064 key creation must not generate a second active secret on transparent
 POST replay or redisplay a stored secret. Before HTTP wiring,derive the public
 key identity from signed actor+fresh create-action UUID in a separate domain,

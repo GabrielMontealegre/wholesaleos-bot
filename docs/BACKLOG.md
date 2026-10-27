@@ -2,6 +2,25 @@
 
 ## Latest Run Summary
 
+2026-10-27 D064/454 LOCAL integrated scoped uploader candidate,NOT released:
+SAME owned branch now wires actual signed-admin create/list/revoke and narrow
+snapshot POST-only key authentication before generic parsers,current issuer
+eligibility/revocation recheck,exactSHA replay/ORIGINAL8field receipts. No generic
+session authority from key. Settings once-only transient key/download with
+session/navigation/late-result clearing;local fixed-endpoint bounded CLI with
+redirect rejection/no retries/counts-time-only output. Actual temp-server admin
+integration,local CLI and Settings1366/400/412 journeys PASS;old a2dc46e rollback
+reader/manual append accepts/preserves new receipts and key history. Synthetic
+LH after100/99 performance,94/94 accessibility;earlier89 failure corrected with
+visible-label-derived accessible names,not hidden. Offline source gate PASS.
+LATEST final-source repeat measured desktop performance76/phone97,access94/94:
+NOT green. Preserve report/diagnose value-free Lighthouse audit errors and
+serialized benchmark contention before merge;earlier100/99 is historical only.
+No real key/file/upload/import/POST/download/send/settings/business writes.
+Full267/current-head/merge/main/automatic deployment/mixed proof still required.
+Main/live464a2dc46e unchanged. Trace issue-454-scoped-assistant-upload.md has
+writer/reader/privacy/rollback/changed assertion details.454OPEN,455/456deferred.
+
 2026-10-27 D064/454 LOCAL controller/audit progress on SAME scoped-upload branch:
 UNREGISTERED key GET/create/revoke handlers now exist;injected-admin synthetic
 tests PASS for no-store/pre-parser/origin/createUUID/domain identity/one-time

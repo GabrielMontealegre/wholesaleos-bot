@@ -66,6 +66,7 @@ async function request(base, method, route, options = {}) {
       { id: 'regular-fixture', name: 'SYNTHETIC USER', role: 'user', firstLogin: false }]
   }, { operatorId: 'admin', now: new Date(Date.now() - 60000).toISOString(), entropy: Buffer.from(Array.from({ length: 48 }, (_, i) => i)) });
   const syntheticKeyRows = JSON.stringify(syntheticKey.store.assistant_upload_keys);
+  let expectedKeyRows = syntheticKeyRows;
   const syntheticKeyHash = syntheticKey.store.assistant_upload_keys[0].secret_sha256;
   const syntheticKeyId = syntheticKey.store.assistant_upload_keys[0].id;
   fs.writeFileSync(dbPath, JSON.stringify(syntheticKey.store));
@@ -171,6 +172,33 @@ async function request(base, method, route, options = {}) {
       assert.ok(!JSON.stringify(projected.body).includes('assistant_upload_keys'), 'Private collection is not serialized by ' + publicProjection);
     }
 
+    const managementPath = '/api/dashboard/assistant-upload-keys';
+    const keyHeaders = { Cookie: cookie, Origin: base, 'X-WOS-Assistant-Key-Action': '1', 'X-WOS-Assistant-Request': '11111111-1111-4111-8111-111111111111' };
+    for (const h of [{}, { 'x-user-id': 'admin' }, { Cookie: `wos_session=${encodeURIComponent(regular)}` }]) {
+      const denied = await fetch(base + managementPath, { method: 'POST', headers: { ...h, 'Content-Type': 'application/json' }, body: 'PRIVATE_MALFORMED_KEY_BODY' });
+      assert.strictEqual(denied.status, h.Cookie ? 403 : 401); assert.strictEqual(denied.headers.get('cache-control'), 'no-store'); assert.ok(!(await denied.text()).includes('PRIVATE_'));
+    }
+    const createdKeyResponse = await fetch(base + managementPath, { method: 'POST', headers: keyHeaders });
+    assert.strictEqual(createdKeyResponse.status, 200); assert.strictEqual(createdKeyResponse.headers.get('cache-control'), 'no-store');
+    const createdKey = await createdKeyResponse.json();
+    assert.ok(!fs.readFileSync(dbPath, 'utf8').includes(createdKey.key), 'Only hash retained in synthetic server store');
+    const createReplay = await fetch(base + managementPath, { method: 'POST', headers: keyHeaders });
+    assert.strictEqual(createReplay.status, 409); assert.ok(!(await createReplay.text()).includes(createdKey.key));
+    const keyList = await request(base, 'GET', managementPath, { headers: { Cookie: cookie } });
+    assert.strictEqual(keyList.status, 200); assert.strictEqual(keyList.body.keys.length, 2);
+    assert.ok(!JSON.stringify(keyList.body).includes(createdKey.key)); assert.ok(!JSON.stringify(keyList.body).includes('secret_sha256'));
+    const scopedHeaders = { 'X-WOS-Assistant-Upload-Key': createdKey.key, 'X-WOS-Assistant-Request': receipt.file_sha256, 'X-WOS-Assistant-Filename': 'wos-assistant-fixture.json', 'Content-Type': 'application/octet-stream' };
+    for (const path of [managementPath, '/api/leads', '/api/stats', snapshotPath]) assert.strictEqual((await fetch(base + path, { headers: scopedHeaders })).status, 401, 'Upload credential grants no GET authority');
+    const automatic = await fetch(base + snapshotPath, { method: 'POST', headers: scopedHeaders, body: snapshotBytes });
+    assert.strictEqual(automatic.status, 200); const automaticReceipt = await automatic.json(); assert.strictEqual(automaticReceipt.counts.buyers, 1);
+    const automaticReplay = await fetch(base + snapshotPath, { method: 'POST', headers: scopedHeaders, body: snapshotBytes });
+    assert.strictEqual(automaticReplay.status, 200); assert.strictEqual((await automaticReplay.json()).duplicate, true);
+    assert.strictEqual(JSON.parse(fs.readFileSync(dbPath, 'utf8')).assistant_snapshots.length, 2, 'Manual and key modes are separate;SHA replay never appends');
+    const revoke = await fetch(base + managementPath + '/' + createdKey.id + '/revoke', { method: 'POST', headers: keyHeaders }); assert.strictEqual(revoke.status, 200);
+    assert.strictEqual((await fetch(base + snapshotPath, { method: 'POST', headers: scopedHeaders, body: snapshotBytes })).status, 401);
+    expectedKeyRows = JSON.stringify(JSON.parse(fs.readFileSync(dbPath, 'utf8')).assistant_upload_keys);
+    assert.ok(!output.includes(createdKey.key), 'Actual handler never logs its synthetic one-time credential');
+
     const pairing = await request(base, 'POST', '/api/auth/pairing-token', { headers: { Cookie: cookie }, body: {} });
     assert.strictEqual(pairing.status, 200);
     const exchange = await request(base, 'POST', '/api/auth/pairing-exchange', { body: { pairing_token: pairing.body.pairing_token } });
@@ -244,8 +272,8 @@ async function request(base, method, route, options = {}) {
 
     assert.strictEqual((await request(base, 'DELETE', '/api/leads/seed-lead', { headers: { Cookie: cookie } })).status, 200);
     assert.strictEqual(JSON.parse(fs.readFileSync(dbPath, 'utf8')).leads.length, 0, 'signed-in DELETE still works');
-    assert.strictEqual(JSON.parse(fs.readFileSync(dbPath, 'utf8')).assistant_snapshots.length, 1, 'Existing canonical writers preserve private snapshot history');
-    assert.ok(JSON.stringify(JSON.parse(fs.readFileSync(dbPath, 'utf8')).assistant_upload_keys) === syntheticKeyRows, 'Existing canonical writers preserve hash-only key records');
+    assert.strictEqual(JSON.parse(fs.readFileSync(dbPath, 'utf8')).assistant_snapshots.length, 2, 'Existing canonical writers preserve both manual and key-import history');
+    assert.ok(JSON.stringify(JSON.parse(fs.readFileSync(dbPath, 'utf8')).assistant_upload_keys) === expectedKeyRows, 'Existing canonical writers preserve hash-only key records');
     assert.ok(!output.includes(syntheticKey.key) && !output.includes(syntheticKeyHash) && !output.includes(syntheticKeyId), 'Server logs omit synthetic upload credentials/hashes/identities');
     console.log(`api-session-gate: ok (${registrations.length} API registrations behind the gate)`);
   } finally {
