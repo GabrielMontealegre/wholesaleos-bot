@@ -26,7 +26,19 @@ let getters=0;const accessor=structuredClone(receipt);Object.defineProperty(acce
 const wrong=structuredClone(receipt);wrong.source_kind='canonical_buyer';assert.throws(()=>model.project(wrong),/^Error: assistant_sheet_invalid$/);
 const savedNow=Date.now,savedFetch=global.fetch;try{Date.now=global.fetch=()=>{throw Error('Ambient effect');};assert.equal(model.project(receipt).recent_replies.length,10);}finally{Date.now=savedNow;global.fetch=savedFetch;}
 
+async function writerRouteProof(){
+ let persisted={buyers:[],reviewed_deals:[]},writes=0;const app=express();
+ registerAssistantSnapshotRoutes(app,{db:{readDBStrict:()=>persisted,writeDB:value=>{writes++;persisted=value;}},now:()=>now,requireAdmin(req,res,next){req.currentUser={id:options.operatorId};next();}});
+ const server=await new Promise(resolve=>{const s=app.listen(0,'127.0.0.1',()=>resolve(s));}),origin='http://127.0.0.1:'+server.address().port,url=origin+'/api/dashboard/assistant-snapshots';
+ try{
+  const headers={Origin:origin,'Content-Type':'application/octet-stream','X-WOS-Assistant-Import':'1','X-WOS-Assistant-Filename':options.filename};
+  let response=await fetch(url,{method:'POST',headers,body:raw});assert.equal(response.status,200);assert.equal(response.headers.get('cache-control'),'no-store');const accepted=await response.json();assert.equal(accepted.file_sha256,receipt.file_sha256);assert.equal(writes,1);
+  response=await fetch(url);const result=await response.json();assert.deepEqual(result.latest.snapshot.buyers,data.buyers);assert.equal(Object.keys(result.latest).length,8);assert.deepEqual(model.project(result.latest).recent_replies.map(b=>b.id),view.recent_replies.map(b=>b.id));
+  const history=JSON.stringify(persisted);const future=structuredClone(data);future.buyers[0].last_reply_at='2026-10-26T15:00:00.001Z';response=await fetch(url,{method:'POST',headers,body:JSON.stringify(future)});assert.equal(response.status,400);assert.equal((await response.json()).code,'assistant_snapshot_date_invalid');assert.equal(writes,1);assert.equal(JSON.stringify(persisted),history,'Future reply is atomically rejected through the actual route');
+ }finally{server.closeAllConnections();await new Promise(resolve=>server.close(resolve));}
+}
 async function main(){
+ await writerRouteProof();
  const {browser}=await launchChromiumWithResolvedBrowser(require('playwright'),{headless:true});
  try{for(const width of [1366,400,412]){
   let active=store,authenticated=true,writes=0;

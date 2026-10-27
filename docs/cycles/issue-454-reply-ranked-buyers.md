@@ -30,7 +30,9 @@ Caches only assistant-model2/sheet3;CSS12/components6/app8/Email12/layout3 retai
 
 ## Tests And Intentional Assertion Changes
 
-New assistant-buyer-replies.test.js uses real importer/registered GET at1366/400/
+New assistant-buyer-replies.test.js first uses actual registered raw POST->GET
+with in-memory synthetic DB:exact SHA/all buyer fields survive;future timestamp
+rejects400 atomically/no extra writes. Then real importer/registered GET at1366/400/
 412:12reply buyers+newer-contact-only buyer,top10exactorder/ties/missing unranked,
 reported yes/no/unknown POF,area search retains all13,old-format newer import
 clears shortlist,401clearsprivateDOM,zero posts/external/errors. Strict timestamps
