@@ -1,5 +1,49 @@
 # Issue455 - Remember This Device
 
+## Released And Verified
+
+PR466/main38ea175b45dcb9dabc634debee36ec703996715d is tree-identical to
+testedd6b65b3. AutomaticRailwayc138421a-3205-40fa-8f8c-24d19fbaa87b
+Active/successful,authoritative Details exact source verified. PR271/0/0,
+MAIN40654964433/job122703655276271/0/0,600s/file,all542 rows retained;
+mainjob14m59s,sum836.34s NOTwall. Public pinned12 true1366/400/412 GET-only,
+health200/private devices+keys+snapshots401no-store and unchecked44px option.
+Actual signed own metadata0rows/controls,Today/Email/classicBack pass without
+real credential/settings/business writes. Positive v2 proof remains LOCAL
+same-source synthetic. Exact merged UI3size/mail5size and isolated integration
+pass;initial aggregate local attempt retained with cause not established,
+no product/assertion changes or unsupported flake claim. Proof and all timings:
+docs/screens/2026-10-28-pr466-release. No new deployment for proof-only commits.
+Only455item1 complete;455item2 next,whole455/backlog not complete. This release
+supersedes candidate hold wording below,which remains historical.
+
+## Final Candidate Gate
+
+PR466 remains DRAFT/unmerged/undeployed. Exact remote tested product head
+d6b65b3b66024ccb7b16752d5423dcac2d03668e,full40603196905/job122536158786
+SUCCESS271/0/0,600s/file,all271 timings in final-native/full-gate-timings.json,
+job15m05s,sum843.38s NOTwall. Contract0.09s/controller0.36s/actual integration
+7.23s/UI10.34s. Earlier8861 actual269/2/0 is retained,not relabeled or reused.
+Original shell/Today stylesheet guards remain unchanged and now pass. Native
+uses only existing design-system CSS13/ws-check;no classic device CSS dependency.
+Candidate backend is identical8861;style boundary is the only runtime correction.
+
+Final functional/privacy/old45da4ac rollback and synthetic performance/access
+evidence passes. This is not production version2 credential proof or release.
+Usage84%primary/89%secondary means preserve full release AND rollback reserve,
+not a product blocker/needs-architect question. Main/live46545da4ac unchanged.
+No real PIN/cookie/device/key/file/settings/business actions and no new owner ask.
+Any local proof-only commit after d6b65b3 must not trigger unchanged CI or be
+misrepresented as a tested product head. Next:reuse466,current main/head check,
+release only with adequate reserve,exact automatic source,public pinned new
+devices401/no-store and checkbox3size,existing signed Chrome GET-only metadata
+and Today/Email/classicBack plus same-merge synthetic positivejourneys/main271.
+Never real remembered-device creation/revoke/logout/PIN entry as live proof.
+Own technical live failure ->rollbackFIRST45da4ac,whose old verifier rejectsv2.
+
+The trace and earlier preparation/failure checkpoints below remain historical;
+this final gate supersedes their pending-suite/No-PR wording.
+
 ## Scope And Trace
 
 First455 slice only: opt-in30day persistent device cookie and own-device

@@ -61,7 +61,7 @@ async function run() {
       }
     }
     phase = 'remember-login'; await page.goto(origin + '/dashboard/'); await page.locator('#remember-device').check();
-    for (const digit of fixture.pin) await page.locator('.pin-btn').filter({ hasText: new RegExp('^' + digit + '$') }).click();
+    await page.locator('#pin').fill(fixture.pin); await page.locator('#unlock').click();
     await page.waitForFunction(() => window.APP?.unlocked === true);
     const cookies = await context.cookies(); const remembered = cookies.find(c => c.name === 'wos_session'); assert(remembered && remembered.httpOnly && remembered.secure && remembered.sameSite === 'Strict'); assert(remembered.expires * 1000 > Date.now() + 29 * 86400000);
     assert.equal(fixture.read().remembered_devices.length, 1);

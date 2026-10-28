@@ -1,5 +1,21 @@
 # Backlog
 
+2026-10-27 FINAL PR466 candidate d6b65b3b66024ccb7b16752d5423dcac2d03668e
+full40603196905/job122536158786 SUCCESS271/0/0,600s/file,all271 timings retained,
+job15m05s,sum843.38s NOTwall. DRAFT/UNMERGED/UNDEPLOYED,not feature live.
+Initial8861 real269/2 guard regression corrected without changing original
+single-stylesheet assertions;failed timings retained separately,not reused.
+Current nativeCSS13/app9/auth3/key-settings2 and classic-only device JS/CSS1;
+other Email/Today/component versions preserved. Same-source pinned functional,
+privacy/rollback negatives and synthetic before/after performance/access gates
+PASS. Latest usage84%primary/89%secondary:hold release to preserve actual release
+AND rollback verification reserve,no reset credit/purchase. Main/live46545da4ac
+UNCHANGED. Local proof-only checkpoint may be ahead of tested remote:do not push
+docs-only CI churn or mistake it for a newly tested product. Reuse466 when budget
+supports release,check current main/head before ready/merge/automatic exact source/
+GET-only mixed proof/main full271. No real PIN/device/key/settings/business writes,
+no new release/live failure/owner question.455 remainsOPEN;455.2+ and456 deferred.
+
 2026-10-27 PR466 DRAFT/unmerged/undeployed:initial8861a5d full40600660469/
 job122527652316 completed269/2/0,all271 timings retained,600s/file,15m10sjob,
 sum852.30s NOTwall. All4 new remember-device tests PASS;existing shell/Today
@@ -27,6 +43,49 @@ or production changes yet,no real credentials/devices/key/files/settings actions
 pending actions,not backlog-wide waits.455 item2+ and456 still deferred.
 
 ## Latest Run Summary
+
+2026-10-28 PR467 candidate3886ee3 full40660146565/job122720858009 REAL271/1/0,
+600s/file/all272timings retained,job12m50s,sum720.54s NOTwall. Existing real
+navigation journey assumed classic Home immediately after root;455item2 now
+intentionally opens nativeToday. First test correction updates ONLY entry/Home
+step to nativeToday->classicDeals,retains Email/Back/exactrecord/locked/nonadmin/
+no-write assertions. Product runtime unchanged;notflaky/environment/cancel and
+no reuse of failed gate. Draft/unmerged/undeployed,newheadfull272 required.
+Main/live46638ea175 remains verified. No real PIN/settings/business actions.
+
+2026-10-28 NEXT455item2 LOCAL candidate,notreleased:on item/455-one-login from
+verified466/main38ea175 plus ONLY owned proof. Same shared PIN renderer/submit
+lifecycle mounts on classic/native,old white keypad/global numeric handler
+removed. Existing signed cookie/remembered ledger/backend auth unchanged.
+Direct/app and browserroot now nativeToday;JSONroot/oldpreview URLs/classicdeep
+links stay compatible. Native Home pointsToday;nonadminstill no admin reads,
+fixed available-tools link preserves classic access. Whole455item3nav notbundled.
+Focused original remembered/shell/Today/secure/key-dialog tests PASS,final affected
+shared/home/role gate thenfull272 stillrequired. Exactscreen syntheticbeforeafter
+FCPclassic817.5/126/87.8ms,native134.7/79.7/35.2ms,LHperformance100/100 and
+access100/100 bothchangedscreens,nooverflow/errors;NOTlive. No real PIN/device/
+key/POST/settings/businessactions. Trace issue-455-one-login.md;proof shared-login-
+candidate. Main/live466 unchangedverified;no PR/fullgate/deploy yet,456deferred.
+
+2026-10-28 PR466/455item1 RELEASED/VERIFIED:main38ea175b45dcb9dabc634debee36ec703996715d
+fulltree identical testedd6b65b3. AutomaticRailwayc138421a-3205-40fa-8f8c-24d19fbaa87b
+Active/successful authoritativeDetails exactsource,no manual build/retry/settings.
+PR40603196905/job122536158786271/0/0,600s/file,job15m05s,sum843.38s NOTwall.
+MAIN40654964433/job122703655276271/0/0,job14m59s,sum836.34s NOTwall;all542
+timings retained. Public pinned12 true1366/400/412 GET-only/health200/unsigned401/
+snapshot+key+devices401no-store/unchecked44pxoption. Existing signedChrome own
+device metadata0rows/Settingscontrols,Today chooser/recordedwork,Email48rows/
+18charbody/disabledemptyReply/Close,andclassic19->1->BackLoading0->same19 pass,
+nooverflow/retainedapplicationerrors0. Opaque BEFOREdisk screenshot islands inspected.
+Exactmerged LOCAL PIN/profile/restart/Settings3size/mail5size pass;isolated
+integration passed after an initial aggregate harness failure retained with cause
+not established,no product/assertion changes. Main independently allgreen.
+No real PIN/device/key/file/POST/import/send/settings/businesswrites/authtransfer.
+Owned local proof replayed deliberately ontoactualmerge;proof-only,no newdeploy.
+Proof docs/screens/2026-10-28-pr466-release. Only455item1 DONE;next455item2
+one PIN screen/session,not bundled.454realownerkey/firstupload/localroutine still
+pending/notactive;463ownerprotection Notyet/alreadyasked;450blocked/456deferred.
+Whole455/412/backlog notcomplete. Older draft/budgethold wording is historical.
 
 2026-10-27 PR465 ENGINEERING RELEASED/VERIFIED:main45da4ac identical tested9b39c00,
 automaticRailway9e867208-8538-41c5-8335-a621493b3f5d Active/successful exactDetails.

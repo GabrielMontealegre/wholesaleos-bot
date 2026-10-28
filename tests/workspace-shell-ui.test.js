@@ -100,7 +100,7 @@ async function prove() {
         ['/dashboard/?workspace=leads', 'Leads - classic view'], ['/dashboard/?workspace=deals', 'Deals - classic view'],
         ['/dashboard/?workspace=buyers', 'Buyers - classic view'], ['/dashboard/?workspace=calendar', 'Calendar - classic view'],
         ['/dashboard/?workspace=pipeline', 'Pipeline - classic view'], ['/dashboard/?workspace=approvals', 'Approvals - classic view']]);
-      assert.equal(await page.locator('.ws-sidebar-footer a').getAttribute('href'), '/dashboard/');
+      assert.equal(await page.locator('.ws-sidebar-footer a').getAttribute('href'), '/app', 'Home follows owner455 nativeToday entry,not the classic tools');
       assert.equal(await page.getByRole('link', { name: 'Settings - classic view', exact: true }).first().getAttribute('href'), '/dashboard/?workspace=settings');
       for (const [key, name] of [['leads', 'Leads'], ['deals', 'Deals'], ['buyers', 'Buyers'], ['calendar', 'Calendar'], ['pipeline', 'Pipeline'], ['approvals', 'Approvals']]) {
         if (width !== 1366) await page.getByRole('button', { name: 'Open navigation', exact: true }).click();
@@ -133,6 +133,7 @@ async function prove() {
       await page.reload();
       await page.getByRole('heading', { name: 'Unlock your workspace', exact: true }).waitFor();
       assert.equal(reads, before, 'Non-admin cannot read the admin workspace');
+      assert.equal(await page.getByRole('link', { name: 'Open available tools', exact: true }).getAttribute('href'), '/dashboard/', 'Existing signed users retain their authorized classic tools without admin promotion');
       assert.deepEqual(writes, []);
       assert.deepEqual(external, []);
       assert.deepEqual(errors, []);

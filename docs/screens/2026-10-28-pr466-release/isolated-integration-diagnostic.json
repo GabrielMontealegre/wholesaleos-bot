@@ -1,0 +1,10 @@
+{
+  "source_sha": "38ea175b45dcb9dabc634debee36ec703996715d",
+  "test": "remembered-device-integration.test.js",
+  "status": "passed",
+  "product_or_assertion_changes": 0,
+  "synthetic_only": true,
+  "production_writes": 0,
+  "initial_aggregate_report": "exact-merge-smoke.json",
+  "cause_of_initial_failure": "not established"
+}

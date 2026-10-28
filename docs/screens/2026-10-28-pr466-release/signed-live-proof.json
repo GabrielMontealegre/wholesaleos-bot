@@ -1,0 +1,91 @@
+{
+  "source_sha": "38ea175b45dcb9dabc634debee36ec703996715d",
+  "get_only": true,
+  "production_writes": 0,
+  "credential_transfer": false,
+  "devices": {
+    "ok": true,
+    "rows": 0,
+    "onlyMetadata": true
+  },
+  "settings": {
+    "width": 1280,
+    "height": 585,
+    "loaded": true,
+    "rows": 0,
+    "refreshEnabled": true,
+    "refreshWidth": 46,
+    "refreshHeight": 44,
+    "refreshFits": true,
+    "forgetControls": 0,
+    "keyRevealOpen": false,
+    "overflow": false
+  },
+  "today": {
+    "width": 1280,
+    "height": 585,
+    "chooserEnabled": true,
+    "pickerHidden": true,
+    "pickerEmpty": true,
+    "importHidden": true,
+    "importDisabled": true,
+    "latestAbsent": true,
+    "recordedWorkOpened": true,
+    "overflow": false
+  },
+  "email": {
+    "width": 1280,
+    "height": 585,
+    "loadedRows": 48,
+    "bodyLength": 18,
+    "defaultComposer": false,
+    "replyEnabled": true,
+    "emptyReply": {
+      "previewDisabled": true,
+      "editDisabled": true,
+      "sendDisabled": true,
+      "unavailableGmail": true,
+      "fieldsFit": true
+    },
+    "closeRestoresBodyLength": 18,
+    "composerAbsentAfterClose": true,
+    "overflow": false
+  },
+  "classic": {
+    "before": {
+      "cards": 19,
+      "workbenches": 0
+    },
+    "open": {
+      "cards": 1,
+      "workbenches": 1,
+      "backVisible": true
+    },
+    "backLoading": {
+      "cards": 0,
+      "workbenches": 0,
+      "loading": true
+    },
+    "restored": {
+      "cards": 19,
+      "workbenches": 0,
+      "loading": false,
+      "overflow": false
+    },
+    "finalViewport": {
+      "width": 1280,
+      "height": 529
+    }
+  },
+  "retainedApplicationConsoleErrors": {
+    "classic": 0,
+    "settingsTodayEmail": 0
+  },
+  "notes": [
+    "No real PIN/remember/revoke/logout/key/file/upload/import/send/settings or business actions.",
+    "Screenshots opaque before disk;static control islands only.",
+    "Menu click did not expand;native Enter opened it without state mutation through evaluate.",
+    "Initial aggregate local integration attempt failed;isolated exact-source diagnostic passed without code/assertion changes;cause not established.",
+    "Current-source main independently passed all271."
+  ]
+}
