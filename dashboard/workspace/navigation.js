@@ -25,7 +25,7 @@
 })(typeof window !== 'undefined' ? window : null, function () {
   var pages = Object.freeze({ today: 'dashboard', email: 'gmail', leads: 'leads', deals: 'todays_deals',
     buyers: 'buyers_found', calendar: 'calendar', pipeline: 'pipeline', approvals: 'approvals', settings: 'settings' });
-  // Screens rebuilt in this shell (#412). Every other key opens its classic view and is labeled so (#429).
+  // Native screens stay primary; other fixed destinations are grouped under More (#455).
   var shellPages = Object.freeze({ today: '/app?preview=1', email: '/app?preview=1&view=email' });
   var home = '/app';
   function page(key) { return Object.hasOwn(pages, key) ? pages[key] : null; }

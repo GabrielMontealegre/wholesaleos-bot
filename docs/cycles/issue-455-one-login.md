@@ -1,5 +1,23 @@
 # Issue455 Item2 - One PIN Screen
 
+## Released And Verified
+
+PR467/main6247e0fe69f998bc24cf6e33f42e35b72c23f8fc complete tree identical
+testedff9434d. AutomaticRailway619e60c5-4dc3-44eb-9b02-a0b1cd912c5b Active/
+successful exactsource Details verified,no manual build/retry/settings. PR272/0/0,
+MAIN40664837512/job122736605750272/0/0,600s/file,all544timings retained;
+mainjob14m57s,sum837.74s NOTwall. Public15 true1366/400/412/directapp/root/
+sharedPIN/health200/private401no-store;exactmerge LOCAL shared/device/navigation/
+mailjourneys PASS. Actual existing signed session moves nativeToday->classic
+Settings->Email without login;read-only controls/ownmetadata0rows,readable1116
+source exact in-memory Reply/Close match,classic19->1->BackLoading0->19 pass.
+First selected email's18chars was a no-readable-text placeholder,not bodyproof.
+Retained old-page HTTP502 before new-source reload is disclosed,not relabeled
+extension/total-zero;current-sourcejourney no new entry. Opaque BEFOREdisk safe
+proof docs/screens/2026-10-28-pr467-release. No real auth/key/settings/business
+writes.455items1+2 done,items3+ next;whole455/backlog not complete. This release
+supersedes candidate/pending text below,which remains historical.
+
 LOCAL candidate,not released. Base38ea175 is verified466;only owned proof
 commits carried.455item1 stays live;456 remains deferred.
 
@@ -51,7 +69,7 @@ retained as measured,not called a current-candidate failure or relabeled green.
 Screens opaque BEFOREdisk,inspected;NOT live measurements. Original device/
 shell/Today/secure-login/key-dialog focused tests PASS. Final Home/non-admin
 link changes get a final affected-focused gate before one full272 dispatch.
-No backend/session/ledger/dependency/lock change. Rollback to verified466 needs
+No backend auth/session/ledger/dependency/lock change. Rollback to verified466 needs
 no schema migration and retains the same issued credentials/revocation checks.
 Full272/currenthead/PR/merge/automaticexact/liveGET-only proof still pending.
 

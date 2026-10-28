@@ -1,5 +1,17 @@
 # Backlog
 
+2026-10-28 LOCAL455item3 candidate:Today/Email plus one visible More entry for
+seven existing tools,plain names,no Classic view navigation labels. Same fixed
+classic destinations/roles/Back/record behavior;no backend/auth/data writes or
+native Deals. Focused pinned More/shell/navigation/Today/mailbox tests PASS.
+Serialized synthetic UI audit PASS:Today/Email FCP all<2s,LH13.5 performance99/96
+and accessibility100/100 both screens,nooverflow/errors. Exact-head full273 gate
+pending;NOT released. Safe numeric/screens in more-navigation-candidate.
+Main/live4676247e0fe remains verified,455items1+2 done(2/9),whole455 OPEN.
+Owned467 proof carried deliberately;no unrelated branches/work changed.454real
+owner key/firstupload/local routine pending separately;463 owner Notyet,no repeat
+question.456 deferred. Older candidate/release notes below are historical.
+
 2026-10-27 FINAL PR466 candidate d6b65b3b66024ccb7b16752d5423dcac2d03668e
 full40603196905/job122536158786 SUCCESS271/0/0,600s/file,all271 timings retained,
 job15m05s,sum843.38s NOTwall. DRAFT/UNMERGED/UNDEPLOYED,not feature live.
@@ -43,6 +55,29 @@ or production changes yet,no real credentials/devices/key/files/settings actions
 pending actions,not backlog-wide waits.455 item2+ and456 still deferred.
 
 ## Latest Run Summary
+
+2026-10-28 PR467/455item2 RELEASED/VERIFIED:main6247e0fe69f998bc24cf6e33f42e35b72c23f8fc
+fulltree identical testedff9434d. AutomaticRailway619e60c5-4dc3-44eb-9b02-a0b1cd912c5b
+Active/successful authoritativeDetails exactsource,no manualbuild/retry/settings.
+PR40662509285/job122728758033272/0/0,600s/file,13m21job,sum723.26s NOTwall.
+MAIN40664837512/job122736605750272/0/0,14m57job,sum837.74s NOTwall;all544
+rows retained. First3886 REAL271/1/0 kept;oldclassicHome journey intentionally
+updated for455nativeToday,remaining safety/source assertions retained,runtime
+unchanged and no failed-gate reuse. Public15 pinned1.44/Chromium1117true3sizes
+root/directapp/sharedPIN/no oldkeypad/private401no-store/health200/noauthtransfer.
+Exactmerge LOCAL sharedlogin/device/navigation3size/mail5size pass. Signeddirect
+Today->classicSettings->Email no secondlogin,ownmetadata0rows,readable1116source
+exactReply/Close in-memory match,classic19->1->BackLoading0->same19/nooverflow.
+First18char email was unreadable-text placeholder,not fullsource;second explicit
+opening verified readable text,no bodybatch. Retained oldclassic HTTP50209:33:09
+BEFORE new-source reload disclosed;currentjourney no new entry,otherappErrors0,
+NOT total-zero historical logs. Opaque BEFOREdisk source/cards/fields inspected.
+No real PIN/login/device/key/file/POST/import/Copy/send/settings/businesswrites.
+Proof docs/screens/2026-10-28-pr467-release.455items1+2 DONE,next455item3 single
+More entry when fullrelease+rollback budget returns;do NOT start release near
+ceiling.454ownerkey/firstupload/localroutine notactive;463ownerprotection Notyet,
+450blocked/456deferred/Claudeuntouched. Whole455/412/backlog notdone. Older467
+candidate text below historical. Preserve proof-only on closedbranch,no redeploy.
 
 2026-10-28 PR467 candidate3886ee3 full40660146565/job122720858009 REAL271/1/0,
 600s/file/all272timings retained,job12m50s,sum720.54s NOTwall. Existing real
