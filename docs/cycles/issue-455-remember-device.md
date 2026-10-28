@@ -1,5 +1,22 @@
 # Issue455 - Remember This Device
 
+## Released And Verified
+
+PR466/main38ea175b45dcb9dabc634debee36ec703996715d is tree-identical to
+testedd6b65b3. AutomaticRailwayc138421a-3205-40fa-8f8c-24d19fbaa87b
+Active/successful,authoritative Details exact source verified. PR271/0/0,
+MAIN40654964433/job122703655276271/0/0,600s/file,all542 rows retained;
+mainjob14m59s,sum836.34s NOTwall. Public pinned12 true1366/400/412 GET-only,
+health200/private devices+keys+snapshots401no-store and unchecked44px option.
+Actual signed own metadata0rows/controls,Today/Email/classicBack pass without
+real credential/settings/business writes. Positive v2 proof remains LOCAL
+same-source synthetic. Exact merged UI3size/mail5size and isolated integration
+pass;initial aggregate local attempt retained with cause not established,
+no product/assertion changes or unsupported flake claim. Proof and all timings:
+docs/screens/2026-10-28-pr466-release. No new deployment for proof-only commits.
+Only455item1 complete;455item2 next,whole455/backlog not complete. This release
+supersedes candidate hold wording below,which remains historical.
+
 ## Final Candidate Gate
 
 PR466 remains DRAFT/unmerged/undeployed. Exact remote tested product head
