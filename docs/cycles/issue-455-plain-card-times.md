@@ -66,3 +66,14 @@ main/deployment/read-only gates remain pending. No actual private capture:468 he
 disabled;only synthetic/public visual proof and signed DOM booleans are allowed
 until validated frame-bound masking. No real credential/privatefile/provider/
 settings/business actions. No full455item4 completion/percentage increase yet.
+
+Initial7c3f5d3 full40764426231/job123084632155 REAL272/2/0,all274 timings retained
+as initial-failed-timings.json,600s/file,14m51job,sum827.82s NOTwall. The two
+conversation-card tests still expected the old Oct8,12:27PM label. First honest
+correction updates unit/rendered expectations to Thu12:27PM for the fixture's
+four-day-old timestamp and pins ONLY the browser fixture clock to its existing
+payload today/now,so the test cannot age into failure. Adds an older conversation
+label assertion. ALL urgency/order/role/duplicate refs/link/escaping/no-source-
+inference/no-write/fixture-immutability assertions retained. Runtime product is
+unchanged;this is an owner-intended expectation/scaffolding gap,NOT flaky or an
+environment failure. A new exact-head full274 gate is required,not reuse of failure.

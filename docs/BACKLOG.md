@@ -1,5 +1,15 @@
 # Backlog
 
+2026-10-28 PR469 DRAFT/unmerged/undeployed:initial7c3f5d3 full40764426231/
+job123084632155 REAL272/2/0,all274timings retained,600s/file,14m51job,sum827.82s
+NOTwall. Both failures were old conversation-card date expectations. First
+test-only correction uses the owner rolling-week label and pins the UI fixture
+clock to its existing payload;ALL order/role/source/link/duplicate/no-write
+assertions retained. Both failed tests now PASS locally with pinned Chromium.
+Runtime dashboard/modules/server identical initialproduct;original3screen UI
+audit remains exact-product proof,not rerun/reusedfailedCI. New full274 required.
+Main/live46880660c6 unchanged. Item4A NOTreleased/item4 NOTcomplete/4553of9.
+
 2026-10-28 LOCAL455item4A shared card times candidate,NOTreleased. Currentmain/live
 46880660c6 unchanged. Existing shared timestamp readers use rolling7day weekday/
 time or older month/day/historicalyear;strictcalendar/UTC/future/source-date/
