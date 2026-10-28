@@ -15,8 +15,8 @@ function run() {
     assert.equal(model.days_in_recorded_stage, 2); assert.match(model.last_action, /Added to WholesaleOS - recorded by fixture-admin/);
     assert.equal(JSON.stringify(row), frozen);
     assert.equal(clock.formatTime(now, now), 'Mon 12:18 PM');
-    assert.equal(clock.formatTime('2026-10-03T19:18:00Z', now), 'Oct 3');
-    assert.equal(clock.formatTime('2025-10-03T19:18:00Z', now), 'Oct 3, 2025');
+    assert.equal(clock.formatTime('2026-10-03T19:18:00Z', now), 'Oct 3, 12:18 PM');
+    assert.equal(clock.formatTime('2025-10-03T19:18:00Z', now), 'Oct 3, 2025, 12:18 PM');
     assert.equal(clock.formatTime('2026-10-12T06:30:00Z', now), 'Sun 11:30 PM');
     const midnight = clock.reviewed({ ...row, closing_date: '2026-10-11', evaluation: { ...row.evaluation, deadline: '2026-10-11' } }, { ...context, now: '2026-10-12T06:30:00Z' });
     assert.equal(midnight.days_left, 0, 'owner calendar day, not UTC midnight');
@@ -48,7 +48,7 @@ function run() {
     const attack = clock.render({ ...model, stage: '<img src=x onerror=alert(1)>', next: '<script>alert(1)</script>', last_action: 'Recorded by <b>not markup</b>' });
     assert.ok(!attack.includes('<img') && !attack.includes('<script') && !attack.includes('<b>')); assert.ok(attack.includes('&lt;script&gt;'));
     assert.ok(!clock.render(model).includes('T19:18')); assert.equal(clock.reviewed(row, {}).days_left, null);
-    console.log('Reviewed deal clock: owner UTC-7 calendar, recent-week/older dates, recorded attribution, missing/future/ambiguous/wrong-origin dates, stage history, purity and escaping passed.');
+    console.log('Reviewed deal clock: owner UTC-7 calendar, same-week/older times, recorded attribution, missing/future/ambiguous/wrong-origin dates, stage history, purity and escaping passed.');
   } finally { global.fetch = oldFetch; Date.now = oldNow; }
 }
 if (require.main === module) run(); module.exports = { run };
