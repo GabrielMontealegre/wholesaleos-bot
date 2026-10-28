@@ -44,6 +44,15 @@ pending actions,not backlog-wide waits.455 item2+ and456 still deferred.
 
 ## Latest Run Summary
 
+2026-10-28 PR467 candidate3886ee3 full40660146565/job122720858009 REAL271/1/0,
+600s/file/all272timings retained,job12m50s,sum720.54s NOTwall. Existing real
+navigation journey assumed classic Home immediately after root;455item2 now
+intentionally opens nativeToday. First test correction updates ONLY entry/Home
+step to nativeToday->classicDeals,retains Email/Back/exactrecord/locked/nonadmin/
+no-write assertions. Product runtime unchanged;notflaky/environment/cancel and
+no reuse of failed gate. Draft/unmerged/undeployed,newheadfull272 required.
+Main/live46638ea175 remains verified. No real PIN/settings/business actions.
+
 2026-10-28 NEXT455item2 LOCAL candidate,notreleased:on item/455-one-login from
 verified466/main38ea175 plus ONLY owned proof. Same shared PIN renderer/submit
 lifecycle mounts on classic/native,old white keypad/global numeric handler

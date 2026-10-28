@@ -55,11 +55,13 @@ async function prove({ screenshots = false } = {}) {
     for (const width of [1366, 400, 412]) {
       await page.setViewportSize({ width, height: width === 1366 ? 768 : 915 });
       await page.goto(base + '/');
-      await page.locator('.desk-settings').waitFor();
-      assert.equal(page.url(), base + '/dashboard/', 'Browser root has one stable classic Home');
+      await page.locator('.ws-topbar h1').waitFor();
+      assert.equal(page.url(), base + '/app', 'Owner455item2 makes nativeToday the stable browser Home');
+      assert.equal(await page.locator('.ws-topbar h1').innerText(), 'Today');
       await shot('1-home', width);
-      await classicMenu(width);
-      await page.locator('.sidebar-nav .nav-item[onclick="navigate(\'todays_deals\',this)"]').click();
+      if (width < 901) await page.getByRole('button', { name: 'Open navigation', exact: true }).click();
+      await page.locator(width === 1366 ? '.ws-sidebar' : '#mobile-nav').getByRole('link', { name: 'Deals - classic view', exact: true }).click();
+      await page.locator('.desk-settings').waitFor();
       await page.locator('.td-card').first().waitFor();
       await shot('2-deals', width);
       await classicMenu(width);
@@ -92,7 +94,7 @@ async function prove({ screenshots = false } = {}) {
       assert.equal(await page.evaluate(() => APP.selectedLead), 'fixture-lead', 'Exact lead, not an arbitrary matching row, is selected');
       assert.notEqual(await page.evaluate(() => APP.page), 'todays_deals', 'Competing Deals bridge does not override the record');
       assert.equal(new URL(page.url()).searchParams.get('record_ref'), 'WOS-FL-1040');
-      report.push({ width, home: '/dashboard/', journey: 'Home > Deals > Email workspace > Deals > Back to Email', exact_record: 'WOS-FL-1040' });
+      report.push({ width, home: '/app', journey: 'Native Today > classic Deals > Email workspace > Deals > Back to Email', exact_record: 'WOS-FL-1040' });
     }
     const before = mailboxReads;
     authenticated = false;
@@ -106,7 +108,7 @@ async function prove({ screenshots = false } = {}) {
     assert.deepEqual(writes, []); assert.deepEqual(errors, []); assert.deepEqual(external, []);
     fixture.assertUnchanged();
     if (screenshots) fs.writeFileSync(path.join(dir, 'synthetic-proof.json'), JSON.stringify({ synthetic_only: true, report, writes, errors, external }, null, 2) + '\n');
-    console.log('workspace-navigation-journey: actual classic Home/Deals, explicit Email entry, native reader, Deals/Back, exact record and locked/non-admin negatives1366/400/412; zero writes/external/errors passed');
+    console.log('workspace-navigation-journey: nativeToday Home/classicDeals, explicit Email entry, native reader, Deals/Back, exact record and locked/non-admin negatives1366/400/412; zero writes/external/errors passed');
   } finally {
     if (browser) await browser.close();
     server.closeAllConnections();

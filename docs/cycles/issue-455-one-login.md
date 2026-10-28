@@ -54,3 +54,13 @@ link changes get a final affected-focused gate before one full272 dispatch.
 No backend/session/ledger/dependency/lock change. Rollback to verified466 needs
 no schema migration and retains the same issued credentials/revocation checks.
 Full272/currenthead/PR/merge/automaticexact/liveGET-only proof still pending.
+
+PR467 first3886ee3 full40660146565/job122720858009 completed271passed/1failed/
+0skipped,600s/file,all272 rows retained failed-3886-timings.json. Job12m50s,
+sum720.54s NOTwall. Existing workspace-navigation-journey still waited for
+classic .desk-settings immediately after root;owner455item2 intentionally opens
+nativeToday instead. First correction changes that entry assertion/step to
+nativeToday->existing classicDeals. All remaining explicit Email/Back/exact-record/
+locked/nonadmin/no-writes/source assertions are retained. Runtime product tree
+unchanged;not a flaky/environment/cancel claim and failed gate not reused.
+New exact-head full272 still required before merge. No production change.
