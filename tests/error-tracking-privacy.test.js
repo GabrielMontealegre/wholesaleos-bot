@@ -9,6 +9,9 @@ const keyFixture=require('../modules/records/assistant-upload-keys').createKey({
 const keyEvent={message:keyFixture.key,request:{headers:{authorization:keyFixture.key},data:keyFixture.store},extra:keyFixture.store,contexts:keyFixture.store,user:keyFixture.store};
 const keyOutput=JSON.stringify(privacy.sanitizeEvent(keyEvent));
 assert.ok(!keyOutput.includes(keyFixture.key));assert.ok(!keyOutput.includes(keyFixture.store.assistant_upload_keys[0].secret_sha256));assert.ok(!keyOutput.includes('assistant_upload_keys'));
+const deviceEvent={message:'SYNTHETIC_DEVICE_COOKIE',request:{headers:{cookie:'SYNTHETIC_DEVICE_COOKIE'},data:{remembered_devices:[{token_sha256:'SYNTHETIC_DEVICE_HASH'}]}},extra:{remembered_devices:[{token_sha256:'SYNTHETIC_DEVICE_HASH'}]},contexts:{remembered_devices:[]}};
+const deviceOutput=JSON.stringify(privacy.sanitizeEvent(deviceEvent));
+for(const value of ['SYNTHETIC_DEVICE_COOKIE','SYNTHETIC_DEVICE_HASH','remembered_devices'])assert.ok(!deviceOutput.includes(value));
 for(const secret of secrets)assert.ok(!out.includes(secret));
 assert.equal(JSON.stringify(event),before);assert.equal(clean.exception.values[0].type,'Error');
 const hint={attachments:[{filename:'private.txt',data:raw}]};privacy.sanitizeEvent(event,hint);assert.deepEqual(hint.attachments,[]);

@@ -25,4 +25,5 @@
   new MutationObserver(()=>{if((ready||reveal||controllers.size)&&!document.querySelector('#assistant-upload-settings'))clear();}).observe(document.body,{childList:true,subtree:true});
   const signout=root.signOutDashboard;if(signout)root.signOutDashboard=function(){clear();return signout.apply(this,arguments);};
   root.addEventListener('pagehide',clear);document.addEventListener('visibilitychange',()=>{if(document.hidden){clear();paint();}else if(document.querySelector('#assistant-upload-settings'))load();});
+  root.addEventListener('wos:session-ended',function(){clear();paint();});
 })(window);

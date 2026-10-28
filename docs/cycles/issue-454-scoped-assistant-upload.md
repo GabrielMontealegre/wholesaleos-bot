@@ -1,5 +1,42 @@
 # D064 Scoped Assistant Upload
 
+## Engineering Release Verified 2026-10-27
+
+PR465 actualmain45da4ac36c79ce4c560429698d52685d04293a16 identical complete
+tested9b39c00 tree. PR267/0/0 and MAIN267/0/0,600s/file,all534timing rows retained.
+AutomaticRailway9e867208-8538-41c5-8335-a621493b3f5d Active/successful EXACT
+source via authoritativeDetails;no manualbuild/retry/settings. Approved435
+publictrue3sizes/health/unsigned401/privatekey401no-store + exactmerged
+Settings3size/CLI/keyPOST/mail5size + actualsignedGETSettings/caps/Today/Email/
+classicBack PASS. No realkey/privatefile/productionPOST/import/download/send/
+settings/businesswrite. See docs/screens/2026-10-27-pr465-release for allproof,
+wall-vs-sum times and honest browser-log coverage. Earlier draft/failure sections
+below are HISTORICAL,not current runtime. Owner privately creating/saving key and
+first real upload/local routine remain separate/pending;454OPEN,455next/456deferred.
+
+## Latest Draft Checkpoint 2026-10-27
+
+PR465 DRAFT/UNMERGED/UNDEPLOYED,remote9b39c0094ac25b6ada4e4772d150ff8f09c1910a.
+Automatic full40549445436/job122348884532 in progress at17:27Z;expected267 files,
+600s/file,every file must be accounted0fail0skip. No duplicate dispatch/retry.
+Current main/live remains verified464/a2dc46e. No local jobs or real key/import.
+
+Final serialized exact-product audit now PASS:before FCP659.8/327.6/374.5ms,
+after398.3/236.6/204.5ms;desktop/phone performance97/100,accessibility94/94,
+no overflow/runtime errors/audit errors. Updated external harness preserves null
+scores and records only value-free error IDs;no overlapping local tests during
+this one controlled diagnostic. Earlier concurrent76/97 remains retained in
+failed report,not relabeled passed or discarded. No threshold/product change
+was used to obtain this result. All measurements SYNTHETIC,not live claims.
+Source safety/functional review complete;full267 gate/release review/currentmain/
+automatic exact deployment/read-only proof still required. Do not mark ready or
+merge until exact head is green and release AND rollback reserve is available.
+
+Owned final numeric proof/docs are retained in a LOCAL proof-only commit atop
+the tested remote product;do not push docs-only CI churn or mistake local proof
+HEAD for the tested product head. After actual merge,carry only owned proof onto
+that real merge deliberately.454 staysOPEN,455/456deferred;no new owner question.
+
 ## Integrated Local Candidate 2026-10-27
 
 This section supersedes the historical unwired checkpoints below. Main/live

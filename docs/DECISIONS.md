@@ -1,5 +1,15 @@
 # Decisions
 
+ASSUMED:455 item1 uses opt-in fixed30day version2 device cookies,hash-only private
+revocation records and current canonical credential binding. Generic and old
+45da4ac verifiers reject version2,so rollback cannot bypass revocation. Explicit
+unchecked new PIN forms use browser-session cookies with renewal preserving that
+choice;clients omitting the option retain existing14day behavior. Separate login
+UUID replay identity never extends expiry;server eligibility remains authoritative.
+No fingerprint/raw credential storage or credential-writer rewrite. Native/classic
+login consolidation belongs to455 item2,not this PR. Owner close-window cause not
+reproduced. --455 item1,AGENTS conservative additive safety--2026-10-27.
+
 ASSUMED:D064 upload credential is accepted ONLY by the existing private snapshot
 POST with its dedicated custom header;Cookie/Origin/Authorization mixtures reject,
 never fall back to signed admin. Key identity never becomes req.currentUser.

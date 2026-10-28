@@ -69,7 +69,12 @@ async function request(base, method, route, options = {}) {
   let expectedKeyRows = syntheticKeyRows;
   const syntheticKeyHash = syntheticKey.store.assistant_upload_keys[0].secret_sha256;
   const syntheticKeyId = syntheticKey.store.assistant_upload_keys[0].id;
-  fs.writeFileSync(dbPath, JSON.stringify(syntheticKey.store));
+  const deviceHelper = require('../modules/security/remembered-devices');
+  const syntheticDevice = deviceHelper.issueDevice(syntheticKey.store, { id: 'admin', role: 'admin' }, { secret, now: Date.now() - 60000, nonce: deviceHelper.nonceForLogin('admin', '33333333-3333-4333-8333-333333333333') });
+  const syntheticDeviceRows = JSON.stringify(syntheticDevice.store.remembered_devices);
+  const syntheticDeviceHash = syntheticDevice.store.remembered_devices[0].token_sha256;
+  const syntheticDeviceId = syntheticDevice.store.remembered_devices[0].id;
+  fs.writeFileSync(dbPath, JSON.stringify(syntheticDevice.store));
   const child = childProcess.spawn(process.execPath, ['server.js'], {
     cwd: root,
     env: Object.assign({}, process.env, {
@@ -170,6 +175,7 @@ async function request(base, method, route, options = {}) {
       assert.ok(!JSON.stringify(projected.body).includes(syntheticKeyId), 'Private key identity is not serialized by ' + publicProjection);
       assert.ok(!JSON.stringify(projected.body).includes(syntheticKey.key), 'Synthetic credential is not serialized by ' + publicProjection);
       assert.ok(!JSON.stringify(projected.body).includes('assistant_upload_keys'), 'Private collection is not serialized by ' + publicProjection);
+      for (const sentinel of [syntheticDevice.token, syntheticDeviceHash, syntheticDeviceId, 'remembered_devices']) assert.ok(!JSON.stringify(projected.body).includes(sentinel), 'Private device record is not serialized by ' + publicProjection);
     }
 
     const managementPath = '/api/dashboard/assistant-upload-keys';
@@ -275,6 +281,8 @@ async function request(base, method, route, options = {}) {
     assert.strictEqual(JSON.parse(fs.readFileSync(dbPath, 'utf8')).assistant_snapshots.length, 2, 'Existing canonical writers preserve both manual and key-import history');
     assert.ok(JSON.stringify(JSON.parse(fs.readFileSync(dbPath, 'utf8')).assistant_upload_keys) === expectedKeyRows, 'Existing canonical writers preserve hash-only key records');
     assert.ok(!output.includes(syntheticKey.key) && !output.includes(syntheticKeyHash) && !output.includes(syntheticKeyId), 'Server logs omit synthetic upload credentials/hashes/identities');
+    assert.strictEqual(JSON.stringify(JSON.parse(fs.readFileSync(dbPath, 'utf8')).remembered_devices), syntheticDeviceRows, 'Canonical writers preserve private remembered-device history');
+    assert.ok(!output.includes(syntheticDevice.token) && !output.includes(syntheticDeviceHash) && !output.includes(syntheticDeviceId), 'Server logs omit synthetic remembered-device credentials/hashes/identities');
     console.log(`api-session-gate: ok (${registrations.length} API registrations behind the gate)`);
   } finally {
     child.kill();

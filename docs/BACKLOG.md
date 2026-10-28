@@ -1,6 +1,61 @@
 # Backlog
 
+2026-10-27 PR466 DRAFT/unmerged/undeployed:initial8861a5d full40600660469/
+job122527652316 completed269/2/0,all271 timings retained,600s/file,15m10sjob,
+sum852.30s NOTwall. All4 new remember-device tests PASS;existing shell/Today
+single-stylesheet guards caught the extra native CSS dependency. First actual
+fix preserves those original assertions:classic-only device CSS,native existing
+ws-check/design-system CSS13/app9. Both failed tests+actual signed-server UI
+PASS locally;corrected-native before/after FCP34.9/32.6/34.3ms,performance100/
+access100 PASS,synthetic NOTlive. New exact-source full271/release proof pending;
+do not rerun unchanged8861/reuse its failed gate. Main/live46545da4ac unchanged,
+no real PIN/device/key/settings/business writes. Budget reserve required before
+any merge;455.1 remains in progress,455.2+ and456 deferred,owner463Notyet separate.
+
+2026-10-27 LOCAL455 item1 candidate,NOT released:on item/455-remember-device
+from verified45da4ac plus owned465 proof only. Actual opt-in30day hash-only
+remembered-device ledger,strict current-user/credential-bound verification,
+own Settings revocation/logout,unchecked PIN controls and browser-session optout
+implemented. Focused actual server/privacy/legacy/key Settings and pinned browser
+restart/3size+shortdesktop/own revocation/session-loss/late-dialog safety PASS.
+Visual contrast corrected;serialized before/after FCP<2s for all3screens/3sizes,
+Lighthouseperformance100/100 each/access91classic,100native,98Settings PASS,
+synthetic NOTlive. Full271/currenthead/merge/main/exactautomaticdeploy/approved
+read-only proof still pending. No455PR
+or production changes yet,no real credentials/devices/key/files/settings actions.
+454 owner key/firstupload/routine and463 owner GitHub protection remain separate
+pending actions,not backlog-wide waits.455 item2+ and456 still deferred.
+
 ## Latest Run Summary
+
+2026-10-27 PR465 ENGINEERING RELEASED/VERIFIED:main45da4ac identical tested9b39c00,
+automaticRailway9e867208-8538-41c5-8335-a621493b3f5d Active/successful exactDetails.
+PR40549445436/job122348884532267/0/0,600s/file,15m19job,sum851.28s NOTwall;
+MAIN40558101945/job122379491627267/0/0,10m35job,sum579.30s NOTwall,allrowsretained.
+Public12true3sizes/health200/unsignedidentity401/privatekeyGET401no-store;
+same-source Settings3size/CLI/keyPOST/mail5size synthetic PASS. Actual signed
+Settings0keys/Createenabled/emptyclosedreveal;GETcapsvalid/latestABSENT;Today
+chooser/recordedwork,Email49rows/full8509body/emptyReplydisabled/finalGmail/Close,
+classic19->1->BackLoading0->SAME19/0/nooverflow PASS. Browser control interruption
+recovered fresh SAMEbrowser;earlier tab logs unavailable,only retained classic
+applicationerrors0 claimed. Source/fields opaque BEFOREdisk. NO realkey/file/
+upload/import/POST/download/send/settings/businesswrites. Final synthetic
+performance97/100/access94/94 NOTlive;earlier failures retained. Proof/all267+267
+timings docs/screens/2026-10-27-pr465-release.454 owner privatekey/firstrealupload/
+routine integration remainsOPEN,not a phone gate or whole-backlog wait;455next,
+456deferred,463GitHubownerclickseparate. No new deployment for proof-only branch.
+
+2026-10-27 PR465 scoped uploader DRAFT/UNMERGED/UNDEPLOYED remote9b39c00,
+automatic full40549445436/job122348884532 in progress17:27Z,expected267/600s-file.
+No duplicate dispatch. Final serialized exact-product Settings audit PASS:
+FCP398.3/236.6/204.5ms,performance97/100/access94/94,no runtime/audit errors.
+Earlier concurrent76/97 report retained,not relabeled passed;harness now preserves
+null scores/value-free error IDs and benchmark ran without overlapping tests.
+All synthetic,NOT live. Functional/auth/CLI/rollback negatives pass;main/live464
+unchanged. Owned final proof LOCAL-only atop tested remote,do not push docs-only
+CI churn or mistake proofHEAD for product. Fullgate/actual release proof still
+required;no realkey/file/upload/import/POST/settings/business writes or new owner
+question.454OPEN,455/456deferred,463owner GitHub click separate.
 
 2026-10-27 D064/454 LOCAL integrated scoped uploader candidate,NOT released:
 SAME owned branch now wires actual signed-admin create/list/revoke and narrow

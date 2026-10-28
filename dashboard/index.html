@@ -10,6 +10,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/dashboard/wos-marketplace.css?v=4">
 <link rel="stylesheet" href="/dashboard/wos-desk-shell.css?v=4">
+<link rel="stylesheet" href="/dashboard/wos-remember-devices.css?v=1">
 <style>
 /* ── Reset & Base ── */
 *{box-sizing:border-box;margin:0;padding:0}
@@ -296,6 +297,7 @@ tr.selected td{background:#f0f6ff}
     <div class="pin-dot" id="dot2"></div>
     <div class="pin-dot" id="dot3"></div>
   </div>
+  <label class="wos-remember-choice" for="remember-device"><input id="remember-device" type="checkbox" autocomplete="off"><span>Remember this device for 30 days</span></label>
   <div class="pin-pad">
     <button class="pin-btn" onclick="pinPress(1)">1</button>
     <button class="pin-btn" onclick="pinPress(2)">2</button>
@@ -424,7 +426,7 @@ tr.selected td{background:#f0f6ff}
 <!-- Toast container -->
 <div class="toast-container" id="toast-container"></div>
 
-<script src="/dashboard/wos-dashboard-auth.js?v=2"></script>
+<script src="/dashboard/wos-dashboard-auth.js?v=3"></script>
 <script>
 
 window.regionalMode = window.regionalMode || function () {
@@ -503,6 +505,7 @@ function save(key, data) {
 //  PIN SYSTEM
 // ══════════════════════════════════════════════════════════
 function pinPress(key) {
+  if (APP.loginPending || APP.unlocked) return;
   if (key === 'x') {
     APP.pinInput = APP.pinInput.slice(0, -1);
   } else if (key === 'ok') {
@@ -524,9 +527,11 @@ function updatePinDots() {
 
 async function checkPin() {
   const pin = APP.pinInput;
-  if (!pin || pin.length < 4) return;
-  const result = await window.WOSDashboardAuth.authenticate(pin);
-  if (result.ok && unlockDashboardUser(result.user)) return;
+  if (!pin || pin.length < 4 || APP.loginPending || APP.unlocked) return;
+  APP.loginPending = true;
+  try {
+  const result = await window.WOSDashboardAuth.authenticate(pin, { remember_device: document.getElementById('remember-device').checked });
+  if (result.ok && unlockDashboardUser(result.user)) { APP.pinInput = ''; updatePinDots(); return; }
   
   // Wrong PIN
   const errEl = document.getElementById('pin-error');
@@ -536,6 +541,7 @@ async function checkPin() {
   APP.pinInput = '';
   updatePinDots();
   setTimeout(function() { if (errEl) errEl.textContent = ''; }, 2000);
+  } finally { APP.loginPending = false; }
 }
 
 function showDashboardLogin(message) {
@@ -572,8 +578,8 @@ async function restoreDashboardSession() {
 }
 
 async function signOutDashboard() {
-  await window.WOSDashboardAuth.logout(APP);
-  showDashboardLogin('Signed out.');
+  const result = await window.WOSDashboardAuth.logout(APP);
+  showDashboardLogin(result.ok ? 'Signed out.' : 'Signed out here. Device revocation could not be confirmed. Sign in to review remembered devices.');
 }
 
 // Keyboard PIN input
@@ -29223,6 +29229,7 @@ function wosRealPullState(stateCode, cardEl) {
 <script src="/dashboard/wos-pipeline-report-review.js?v=1"></script>
 <script src="/dashboard/workspace/navigation.js?v=2"></script>
 <link rel="stylesheet" href="/dashboard/wos-assistant-upload-settings.css?v=1">
-<script src="/dashboard/wos-assistant-upload-settings.js?v=1"></script>
+<script src="/dashboard/wos-assistant-upload-settings.js?v=2"></script>
+<script src="/dashboard/wos-remember-devices.js?v=1"></script>
 </body>
 </html>
