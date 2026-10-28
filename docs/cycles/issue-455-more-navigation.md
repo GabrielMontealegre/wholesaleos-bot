@@ -1,5 +1,50 @@
 # Issue455 Item3 - More Navigation
 
+## Released And Verified
+
+PR468/main80660c6c0272b02feefbf2822a74370bed3cfecd complete tree identical
+testedfbf7ae39. AutomaticRailway9f55d8ff-5790-4a49-8d1a-b61b2eddceb3 Active/
+successful;authoritative Details exact80660c6 source link verified,no manual
+build/retry/settings. PR40709743777/job122891456333 SUCCESS273/0/0,600s/file,
+15m41job,sum864.76s NOTwall;MAIN40712746643/job122902111868 SUCCESS273/0/0,
+16m39job,sum907.67s NOTwall. All546 timing rows retained;newMore12.65s/12.78s.
+
+Public15 pinnedPW1.44/Chromium1117 true1366/400/412/root/classic/Email/Today/
+directapp/health200/unsignedidentity401/private snapshot+keys+devices401no-store,
+no authentication transfer or writes. ExactMERGED synthetic five-file focused
+set PASS:More8cases/shell/navigation3size/Today/mailbox5size. Existing current
+signedChrome1280x529:Today primary2links+More,exact7fixedtoolnames/one44pxX/
+X+Escape/focusreturn/nooverflow,More->classicSettings without login,ownmetadata
+0keys/0devices/Createenabled/closedemptyreveal. No key/device/settings action.
+Today chooser enabled/hiddenemptyfile/hiddenDisabledImport and recorded work
+visible. Email48rows,one explicitly opened readable2741char source,blank reply
+body/PreviewEditSenddisabled/fieldsfit/Close exact SAME-locator in-memory match;
+private comparison cleared. Source-prefilled recipient/subject fields are NOT
+called empty. Unsupported control tooltip is on the existing wrapper,not Send.
+More opens in Email. Classic19->1->Back transient0->19/0loading/0open,nooverflow.
+The immediate pre-hydration comparison was cleared;later19 is a count claim,
+NOT all-record identity proof. Exact identities remain covered synthetically.
+Fresh tab error logs:4chrome-extension errors,0application errors;NOT total0.
+
+### Capture Incident
+
+One Email More screenshot was taken from a stale browser frame:the DOM modal
+rectangle did not match the captured pixels and private email content was shown
+in the chat. Its agent-created uncommitted local image was immediately deleted,
+never staged/pushed or used as proof. The unsafe helper was disabled;no further
+private Email/Classic screenshots were attempted. This is a capture/redaction
+failure,NOT an application navigation failure;rolling back product code would
+not repair the capture mismatch. Retained signed Today/More/Settings/reply images
+were inspected and contain only static controls on opaque backgrounds. Public
+and synthetic screenshots remain the three-size visual proof. Do not claim every
+capture attempt was safe. Future private captures require a validated frame-bound
+mask;use DOM booleans plus approved public/same-source synthetic proof meanwhile.
+
+Safe retained proof/all546timings:docs/screens/2026-10-28-pr468-release.
+No real PIN/key/device/privatefile/import/POST/Copy/telSMS/check/drafttyping/
+PreviewSend/settings/business writes.455items1-3 done(3/9);455item4 plain dates
+next,456 deferred,whole455/backlog OPEN. This supersedes candidate text below.
+
 Local candidate from verified main6247e0fe,not released. Only owned467 proof
 carried deliberately.455items1+2 remain live;items4+ and456 are not bundled.
 

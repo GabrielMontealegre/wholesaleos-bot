@@ -1,5 +1,24 @@
 # Backlog
 
+2026-10-28 PR468 RELEASED/VERIFIED main80660c6c0272b02feefbf2822a74370bed3cfecd,
+complete tree identical testedfbf7ae39. AutomaticRailway9f55d8ff-5790-4a49-8d1a-
+b61b2eddceb3 exactsource Active/successful,Details verified;no manual settings.
+PR40709743777/job122891456333273/0/0,15m41job,sum864.76s NOTwall;MAIN40712746643/
+job122902111868273/0/0,16m39job,sum907.67s NOTwall,600s/file,all546timings retained.
+Single More/plain7tools shipped;Today/Email/native current keys and all classic
+roles/routes/Back preserved. Public pinned3size15cases/health200/private401,
+sameMERGED More/shell/navigation/Today/mailbox focused proof and actual signed
+GET-only More/X/Escape/Settings/Today/sourceReplyClose/classicBack pass. No real
+credential/settings/business writes. One stale Email capture escaped masking and
+was displayed in chat;local file deleted before staging and helper disabled.
+See explicit capture incident in issue-455-more-navigation trace;retained proof
+excludes that image. No further private screenshots until frame-bound masking
+is validated. This is not an app regression or claim every capture was safe.
+455items1-3 DONE(3/9,33%);next separate item4 plain dates when full release AND
+rollback reserve permits. Whole455/412/backlog OPEN;454realownerkey/firstupload/
+localroutine pending separately/already asked,463Notyet/450blocked/456deferred.
+New release summary supersedes older candidate notes below.
+
 2026-10-28 LOCAL455item3 candidate:Today/Email plus one visible More entry for
 seven existing tools,plain names,no Classic view navigation labels. Same fixed
 classic destinations/roles/Back/record behavior;no backend/auth/data writes or

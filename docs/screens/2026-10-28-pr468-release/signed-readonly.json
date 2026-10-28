@@ -1,0 +1,108 @@
+{
+  "today": {
+    "chooserEnabled": true,
+    "importDisabled": true,
+    "importHidden": true,
+    "openRecorded": true,
+    "overflow": false,
+    "pickerEmpty": true,
+    "pickerHidden": true,
+    "recordedVisible": true
+  },
+  "more": {
+    "exactSevenDestinations": true,
+    "oneDialog": true,
+    "oneClose": true,
+    "allControls44": true,
+    "noClassicLabels": true,
+    "escape": {
+      "closed": true,
+      "focusReturned": true
+    },
+    "xClosed": true
+  },
+  "settings": {
+    "createEnabled": true,
+    "devicePanel": true,
+    "deviceRefreshEnabled": true,
+    "deviceRows": 0,
+    "keyPanel": true,
+    "keyRevealClosed": true,
+    "keyRevealEmpty": true,
+    "keyRows": 0,
+    "overflow": false
+  },
+  "email": {
+    "bodyLength": 0,
+    "defaultComposer": false,
+    "morePresent": true,
+    "overflow": false,
+    "placeholder": false,
+    "rows": 48,
+    "body": {
+      "length": 2741,
+      "placeholder": false
+    },
+    "reply": {
+      "buttons": [
+        {
+          "disabled": true,
+          "name": "Preview reply"
+        },
+        {
+          "disabled": true,
+          "name": "Edit reply"
+        },
+        {
+          "disabled": true,
+          "name": "Send"
+        }
+      ],
+      "composer": true,
+      "empty": false,
+      "fieldsFit": true,
+      "overflow": false,
+      "bodyEmpty": true,
+      "finalUnavailable": false
+    },
+    "sourceUnchanged": true,
+    "more": {
+      "oneDialog": true,
+      "overflow": false,
+      "sevenLinks": true
+    },
+    "unavailableControlsPresent": true
+  },
+  "captureNote": "One stale Email modal capture did not match the DOM mask;the uncommitted local image was removed and excluded from proof.No further private Email/Classic screenshots were taken.",
+  "classic": {
+    "before": {
+      "cards": 19,
+      "loading": 0,
+      "overflow": false
+    },
+    "open": {
+      "backVisible": true,
+      "cards": 1,
+      "open": 1,
+      "overflow": false
+    },
+    "after": {
+      "cards": 0,
+      "loading": 0,
+      "open": 0,
+      "overflow": false
+    },
+    "sameRecords": false,
+    "afterHydration": {
+      "cards": 19,
+      "loading": 0,
+      "open": 0,
+      "overflow": false
+    },
+    "identityNote": "Immediate post-Back sample was before hydration and comparison was cleared;later19-card count is not an all-record identity assertion.Exact record identity remains covered by same-source synthetic journeys."
+  },
+  "console": {
+    "errors": 4,
+    "extensionErrors": 4
+  }
+}
