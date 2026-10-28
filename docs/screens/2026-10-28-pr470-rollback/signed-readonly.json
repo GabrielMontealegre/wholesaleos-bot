@@ -1,0 +1,72 @@
+{
+  "privateScreenshotsTaken": 0,
+  "privateSourceReads": 0,
+  "authTransfer": false,
+  "today": {
+    "chooserEnabled": true,
+    "importDisabled": true,
+    "importHidden": true,
+    "oldClockTag": true,
+    "oneMore": true,
+    "overflow": false,
+    "pickerEmpty": true,
+    "pickerHidden": true,
+    "primaryLinks": 2
+  },
+  "more": {
+    "oneDialog": true,
+    "open": true,
+    "sevenTools": true
+  },
+  "settings": {
+    "createEnabled": true,
+    "devices": 0,
+    "keys": 0,
+    "overflow": false,
+    "panel": true,
+    "priorClassicClock": true,
+    "revealClosed": true,
+    "revealEmpty": true
+  },
+  "email": {
+    "defaultComposer": false,
+    "morePresent": true,
+    "oldClockTag": true,
+    "overflow": false,
+    "rows": 49,
+    "toolDiagnosticIncident": "A private excerpt was automatically included in a locator-timeout diagnostic;no private-content locator calls will be retried.No excerpt is copied into proof files.",
+    "sourceComparison": "Not performed;exact source preservation is synthetic-only.Live checks are length/count/boolean only.",
+    "current": {
+      "bodyLength": 2749,
+      "composer": false,
+      "overflow": false
+    }
+  },
+  "classic": {
+    "before": {
+      "cards": 19,
+      "open": 0,
+      "overflow": false
+    },
+    "open": {
+      "backVisible": true,
+      "cards": 1,
+      "open": 1,
+      "overflow": false
+    },
+    "afterImmediate": {
+      "cards": 0,
+      "loading": 0,
+      "open": 0,
+      "overflow": false
+    },
+    "afterHydration": {
+      "cards": 19,
+      "loading": 0,
+      "open": 0,
+      "overflow": false
+    },
+    "identityClaim": "Counts only;no private record IDs were read or compared.Exact record identity is synthetic-only."
+  },
+  "privateLocatorPolicy": "After automatic content in a timeout diagnostic,only fixed GET routes,static command selectors and global boolean/count evaluations were used.No content-bearing locators,private AX or screenshots."
+}
