@@ -60,7 +60,8 @@ async function prove({ screenshots = false } = {}) {
       assert.equal(await page.locator('.ws-topbar h1').innerText(), 'Today');
       await shot('1-home', width);
       if (width < 901) await page.getByRole('button', { name: 'Open navigation', exact: true }).click();
-      await page.locator(width === 1366 ? '.ws-sidebar' : '#mobile-nav').getByRole('link', { name: 'Deals - classic view', exact: true }).click();
+      await page.locator(width === 1366 ? '.ws-sidebar' : '#mobile-nav').getByRole('button', { name: 'More', exact: true }).click();
+      await page.locator('#more-tools').getByRole('link', { name: 'Deals', exact: true }).click();
       await page.locator('.desk-settings').waitFor();
       await page.locator('.td-card').first().waitFor();
       await shot('2-deals', width);
@@ -81,7 +82,8 @@ async function prove({ screenshots = false } = {}) {
       await shot('4-native-email', width);
       if (width < 901) await page.getByRole('button', { name: 'Open navigation', exact: true }).click();
       const scope = page.locator(width === 1366 ? '.ws-sidebar' : '#mobile-nav');
-      await scope.getByRole('link', { name: 'Deals - classic view', exact: true }).click();
+      await scope.getByRole('button', { name: 'More', exact: true }).click();
+      await page.locator('#more-tools').getByRole('link', { name: 'Deals', exact: true }).click();
       await page.locator('.td-card').first().waitFor();
       assert.equal(new URL(page.url()).searchParams.get('workspace'), 'deals');
       await shot('5-return-deals', width);

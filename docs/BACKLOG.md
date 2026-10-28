@@ -1,5 +1,17 @@
 # Backlog
 
+2026-10-28 LOCAL455item3 candidate:Today/Email plus one visible More entry for
+seven existing tools,plain names,no Classic view navigation labels. Same fixed
+classic destinations/roles/Back/record behavior;no backend/auth/data writes or
+native Deals. Focused pinned More/shell/navigation/Today/mailbox tests PASS.
+Serialized synthetic UI audit PASS:Today/Email FCP all<2s,LH13.5 performance99/96
+and accessibility100/100 both screens,nooverflow/errors. Exact-head full273 gate
+pending;NOT released. Safe numeric/screens in more-navigation-candidate.
+Main/live4676247e0fe remains verified,455items1+2 done(2/9),whole455 OPEN.
+Owned467 proof carried deliberately;no unrelated branches/work changed.454real
+owner key/firstupload/local routine pending separately;463 owner Notyet,no repeat
+question.456 deferred. Older candidate/release notes below are historical.
+
 2026-10-27 FINAL PR466 candidate d6b65b3b66024ccb7b16752d5423dcac2d03668e
 full40603196905/job122536158786 SUCCESS271/0/0,600s/file,all271 timings retained,
 job15m05s,sum843.38s NOTwall. DRAFT/UNMERGED/UNDEPLOYED,not feature live.

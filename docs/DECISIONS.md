@@ -1,5 +1,12 @@
 # Decisions
 
+ASSUMED:455item3 keeps Today and Email as native primary destinations and
+groups all seven existing non-native tools,including Settings,under one visible
+More entry. More uses the existing dialog/component/icon/navigation contracts;
+it does not rebuild Deals or add backend/auth/data authority. Classic routes and
+their role checks remain unchanged. Full-height mobile navigation and other455
+items are separate. --Owner455item3,AGENTS additive consistency--2026-10-28.
+
 ASSUMED:455item2 uses one shared PIN renderer and submit lifecycle on existing
 classic/native entry URLs,not a new authentication endpoint or return-URL router.
 This preserves exact classic tool destinations and user/admin restrictions while

@@ -14,21 +14,23 @@
   ];
 
   function navigation() {
-    return '<nav class="ws-nav" aria-label="Main navigation">' + groups.map(function (group) {
+    return '<nav class="ws-nav" aria-label="Main navigation"><section class="ws-nav-group">' +
+      '<h2>Today</h2>' + groups[0][1].map(function (item) { return link(item[0], item[1], item[2], item[3]); }).join('') +
+      '</section>' + c.button({ label: 'More', icon: 'menu' }).replace('<button ', '<button data-open-more aria-haspopup="dialog" aria-controls="more-tools" title="More" ').replace('class="ws-button ', 'class="ws-button ws-nav-more ') + '</nav>';
+  }
+
+  function moreNavigation() {
+    return '<nav class="ws-nav" aria-label="More tools">' + groups.slice(1).map(function (group) {
       return '<section class="ws-nav-group"><h2>' + c.escape(group[0]) + '</h2>' + group[1].map(function (item) {
         return link(item[0], item[1], item[2], item[3]);
       }).join('') + '</section>';
-    }).join('') + '</nav>';
+    }).join('') + link('settings', 'Settings', 'settings', 'Settings') + '</nav>';
   }
 
-  // Screens not rebuilt yet open their classic view; the label says so before the click (#429).
   function link(key, label, icon, help) {
-    var classic = nav.isClassic(key);
     return '<a href="' + nav.navHref(key) + '"' +
       (key === screen ? ' aria-current="page"' : '') +
-      (classic ? ' aria-label="' + c.escape(label + ' - classic view') + '"' : '') +
-      ' data-help="' + c.escape(classic ? help + '. Opens the classic view, which looks different until this screen is rebuilt.' : help) + '">' +
-      c.icon(icon) + '<span>' + c.escape(label) + '</span>' + (classic ? '<small class="ws-nav-note" aria-hidden="true">Classic view</small>' : '') + '</a>';
+      ' data-help="' + c.escape(help) + '">' + c.icon(icon) + '<span>' + c.escape(label) + '</span></a>';
   }
 
   function clearPrivate() {
@@ -61,16 +63,36 @@
       c.button({ label: 'Open navigation', icon: 'menu', iconOnly: true, id: 'menu-open' }).replace('ws-button--icon', 'ws-button--icon ws-mobile-menu') +
       '<h1' + (screen === 'email' ? ' class="ws-sr-only"' : '') + '>' + (screen === 'email' ? 'Email' : 'Today') + '</h1>' +
       (screen === 'email' ? '<form class="ws-mail-search" role="search"><label class="ws-sr-only" for="mail-search">Search loaded mail</label>' + c.icon('search') + '<input id="mail-search" type="search" maxlength="300" placeholder="Search loaded mail" autocomplete="off" title="Searches the messages currently loaded; global mail, lead and buyer search is not connected"></form>' : '') + '<div class="ws-topbar-actions">' + c.button({ label: screen === 'email' ? 'Refresh email' : 'Refresh recorded work', icon: 'refresh-cw', iconOnly: true, id: 'refresh', help: 'Reload recorded work without running a batch' }) +
-      '<a class="ws-button ws-button--icon" href="' + nav.navHref('settings') + '" aria-label="Settings - classic view" data-help="Open your current settings in the classic view">' + c.icon('settings') + '</a>' +
       c.button({ label: 'Account', icon: 'users', iconOnly: true, id: 'account-open' }) +
       '</div></header><div class="ws-help" id="help"' + (screen === 'email' ? ' hidden' : '') + '></div><main class="ws-content" id="today-content" aria-busy="true">' +
       c.skeleton('Loading recorded work') + '</main></div></div>' +
-      c.drawer('mobile-nav', 'Navigation') + c.drawer('account', 'Account') + c.drawer('detail', 'Record');
-    var mobile = document.getElementById('mobile-nav'), account = document.getElementById('account');
+      c.drawer('mobile-nav', 'Navigation') + c.drawer('more-tools', 'More') + c.drawer('account', 'Account') + c.drawer('detail', 'Record');
+    var mobile = document.getElementById('mobile-nav'), account = document.getElementById('account'), moreNode = document.getElementById('more-tools');
+    moreNode.classList.add('ws-more-tools');
     mobile.querySelector('[data-dialog-body]').innerHTML = navigation();
+    moreNode.querySelector('[data-dialog-body]').innerHTML = moreNavigation();
     if (screen === 'email') host.querySelectorAll('[data-help]').forEach(function (element) { element.title = element.dataset.help; });
-    account.querySelector('[data-dialog-body]').innerHTML = '<p>Admin session</p><a class="ws-button" href="' + nav.navHref('settings') + '">Settings - classic view</a>' + c.button({ label: 'Sign out', icon: 'log-out', id: 'signout' });
-    var menu = c.bindDialog(mobile), user = c.bindDialog(account);
+    account.querySelector('[data-dialog-body]').innerHTML = '<p>Admin session</p>' + c.button({ label: 'Sign out', icon: 'log-out', id: 'signout' });
+    var menu = c.bindDialog(mobile), user = c.bindDialog(account), more = c.bindDialog(moreNode);
+    host.querySelectorAll('[data-open-more]').forEach(function (button) {
+      button.addEventListener('click', function () {
+        if (mobile.open) { menu.close(); document.getElementById('menu-open').focus(); }
+        more.open();
+      });
+    });
+    moreNode.addEventListener('click', function (event) {
+      if (event.target.closest('a')) { more.close(); return; }
+      var bounds = moreNode.getBoundingClientRect();
+      if (event.target === moreNode && (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom)) more.close();
+    });
+    moreNode.addEventListener('keydown', function (event) {
+      if (event.key !== 'Tab' || event.ctrlKey || event.metaKey || event.altKey) return;
+      var controls = Array.from(moreNode.querySelectorAll('a[href],button:not([disabled])')).filter(function (element) { return element.getClientRects().length; });
+      var first = controls[0], last = controls[controls.length - 1];
+      if ((event.shiftKey && document.activeElement === first) || (!event.shiftKey && document.activeElement === last)) {
+        event.preventDefault(); (event.shiftKey ? last : first).focus();
+      }
+    });
     detailWidget = c.bindDialog(document.getElementById('detail'));
     document.getElementById('menu-open').addEventListener('click', menu.open);
     document.getElementById('account-open').addEventListener('click', user.open);

@@ -88,9 +88,8 @@ h3 { font-size: var(--ws-type-base); line-height: 1.4; }
 .ws-shell { display: grid; grid-template-columns: 208px minmax(0, 1fr); height: 100dvh; }
 .ws-shell--mail { grid-template-columns: 64px minmax(0, 1fr); }
 .ws-shell--mail .ws-sidebar { padding-inline: 8px; }
-.ws-shell--mail .ws-sidebar .ws-nav a { justify-content: center; padding-inline: 8px; }
-.ws-shell--mail .ws-sidebar .ws-nav a > span, .ws-shell--mail .ws-sidebar .ws-nav-group h2 { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
-.ws-shell--mail .ws-sidebar .ws-nav-note { display: none; }
+.ws-shell--mail .ws-sidebar .ws-nav a, .ws-shell--mail .ws-sidebar .ws-nav-more { justify-content: center; padding-inline: 8px; }
+.ws-shell--mail .ws-sidebar .ws-nav a > span, .ws-shell--mail .ws-sidebar .ws-nav-more > span, .ws-shell--mail .ws-sidebar .ws-nav-group h2 { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
 .ws-shell--mail .ws-brand { text-align: center; }
 .ws-shell--mail .ws-sidebar-footer .ws-button { width: 44px; padding: 10px; }
 .ws-sidebar { display: flex; flex-direction: column; gap: var(--ws-space-4); padding: var(--ws-space-4) var(--ws-space-3); border-right: 1px solid var(--ws-line); background: var(--ws-surface); }
@@ -98,10 +97,11 @@ h3 { font-size: var(--ws-type-base); line-height: 1.4; }
 .ws-nav { display: grid; gap: var(--ws-space-3); }
 .ws-nav-group { display: grid; gap: var(--ws-space-1); }
 .ws-nav-group h2 { padding: 0 var(--ws-space-2); color: var(--ws-muted); font-size: var(--ws-type-xs); font-weight: 500; }
-.ws-nav a { display: flex; gap: var(--ws-space-3); align-items: center; min-height: 44px; padding: var(--ws-space-2); color: var(--ws-text); text-decoration: none; border-radius: 4px; }
-.ws-nav a:hover, .ws-nav a[aria-current="page"] { background: var(--ws-raised); }
+.ws-nav a, .ws-nav .ws-nav-more { display: flex; gap: var(--ws-space-3); align-items: center; justify-content: flex-start; min-height: 44px; padding: var(--ws-space-2); color: var(--ws-text); text-decoration: none; border-radius: 4px; }
+.ws-nav .ws-nav-more { width: 100%; border: 0; background: transparent; }
+.ws-nav a:hover, .ws-nav a[aria-current="page"], .ws-nav .ws-nav-more:hover { background: var(--ws-raised); }
 .ws-nav a[aria-current="page"] { box-shadow: inset 3px 0 var(--ws-green); }
-.ws-nav-note { margin-left: auto; color: var(--ws-muted); font-size: var(--ws-type-xs); white-space: nowrap; }
+.ws-more-tools .ws-nav { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .ws-sidebar-footer { margin-top: auto; }
 .ws-workspace { min-width: 0; min-height: 0; display: grid; grid-template-rows: auto auto minmax(0, 1fr); }
 .ws-topbar { min-height: 64px; display: flex; align-items: center; justify-content: space-between; gap: var(--ws-space-3); padding: var(--ws-space-2) var(--ws-space-6); border-bottom: 1px solid var(--ws-line); }
@@ -289,7 +289,6 @@ h3 { font-size: var(--ws-type-base); line-height: 1.4; }
   .ws-row-button { gap: var(--ws-space-2); }
   .ws-dialog-body .ws-nav { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .ws-dialog-body .ws-nav a { flex-wrap: wrap; row-gap: 0; }
-  .ws-dialog-body .ws-nav-note { flex-basis: 100%; margin-left: calc(20px + var(--ws-space-3)); }
   .ws-mail-panes { grid-template-columns: minmax(0, 1fr); }
   .ws-mail-list { border: 0; padding: 0; }
   .ws-mail-reading { display: none; padding: 0; }
