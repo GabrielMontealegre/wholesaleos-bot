@@ -24,11 +24,11 @@
   function formatTime(value, now) {
     var time = instant(value), current = instant(now);
     if (time == null || current == null || time > current) return 'Unknown';
-    var sameWeek = Math.floor((day(time) + 4) / 7) === Math.floor((day(current) + 4) / 7);
+    var recent = current - time <= 7 * DAY;
     var parts = new Intl.DateTimeFormat('en-US', { timeZone: ZONE, year: 'numeric' }).format(new Date(time));
     var year = new Intl.DateTimeFormat('en-US', { timeZone: ZONE, year: 'numeric' }).format(new Date(current));
-    var options = { timeZone: ZONE, hour: 'numeric', minute: '2-digit' };
-    if (sameWeek) options.weekday = 'short';
+    var options = { timeZone: ZONE };
+    if (recent) { options.weekday = 'short'; options.hour = 'numeric'; options.minute = '2-digit'; }
     else { options.month = 'short'; options.day = 'numeric'; if (parts !== year) options.year = 'numeric'; }
     return new Intl.DateTimeFormat('en-US', options).format(new Date(time));
   }

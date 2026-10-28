@@ -1,5 +1,18 @@
 # Backlog
 
+2026-10-28 LOCAL455item4A shared card times candidate,NOTreleased. Currentmain/live
+46880660c6 unchanged. Existing shared timestamp readers use rolling7day weekday/
+time or older month/day/historicalyear;strictcalendar/UTC/future/source-date/
+deadline/stage authority unchanged. Clockcache2 in both HTML entries only;all other
+current tags retained. New pure+native3size tests and focused7files PASS. Synthetic
+beforeafter3screen/3size FCPall<2s;LH13.5performance99/96Today,99/94Email,100/100
+Deals/access100/100,100/100,98/98;noerrors/overflow. Full274/currenthead/main/
+automatic exactdeployment/read-only release gates pending. Item4 remainsOPEN:
+independent legacy/assistant/Settings date renderers are explicit4B follow-up,
+not claimed fixed by4A.455wholecount stays3/9,not4/9. No real auth/key/privatefile/
+settings/business actions/private captures;468 capture helper disabled. Owned468
+proof carried deliberately,currentbranch item/455-plain-card-times.456deferred.
+
 2026-10-28 PR468 RELEASED/VERIFIED main80660c6c0272b02feefbf2822a74370bed3cfecd,
 complete tree identical testedfbf7ae39. AutomaticRailway9f55d8ff-5790-4a49-8d1a-
 b61b2eddceb3 exactsource Active/successful,Details verified;no manual settings.
