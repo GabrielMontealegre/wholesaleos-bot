@@ -44,6 +44,26 @@ pending actions,not backlog-wide waits.455 item2+ and456 still deferred.
 
 ## Latest Run Summary
 
+2026-10-28 PR466/455item1 RELEASED/VERIFIED:main38ea175b45dcb9dabc634debee36ec703996715d
+fulltree identical testedd6b65b3. AutomaticRailwayc138421a-3205-40fa-8f8c-24d19fbaa87b
+Active/successful authoritativeDetails exactsource,no manual build/retry/settings.
+PR40603196905/job122536158786271/0/0,600s/file,job15m05s,sum843.38s NOTwall.
+MAIN40654964433/job122703655276271/0/0,job14m59s,sum836.34s NOTwall;all542
+timings retained. Public pinned12 true1366/400/412 GET-only/health200/unsigned401/
+snapshot+key+devices401no-store/unchecked44pxoption. Existing signedChrome own
+device metadata0rows/Settingscontrols,Today chooser/recordedwork,Email48rows/
+18charbody/disabledemptyReply/Close,andclassic19->1->BackLoading0->same19 pass,
+nooverflow/retainedapplicationerrors0. Opaque BEFOREdisk screenshot islands inspected.
+Exactmerged LOCAL PIN/profile/restart/Settings3size/mail5size pass;isolated
+integration passed after an initial aggregate harness failure retained with cause
+not established,no product/assertion changes. Main independently allgreen.
+No real PIN/device/key/file/POST/import/send/settings/businesswrites/authtransfer.
+Owned local proof replayed deliberately ontoactualmerge;proof-only,no newdeploy.
+Proof docs/screens/2026-10-28-pr466-release. Only455item1 DONE;next455item2
+one PIN screen/session,not bundled.454realownerkey/firstupload/localroutine still
+pending/notactive;463ownerprotection Notyet/alreadyasked;450blocked/456deferred.
+Whole455/412/backlog notcomplete. Older draft/budgethold wording is historical.
+
 2026-10-27 PR465 ENGINEERING RELEASED/VERIFIED:main45da4ac identical tested9b39c00,
 automaticRailway9e867208-8538-41c5-8335-a621493b3f5d Active/successful exactDetails.
 PR40549445436/job122348884532267/0/0,600s/file,15m19job,sum851.28s NOTwall;
