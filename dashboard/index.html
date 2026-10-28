@@ -10,7 +10,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/dashboard/wos-marketplace.css?v=4">
 <link rel="stylesheet" href="/dashboard/wos-desk-shell.css?v=4">
-<link rel="stylesheet" href="/dashboard/wos-remember-devices.css?v=1">
+<link rel="stylesheet" href="/dashboard/wos-remember-devices.css?v=2">
 <style>
 /* ── Reset & Base ── */
 *{box-sizing:border-box;margin:0;padding:0}
@@ -21,7 +21,7 @@ input,select,textarea,button{font-family:inherit;font-size:13px}
 ::-webkit-scrollbar-thumb{background:#d1d1d6;border-radius:2px}
 
 /* ── PIN Screen ── */
-#pin-screen{position:fixed;inset:0;background:#fff;display:flex;align-items:center;justify-content:center;z-index:9999;flex-direction:column;gap:24px}
+#pin-screen{position:fixed;inset:0;background:#111315;color:#f1f3f5;display:flex;align-items:flex-start;justify-content:center;z-index:9999;overflow:auto}
 .pin-logo{display:flex;align-items:center;gap:12px}
 .pin-logo img{height:56px}
 .pin-logo-text{font-size:22px;font-weight:700;color:#1d1d1f}
@@ -283,38 +283,7 @@ tr.selected td{background:#f0f6ff}
 <body data-wos-design="marketplace">
 
 <!-- PIN Screen -->
-<div id="pin-screen" style="display:flex">
-  <div class="pin-logo">
-    <div style="width:52px;height:52px;background:#1d1d1f;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:900;color:#fff;letter-spacing:-1px">M</div>
-    <div>
-      <div class="pin-logo-text">Montsan REI</div>
-      <div class="pin-subtitle">Real Estate Investment Platform</div>
-    </div>
-  </div>
-  <div class="pin-dots" id="pin-dots">
-    <div class="pin-dot" id="dot0"></div>
-    <div class="pin-dot" id="dot1"></div>
-    <div class="pin-dot" id="dot2"></div>
-    <div class="pin-dot" id="dot3"></div>
-  </div>
-  <label class="wos-remember-choice" for="remember-device"><input id="remember-device" type="checkbox" autocomplete="off"><span>Remember this device for 30 days</span></label>
-  <div class="pin-pad">
-    <button class="pin-btn" onclick="pinPress(1)">1</button>
-    <button class="pin-btn" onclick="pinPress(2)">2</button>
-    <button class="pin-btn" onclick="pinPress(3)">3</button>
-    <button class="pin-btn" onclick="pinPress(4)">4</button>
-    <button class="pin-btn" onclick="pinPress(5)">5</button>
-    <button class="pin-btn" onclick="pinPress(6)">6</button>
-    <button class="pin-btn" onclick="pinPress(7)">7</button>
-    <button class="pin-btn" onclick="pinPress(8)">8</button>
-    <button class="pin-btn" onclick="pinPress(9)">9</button>
-    <button class="pin-btn" onclick="pinPress('x')">⌫</button>
-    <button class="pin-btn" onclick="pinPress(0)">0</button>
-    <button class="pin-btn" onclick="pinPress('ok')" style="background:#1d1d1f;color:#fff">OK</button>
-  </div>
-  <div class="pin-error" id="pin-error"></div>
-  <div style="font-size:11px;color:#86868b;margin-top:8px">Use the PIN configured for your account.</div>
-</div>
+<div id="pin-screen" style="display:flex"><main class="ws-login" aria-busy="true"><h1>WholesaleOS</h1><p role="status">Checking your session...</p></main></div>
 
 <!-- Main App -->
 <div id="app" style="display:none">
@@ -427,6 +396,7 @@ tr.selected td{background:#f0f6ff}
 <div class="toast-container" id="toast-container"></div>
 
 <script src="/dashboard/wos-dashboard-auth.js?v=3"></script>
+<script src="/dashboard/wos-dashboard-login.js?v=1"></script>
 <script>
 
 window.regionalMode = window.regionalMode || function () {
@@ -449,7 +419,6 @@ const APP = {
   isAdmin: false,
   role: 'user',
   unlocked: false,
-  pinInput: '',
   page: 'dashboard',
   selectedLead: null,
   sortCol: 'fee_hi',
@@ -504,58 +473,20 @@ function save(key, data) {
 // ══════════════════════════════════════════════════════════
 //  PIN SYSTEM
 // ══════════════════════════════════════════════════════════
-function pinPress(key) {
-  if (APP.loginPending || APP.unlocked) return;
-  if (key === 'x') {
-    APP.pinInput = APP.pinInput.slice(0, -1);
-  } else if (key === 'ok') {
-    checkPin();
-    return;
-  } else {
-    if (APP.pinInput.length >= 6) return;
-    APP.pinInput += String(key);
-    if (APP.pinInput.length === 4) { setTimeout(checkPin, 150); }
-  }
-  updatePinDots();
-}
-
-function updatePinDots() {
-  for (let i = 0; i < 4; i++) {
-    document.getElementById('dot' + i).classList.toggle('filled', i < APP.pinInput.length);
-  }
-}
-
-async function checkPin() {
-  const pin = APP.pinInput;
-  if (!pin || pin.length < 4 || APP.loginPending || APP.unlocked) return;
-  APP.loginPending = true;
-  try {
-  const result = await window.WOSDashboardAuth.authenticate(pin, { remember_device: document.getElementById('remember-device').checked });
-  if (result.ok && unlockDashboardUser(result.user)) { APP.pinInput = ''; updatePinDots(); return; }
-  
-  // Wrong PIN
-  const errEl = document.getElementById('pin-error');
-  if (errEl) errEl.textContent = result.code === 'ADMIN_LOGIN_NOT_CONFIGURED'
-    ? 'Dashboard login is not configured.'
-    : 'Login failed. Check the PIN and try again.';
-  APP.pinInput = '';
-  updatePinDots();
-  setTimeout(function() { if (errEl) errEl.textContent = ''; }, 2000);
-  } finally { APP.loginPending = false; }
-}
-
+var disposeDashboardLogin = null;
 function showDashboardLogin(message) {
   window.WOSDashboardAuth.lockIdentity(APP);
   var pinScreen = document.getElementById('pin-screen');
   var appEl = document.getElementById('app');
-  var errEl = document.getElementById('pin-error');
+  if (disposeDashboardLogin) disposeDashboardLogin();
   if (pinScreen) pinScreen.style.display = 'flex';
   if (appEl) appEl.style.display = 'none';
-  if (errEl && message) errEl.textContent = message;
+  disposeDashboardLogin = window.WOSDashboardLogin.mount(pinScreen, { message: message, onAuthenticated: unlockDashboardUser });
 }
 
 function unlockDashboardUser(user) {
   if (!window.WOSDashboardAuth.applyAuthenticatedUser(APP, user)) return false;
+  if (disposeDashboardLogin) { disposeDashboardLogin(); disposeDashboardLogin = null; }
   try {
     localStorage.setItem('montsan_userId', user.id);
     localStorage.setItem('montsan_role', user.role || 'user');
@@ -581,16 +512,6 @@ async function signOutDashboard() {
   const result = await window.WOSDashboardAuth.logout(APP);
   showDashboardLogin(result.ok ? 'Signed out.' : 'Signed out here. Device revocation could not be confirmed. Sign in to review remembered devices.');
 }
-
-// Keyboard PIN input
-document.addEventListener('keydown', function(e) {
-  var ps = document.getElementById('pin-screen');
-  if (!ps || ps.style.display === 'none') return; // PIN removed
-  if (e.key >= '0' && e.key <= '9') { pinPress(parseInt(e.key)); }
-  else if (e.key === 'Backspace') { pinPress('x'); }
-  else if (e.key === 'Enter') { checkPin(); }
-});
-
 
 function promptSetPin(userId) {
   APP._setPinUserId = userId;
@@ -29227,7 +29148,7 @@ function wosRealPullState(stateCode, cardEl) {
 <link rel="stylesheet" href="/dashboard/wos-pipeline-workspace.css?v=2">
 <script src="/dashboard/wos-pipeline-workspace.js?v=3"></script>
 <script src="/dashboard/wos-pipeline-report-review.js?v=1"></script>
-<script src="/dashboard/workspace/navigation.js?v=2"></script>
+<script src="/dashboard/workspace/navigation.js?v=3"></script>
 <link rel="stylesheet" href="/dashboard/wos-assistant-upload-settings.css?v=1">
 <script src="/dashboard/wos-assistant-upload-settings.js?v=2"></script>
 <script src="/dashboard/wos-remember-devices.js?v=1"></script>

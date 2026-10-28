@@ -4,7 +4,7 @@
   var app = {}, generation = 0, current = null, pageSize = 25, helpTimer = null, detailWidget = null;
   var host = document.getElementById('workspace-root');
   var screen = new URLSearchParams(root.location.search).get('view') === 'email' ? 'email' : 'today', emailScreen = null;
-  var assistantSheet = null, assistantHost = null;
+  var assistantSheet = null, assistantHost = null, disposeLogin = null;
   document.title = 'WholesaleOS | ' + (screen === 'email' ? 'Email' : 'Today');
   var groups = [
     ['Today', [['today', 'Today', 'layout-dashboard', 'Your recorded actions and activity'], ['email', 'Email', 'mail', 'Read messages in your current Email workspace']]],
@@ -32,6 +32,7 @@
   }
 
   function clearPrivate() {
+    if (disposeLogin) { disposeLogin(); disposeLogin = null; }
     generation++;
     if (assistantSheet) assistantSheet.destroy();
     assistantSheet = null; assistantHost = null;
@@ -43,42 +44,19 @@
     host.replaceChildren();
   }
 
-  function locked(message) {
+  function locked(message, classicTools) {
     clearPrivate();
     auth.lockIdentity(app);
-    host.innerHTML = '<main class="ws-login"><h1>WholesaleOS</h1><h2>Unlock your workspace</h2>' +
-      '<form id="login"><label for="pin">Dashboard PIN</label><input id="pin" type="password" inputmode="numeric" autocomplete="current-password" required>' +
-      '<label class="ws-check wos-remember-choice" for="remember-device"><input id="remember-device" type="checkbox" autocomplete="off"><span>Remember this device for 30 days</span></label>' +
-      c.button({ label: 'Unlock', icon: 'check', tone: 'green', id: 'unlock' }) +
-      '<p role="alert" class="ws-error" id="login-error">' + c.escape(message || '') + '</p></form>' +
-      '<a href="' + nav.home + '">Open classic dashboard</a></main>';
-    var form = document.getElementById('login');
-    async function login(event) {
-      event.preventDefault();
-      var input = document.getElementById('pin'), button = document.getElementById('unlock');
-      if (button.disabled || !input.value) return;
-      button.disabled = true;
-      var value = input.value;
-      input.value = '';
-      var result = await auth.authenticate(value, { remember_device: document.getElementById('remember-device').checked });
-      value = '';
-      if (result.ok && result.user.role === 'admin') {
-        auth.applyAuthenticatedUser(app, result.user);
-        shell();
-        load();
-      } else {
-        document.getElementById('login-error').textContent = result.ok ? 'This workspace requires an admin session.' : 'Could not unlock. Check your PIN and connection.';
-        button.disabled = false;
-      }
-    }
-    form.addEventListener('submit', login);
-    document.getElementById('unlock').addEventListener('click', login);
+    disposeLogin = root.WOSDashboardLogin.mount(host, { message: message, classicTools: classicTools === true, onAuthenticated: function (user) {
+      if (user.role !== 'admin') return false;
+      auth.applyAuthenticatedUser(app, user); shell(); load(); return true;
+    } });
   }
 
   function shell() {
     clearPrivate();
     host.innerHTML = '<div class="ws-shell' + (screen === 'email' ? ' ws-shell--mail' : '') + '"><aside class="ws-sidebar"><a class="ws-brand" href="/app?preview=1" aria-label="WholesaleOS">' + (screen === 'email' ? 'W' : 'WholesaleOS') + '</a>' + navigation() +
-      '<div class="ws-sidebar-footer"><a class="ws-button" href="' + nav.home + '" data-help="The app always opens here">' + (screen === 'email' ? c.icon('house') + '<span class="ws-sr-only">Home - classic dashboard</span>' : 'Home - classic dashboard') + '</a></div></aside>' +
+      '<div class="ws-sidebar-footer"><a class="ws-button" href="' + nav.home + '" data-help="Open Today">' + (screen === 'email' ? c.icon('house') + '<span class="ws-sr-only">Home - Today</span>' : 'Home - Today') + '</a></div></aside>' +
       '<div class="ws-workspace' + (screen === 'email' ? ' ws-workspace--mail' : '') + '"><header class="ws-topbar">' +
       c.button({ label: 'Open navigation', icon: 'menu', iconOnly: true, id: 'menu-open' }).replace('ws-button--icon', 'ws-button--icon ws-mobile-menu') +
       '<h1' + (screen === 'email' ? ' class="ws-sr-only"' : '') + '>' + (screen === 'email' ? 'Email' : 'Today') + '</h1>' +
@@ -292,7 +270,7 @@
   auth.installFetchGuard(app, { onUnauthorized: function () { locked('Your session expired. Unlock to continue.'); } });
   auth.restoreSession(app).then(function (result) {
     if (!result.ok) return locked();
-    if (result.user.role !== 'admin') return locked('This workspace requires an admin session.');
+    if (result.user.role !== 'admin') return locked('This workspace requires an admin session.', true);
     shell();
     load();
   });

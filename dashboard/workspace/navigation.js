@@ -27,7 +27,7 @@
     buyers: 'buyers_found', calendar: 'calendar', pipeline: 'pipeline', approvals: 'approvals', settings: 'settings' });
   // Screens rebuilt in this shell (#412). Every other key opens its classic view and is labeled so (#429).
   var shellPages = Object.freeze({ today: '/app?preview=1', email: '/app?preview=1&view=email' });
-  var home = '/dashboard/';
+  var home = '/app';
   function page(key) { return Object.hasOwn(pages, key) ? pages[key] : null; }
   function href(key) { return page(key) ? '/dashboard/?workspace=' + encodeURIComponent(key) : null; }
   function shellHref(key) { return Object.hasOwn(shellPages, key) ? shellPages[key] : null; }

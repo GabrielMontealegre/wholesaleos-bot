@@ -44,6 +44,20 @@ pending actions,not backlog-wide waits.455 item2+ and456 still deferred.
 
 ## Latest Run Summary
 
+2026-10-28 NEXT455item2 LOCAL candidate,notreleased:on item/455-one-login from
+verified466/main38ea175 plus ONLY owned proof. Same shared PIN renderer/submit
+lifecycle mounts on classic/native,old white keypad/global numeric handler
+removed. Existing signed cookie/remembered ledger/backend auth unchanged.
+Direct/app and browserroot now nativeToday;JSONroot/oldpreview URLs/classicdeep
+links stay compatible. Native Home pointsToday;nonadminstill no admin reads,
+fixed available-tools link preserves classic access. Whole455item3nav notbundled.
+Focused original remembered/shell/Today/secure/key-dialog tests PASS,final affected
+shared/home/role gate thenfull272 stillrequired. Exactscreen syntheticbeforeafter
+FCPclassic817.5/126/87.8ms,native134.7/79.7/35.2ms,LHperformance100/100 and
+access100/100 bothchangedscreens,nooverflow/errors;NOTlive. No real PIN/device/
+key/POST/settings/businessactions. Trace issue-455-one-login.md;proof shared-login-
+candidate. Main/live466 unchangedverified;no PR/fullgate/deploy yet,456deferred.
+
 2026-10-28 PR466/455item1 RELEASED/VERIFIED:main38ea175b45dcb9dabc634debee36ec703996715d
 fulltree identical testedd6b65b3. AutomaticRailwayc138421a-3205-40fa-8f8c-24d19fbaa87b
 Active/successful authoritativeDetails exactsource,no manual build/retry/settings.

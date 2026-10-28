@@ -1,5 +1,13 @@
 # Decisions
 
+ASSUMED:455item2 uses one shared PIN renderer and submit lifecycle on existing
+classic/native entry URLs,not a new authentication endpoint or return-URL router.
+This preserves exact classic tool destinations and user/admin restrictions while
+making direct/app and the root browser home nativeToday. Legacy preview URLs and
+JSON status clients remain compatible. Existing shared signed cookie/30day
+device revocation contracts do not change;455item3 navigation is separate.
+--Owner455item2,AGENTS additive architecture/data safety--2026-10-28.
+
 ASSUMED:455 item1 uses opt-in fixed30day version2 device cookies,hash-only private
 revocation records and current canonical credential binding. Generic and old
 45da4ac verifiers reject version2,so rollback cannot bypass revocation. Explicit
