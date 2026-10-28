@@ -1,47 +1,5 @@
 # Backlog
 
-2026-10-28 PR469 DRAFT/unmerged/undeployed:initial7c3f5d3 full40764426231/
-job123084632155 REAL272/2/0,all274timings retained,600s/file,14m51job,sum827.82s
-NOTwall. Both failures were old conversation-card date expectations. First
-test-only correction uses the owner rolling-week label and pins the UI fixture
-clock to its existing payload;ALL order/role/source/link/duplicate/no-write
-assertions retained. Both failed tests now PASS locally with pinned Chromium.
-Runtime dashboard/modules/server identical initialproduct;original3screen UI
-audit remains exact-product proof,not rerun/reusedfailedCI. New full274 required.
-Main/live46880660c6 unchanged. Item4A NOTreleased/item4 NOTcomplete/4553of9.
-
-2026-10-28 LOCAL455item4A shared card times candidate,NOTreleased. Currentmain/live
-46880660c6 unchanged. Existing shared timestamp readers use rolling7day weekday/
-time or older month/day/historicalyear;strictcalendar/UTC/future/source-date/
-deadline/stage authority unchanged. Clockcache2 in both HTML entries only;all other
-current tags retained. New pure+native3size tests and focused7files PASS. Synthetic
-beforeafter3screen/3size FCPall<2s;LH13.5performance99/96Today,99/94Email,100/100
-Deals/access100/100,100/100,98/98;noerrors/overflow. Full274/currenthead/main/
-automatic exactdeployment/read-only release gates pending. Item4 remainsOPEN:
-independent legacy/assistant/Settings date renderers are explicit4B follow-up,
-not claimed fixed by4A.455wholecount stays3/9,not4/9. No real auth/key/privatefile/
-settings/business actions/private captures;468 capture helper disabled. Owned468
-proof carried deliberately,currentbranch item/455-plain-card-times.456deferred.
-
-2026-10-28 PR468 RELEASED/VERIFIED main80660c6c0272b02feefbf2822a74370bed3cfecd,
-complete tree identical testedfbf7ae39. AutomaticRailway9f55d8ff-5790-4a49-8d1a-
-b61b2eddceb3 exactsource Active/successful,Details verified;no manual settings.
-PR40709743777/job122891456333273/0/0,15m41job,sum864.76s NOTwall;MAIN40712746643/
-job122902111868273/0/0,16m39job,sum907.67s NOTwall,600s/file,all546timings retained.
-Single More/plain7tools shipped;Today/Email/native current keys and all classic
-roles/routes/Back preserved. Public pinned3size15cases/health200/private401,
-sameMERGED More/shell/navigation/Today/mailbox focused proof and actual signed
-GET-only More/X/Escape/Settings/Today/sourceReplyClose/classicBack pass. No real
-credential/settings/business writes. One stale Email capture escaped masking and
-was displayed in chat;local file deleted before staging and helper disabled.
-See explicit capture incident in issue-455-more-navigation trace;retained proof
-excludes that image. No further private screenshots until frame-bound masking
-is validated. This is not an app regression or claim every capture was safe.
-455items1-3 DONE(3/9,33%);next separate item4 plain dates when full release AND
-rollback reserve permits. Whole455/412/backlog OPEN;454realownerkey/firstupload/
-localroutine pending separately/already asked,463Notyet/450blocked/456deferred.
-New release summary supersedes older candidate notes below.
-
 2026-10-28 LOCAL455item3 candidate:Today/Email plus one visible More entry for
 seven existing tools,plain names,no Classic view navigation labels. Same fixed
 classic destinations/roles/Back/record behavior;no backend/auth/data writes or

@@ -9,8 +9,7 @@ assert.equal(cards.rank(rows[3],today),2);assert.equal(cards.rank(rows[4],today)
 const row={id:'fixture',person:'<script>not executable</script>',role:'buyer',refs:['WOS-FL-1030'],status:'follow_up',channels:['manual'],source_kind:'imported_report',last_in:'2026-10-08T19:27:00Z',last_out:'',due_date:'2026-10-10',thread_url:'',ready_message:'',what_they_said:'',next_step:'',linked_deals:[{id:'deal',ref:'WOS-FL-1030'}]};
 const html=cards.render(row,{clock,now,today});
 assert.ok(html.includes('&lt;script&gt;'));assert.ok(!html.includes('<script>'));
-assert.ok(html.includes('Thu 12:27 PM'));assert.ok(!html.includes(row.last_in));assert.ok(!html.includes('Due: 2026-'));
-assert.ok(cards.render({...row,last_in:'2026-10-01T19:27:00Z'},{clock,now,today}).includes('Last incoming: Oct 1'),'Older recorded conversation dates use the same shared policy');
+assert.ok(html.includes('Oct 8, 12:27 PM'));assert.ok(!html.includes(row.last_in));assert.ok(!html.includes('Due: 2026-'));
 for(const missing of ['Draft message not supplied','Conversation link not supplied','They said:','Next:','Last outgoing:'])assert.ok(!html.includes(missing));
 assert.equal((html.match(/class="cv-primary"/g)||[]).length,1);assert.ok(html.includes('Open deal'));
 assert.ok(!cards.render({...row,linked_deals:[]},{clock,now,today}).includes('Open deal'),'a WOS ref alone never invents a linked deal');

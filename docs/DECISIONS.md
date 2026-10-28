@@ -1,15 +1,5 @@
 # Decisions
 
-ASSUMED:455item4 is split into bounded presentation-only slices:4A changes the
-existing shared operational timestamp formatter to a rolling seven-day window
-(inclusive boundary),weekday/time when recent,month/day when older and year when
-different. Existing owner UTC-7 zone,strict UTC input/future rejection,date-only
-calendar meaning and all source-date authority stay unchanged. All current shared
-consumers change together;independent legacy/assistant/Settings date renderers
-remain explicit4B follow-up,so item4 is NOT complete after4A. No generic DOM text
-rewriter or backend/date-normalization changes. --455item4,AGENTS safe sub-PRs and
-source truth precedence--2026-10-28.
-
 ASSUMED:455item3 keeps Today and Email as native primary destinations and
 groups all seven existing non-native tools,including Settings,under one visible
 More entry. More uses the existing dialog/component/icon/navigation contracts;
