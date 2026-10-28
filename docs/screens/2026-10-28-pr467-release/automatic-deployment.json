@@ -1,0 +1,10 @@
+{
+  "source_sha": "6247e0fe69f998bc24cf6e33f42e35b72c23f8fc",
+  "tested_head": "ff9434d7b219ac7dc35a6083fa66a525ae81cb0f",
+  "identical_tree": "9d56937ddba083c1cf10ae12be62d3dec98081d3",
+  "deployment_id": "619e60c5-4dc3-44eb-9b02-a0b1cd912c5b",
+  "active": true,
+  "successful": true,
+  "source_evidence": "Authoritative Railway Details exact GitHub commit link;automatic deployment only",
+  "manual_build_retry_settings_actions": 0
+}
