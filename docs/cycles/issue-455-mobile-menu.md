@@ -30,5 +30,14 @@ Initial screenshots retained separately, not final visual proof.
 
 Owned473 final/release documentation commits deliberately carried from the
 closed branch; no unrelated changes or product code copied from other work.
-Full suite, final UI audits and exact automatic live release remain pending.
+Final serialized synthetic audit against ccc48ef passes at1366/400/412:
+TodayFCP35.9/32.5/33.4ms,Email34.8/37.4/33.1ms;LH13.5 performance99/96,
+accessibility100/100 both screens; null runtime/empty audit errors/no overflow.
+Initial audit content masks obscured drawer visuals, so12 supplemental exact-
+source screenshots were captured without content masking (synthetic only),
+without rerunning full suites or Lighthouse. All30 final synthetic images were
+inspected; initial stretched layout remains historical. NOTlive speed.
+Self-review: current main base, bounded CSS15/app13 only, no changed existing
+assertions, no storage/API/role/provider/clock changes; fixed routes intact.
+Full suite and exact automatic live release remain pending.
 No production private capture, text read, credential or business action allowed.
