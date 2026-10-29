@@ -2,6 +2,7 @@
 const deals = require('./reviewed-deals');
 const activity = require('../records/record-activity');
 const jvWorkflow = require('./jv-workflow');
+const profiles = require('../records/operator-profile');
 function registerReviewedDealRoutes(app, { db, requireAdmin, now = () => new Date().toISOString() }) {
   require('../records/county-filter-catalog').registerCountyFilterCatalog(app, {requireAdmin});
   function failure(res, e) { const known = /^find_deal_[a-z_]+$/.test(e.code || ''); res.status(known ? e.status || 400 : 503).json({ code: known ? e.code : 'deal_store_unavailable' }); }
@@ -43,7 +44,7 @@ function registerReviewedDealRoutes(app, { db, requireAdmin, now = () => new Dat
     }catch(e){failure(res,e);}
   });
   app.get('/api/dashboard/todays-deals/:id/jv-draft', requireAdmin, (req, res) => {
-    try { const store = db.readDBStrict(); const deal = (store.reviewed_deals || []).find(d => d.id === req.params.id); if (!deal || deal.deal_kind !== 'jv') return res.status(404).json({ code: 'find_deal_not_found' }); res.set('Cache-Control', 'no-store').attachment('jv-term-sheet.txt').type('text/plain').send(deals.jvDraft(deal, deals.evaluate(deal, store.buyers, now()))); } catch (e) { failure(res, e); }
+    try { const store = db.readDBStrict(); const deal = (store.reviewed_deals || []).find(d => d.id === req.params.id); if (!deal || deal.deal_kind !== 'jv') return res.status(404).json({ code: 'find_deal_not_found' }); const at=now();res.set('Cache-Control', 'no-store').attachment('jv-term-sheet.txt').type('text/plain').send(deals.jvDraft(deal, deals.evaluate(deal, store.buyers, at),profiles.draft(store,req.currentUser.id,{now:at}))); } catch (e) { failure(res, e); }
   });
   app.post('/api/dashboard/todays-deals/:id/jv-draft', requireAdmin, (req, res) => {
     try {
@@ -53,8 +54,10 @@ function registerReviewedDealRoutes(app, { db, requireAdmin, now = () => new Dat
       if (!deal || deal.deal_kind !== 'jv') return res.status(404).json({code:'find_deal_not_found'});
       let store = activity.assign(original,'deal',deal.id);
       store = activity.recordEvent(store,'deal',deal.id,'jv_generated','Working JV draft generated; not signed.',context);
-      const record = store.reviewed_deals.find(d => d.id === deal.id); db.writeDB(store);
-      res.attachment('jv-term-sheet.txt').type('text/plain').send(deals.jvDraft(record,deals.evaluate(record,store.buyers,context.now)));
+      const record = store.reviewed_deals.find(d => d.id === deal.id);
+      const draft=deals.jvDraft(record,deals.evaluate(record,store.buyers,context.now),profiles.draft(store,req.currentUser.id,{now:context.now}));
+      db.writeDB(store);
+      res.attachment('jv-term-sheet.txt').type('text/plain').send(draft);
     } catch(e) { failure(res,e); }
   });
   app.use('/api/dashboard/todays-deals', (error,req,res,next) => {

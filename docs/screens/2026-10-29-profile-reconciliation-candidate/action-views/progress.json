@@ -1,0 +1,45 @@
+{
+  "synthetic_only": true,
+  "capture_only": true,
+  "baseline": "7262b1114f5db3543cfb13a8cd304ad529a6f99a",
+  "source_sha": "ac3b348a01026670cc471d295cff869d886ab5a6",
+  "sizes": [
+    {
+      "mode": "after",
+      "view": "settings",
+      "width": 1366,
+      "overflow": false,
+      "actualPage": "settings",
+      "profileForms": 1,
+      "templateForms": 0,
+      "preview": 0,
+      "securityInputs": 2,
+      "errors": []
+    },
+    {
+      "mode": "after",
+      "view": "settings",
+      "width": 400,
+      "overflow": false,
+      "actualPage": "settings",
+      "profileForms": 1,
+      "templateForms": 0,
+      "preview": 0,
+      "securityInputs": 2,
+      "errors": []
+    },
+    {
+      "mode": "after",
+      "view": "settings",
+      "width": 412,
+      "overflow": false,
+      "actualPage": "settings",
+      "profileForms": 1,
+      "templateForms": 0,
+      "preview": 0,
+      "securityInputs": 2,
+      "errors": []
+    }
+  ],
+  "notes": "Capture-only supplemental actual controls, not a new FCP/Lighthouse gate. Same fixed routes/real Load+summary interaction, natural3500ms toast expiry awaited without hiding/freezing, viewport scroll framing only. Baseline Settings inputs opaque BEFORE screenshot; no private data."
+}

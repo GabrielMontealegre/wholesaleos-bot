@@ -170,6 +170,8 @@ app.use('/api/dashboard/assistant-snapshots', (req, res, next) => { res.set('Cac
 app.use('/api/dashboard/assistant-upload-keys', require('./modules/records/assistant-upload-key-routes').noStore,
   requireAdmin, require('./modules/records/assistant-upload-key-routes').requireKeyPayload);
 app.use('/api/auth/devices', rememberedDeviceRoutes.noStore, requireAuth, rememberedDeviceRoutes.requireDevicePayload);
+app.use('/api/dashboard/operator-profile', require('./modules/records/operator-profile').noStore,
+  requireAdmin, require('./modules/records/operator-profile').requireProfilePayload);
 app.use(express.json({ strict: false, limit: '1mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use(express.text({ limit: '100mb', type: 'text/plain' }));
@@ -2775,6 +2777,7 @@ app.delete('/api/leads/:id', (req, res) => {
 const ownerTelegram=require('./modules/agents/owner-telegram').createOwnerTelegram({log:entry=>logger.info({result:entry.result,ref:entry.ref},'[telegram] owner alert')});
 assistantFindRoutes.registerAssistantFindRoutes(app, { db, requireAdmin, pairingOptions: { env: process.env },onIncomingInteractions:events=>ownerTelegram.incoming(events) });
 require('./modules/deals/reviewed-deal-routes').registerReviewedDealRoutes(app, { db, requireAdmin });
+require('./modules/records/operator-profile').registerRoutes(app, { db, requireAdmin });
 require('./modules/records/record-activity-routes').registerRecordActivityRoutes(app, { db, requireAdmin });
 require('./modules/records/conversation-routes').registerConversationRoutes(app, { db, requireAdmin, assistantSnapshotImport: true });
 require('./modules/records/assistant-snapshot-routes').registerAssistantSnapshotRoutes(app, { db, requireAdmin });

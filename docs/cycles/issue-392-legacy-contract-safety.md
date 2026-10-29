@@ -51,8 +51,16 @@
   corrected runtime then hit restricted loopback execution. Established
   escalated hermetic loopback run passed, with no product correction for those
   runtime failures. No existing test assertion changed.
-- Full candidate/main suites, current-head self-review, exact automatic deploy
-  and read-only release verification are PENDING. Not released or DONE.
+- RELEASED/VERIFIED via PR481, actualmain7262b1114f5db3543cfb13a8cd304ad529a6f99a,
+  complete treead2a9394 identicaltested0ccc7b9. PR40943640399/job123693179856
+  281/0/0,14m45job,sum813.78s; MAIN40946017461/job123701444872281/0/0,
+  12m31job,sum703.91s. All562 rows,600s/file,sumsNOTwall/no reruns/skips/failures.
+  AutomaticRailwayc39a8dbe-fde5-4d12-9d34-7fd8ea19e5e1 Active/successful,
+  authoritative Details aria-selected/exactsourceanchor. Public15/security/
+  unchanged44px/exactcurrentcache guards PASS,all15 unsignedimages inspected.
+  ActualsignedChrome4 structural19->Open1->Backloading->19/0open/nooverflow.
+  No private content/values/contract POST/generation/writes/authtransfer.
+  Proof docs/screens/2026-10-29-pr481-release. #392 DONE, wholebacklogactive.
 - Backend-only; no UI changes or new UI performance/screenshot claim. No real
   contract generation, production POST, profile read, private file or business
   write during verification. Positive content proof is synthetic only.

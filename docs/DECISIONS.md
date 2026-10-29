@@ -1,5 +1,16 @@
 # Decisions
 
+ASSUMED: Reconcile existing394/D-059 Profile onto current481, preserving both
+owned checkpoints and current profit-review/version/auth/source/value gates.
+Only reviewed canonical JV/template/buyer-email drafts may consume Profile;
+legacy392 remains excluded even after its separate repair. Settings stays on
+the actual classic route; use shared form/token rules in existing UI kit, not
+a new one-off stylesheet or native Settings/Deals migration. Preserve current
+Calendar assertions rather than replaying the old unrelated driver correction.
+Private Profile authorization/no-store precede a bounded value-free JSON parser.
+No real Profile save, private value/file/signature read or production contract/
+message action is a verification step. -- AGENTS2/3/5, D-059,412 --2026-10-29.
+
 ASSUMED:455.9 uses nativeclosed comparable-sales details and row-local explicit
 reason disclosure;opening orCancel cannot write/refetch or markreview complete.
 OnlyConfirm exclusion invokes the existing key/index/reason-boundPATCH. Preserve

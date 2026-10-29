@@ -1,6 +1,7 @@
 'use strict';
 (function(root){
-  var data=null,busy=false,error='',status='',chosen='holder_jv_reply';
+  var data=null,busy=false,error='',status='',chosen='holder_jv_reply',sequence=0;
+  function actor(){return root.APP?.unlocked&&root.APP?.currentUser?.id;}
   function esc(value){return String(value==null?'':value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
   function time(value){return value&&Number.isFinite(Date.parse(value))?new Intl.DateTimeFormat('en-US',{timeZone:'Etc/GMT+7',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}).format(new Date(value)):'Unknown';}
   function markup(){
@@ -12,20 +13,29 @@
         '<p>'+esc(current.invalid_history?'Recorded template needs investigation.':current.full_preview_required?'Full message review required before sending.':'First 20 recorded. Sending still requires your explicit action.')+'</p>'+
         (current.template?'<small>Operator-reviewed text; recorded '+esc(time(current.template.recorded_at))+' by '+esc(current.template.operator_id)+'.</small>':'')+
         '<label>Subject<input name="subject" maxlength="240" required value="'+esc(current.template&&current.template.subject)+'"></label><label>Template text<textarea name="body" maxlength="4000" required>'+esc(current.template&&current.template.body)+'</textarea></label>'+
+        '<label>Insert from my profile<select data-template-profile-field><option value="">Choose a field</option><option value="operator_legal_name">Legal name</option><option value="operator_llc">LLC</option><option value="operator_email">Email</option><option value="operator_phone">Phone</option><option value="operator_mailing_address">Mailing address</option><option value="operator_signature">Draft sign-off</option></select></label>'+
+        (current.profile_preview?'<details><summary>Preview with my saved profile</summary><strong>'+esc(current.profile_preview.subject)+'</strong><pre class="et-profile-preview">'+esc(current.profile_preview.body)+'</pre><p>Saved template preview. Unsigned draft; missing details are marked not supplied. No email sent.</p></details>':'')+
         '<label><input type="checkbox" name="reviewed"> I reviewed this template text</label><button type="submit" title="Save your reviewed text; no email is sent"'+(busy||current.invalid_history?' disabled':'')+'>Save reviewed template</button><p>Template review is not a sent email.</p></form>':'')+'</section>';
   }
   function paint(){var element=document.querySelector('#email-template-library');if(element)element.outerHTML=markup();}
-  async function load(){if(busy)return;busy=true;error='';paint();try{var response=await fetch('/api/dashboard/email-templates');if(!response.ok)throw Error();var value=await response.json();if(!Array.isArray(value.items))throw Error();data=value;}catch(_){data=null;error='Templates unavailable. Check your admin session.';}finally{busy=false;paint();}}
+  async function load(){if(busy)return;var identity=actor(),ticket=++sequence;busy=true;error='';paint();try{var response=await fetch('/api/dashboard/email-templates');if(!response.ok)throw Error();var value=await response.json();if(ticket!==sequence||actor()!==identity)return;if(!Array.isArray(value.items))throw Error();data=value;}catch(_){if(ticket!==sequence||actor()!==identity)return;data=null;error='Templates unavailable. Check your admin session.';}finally{if(ticket===sequence){busy=false;paint();}}}
   var gmail=root.renderGmail;root.renderGmail=function(){return gmail()+markup();};
+  function clear(message){++sequence;data=null;busy=false;status='';error=message;paint();}
+  var signout=root.signOutDashboard;if(signout)root.signOutDashboard=function(){clear('Dashboard login required.');return signout.apply(this,arguments);};
+  var login=root.showDashboardLogin;if(login)root.showDashboardLogin=function(){clear('Dashboard login required.');return login.apply(this,arguments);};
+  root.addEventListener('wos:session-ended',()=>clear('Dashboard login required.'));
+  root.addEventListener('pagehide',()=>clear('Reload templates before reviewing a preview.'));
+  root.addEventListener('wos:profile-changed',()=>clear('Profile details loaded or changed. Reload templates before reviewing a preview.'));
   document.addEventListener('click',event=>{if(event.target.closest('[data-template-load]'))load();});
   document.addEventListener('change',event=>{if(event.target.matches('[data-template-kind]')){chosen=event.target.value;status='';error='';paint();}});
+  document.addEventListener('change',event=>{if(event.target.matches('[data-template-profile-field]')&&event.target.value){var form=event.target.closest('form'),body=form.elements.body;body.setRangeText('{{'+event.target.value+'}}',body.selectionStart,body.selectionEnd,'end');form.elements.reviewed.checked=false;event.target.value='';body.focus();}});
   document.addEventListener('submit',async event=>{
     var form=event.target.closest('[data-template-form]');if(!form)return;event.preventDefault();if(busy)return;
     var current=data.items.find(row=>row.kind===chosen);var f=form.elements;
     if(!f.reviewed.checked){form.querySelector('p').textContent='Review the template and tick the checkbox first. Nothing saved.';return;}
-    var body={kind:chosen,subject:f.subject.value,body:f.body.value,version:current.version,reviewed:true};var button=form.querySelector('[type=submit]');Array.from(form.elements).forEach(el=>{el.disabled=true;});busy=true;
-    try{var response=await fetch('/api/dashboard/email-templates',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});var result=await response.json();if(!response.ok)throw Error(result.code==='email_template_changed'?'Template changed. Reload it before saving.':'Template not saved. Check your admin session and text.');status=result.status;busy=false;await load();}
-    catch(error){form.querySelector('p').textContent=error.message;busy=false;Array.from(form.elements).forEach(el=>{el.disabled=false;});}
+    var body={kind:chosen,subject:f.subject.value,body:f.body.value,version:current.version,reviewed:true},identity=actor(),ticket=++sequence;Array.from(form.elements).forEach(el=>{el.disabled=true;});busy=true;
+    try{var response=await fetch('/api/dashboard/email-templates',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});var result=await response.json();if(ticket!==sequence||actor()!==identity)return;if(!response.ok)throw Error(result.code==='email_template_changed'?'Template changed. Reload it before saving.':'Template not saved. Check your admin session and text.');status=result.status;busy=false;await load();}
+    catch(error){if(ticket!==sequence||actor()!==identity)return;form.querySelector('p').textContent=error.message;busy=false;Array.from(form.elements).forEach(el=>{el.disabled=false;});}
   });
   var style=document.createElement('style');style.textContent='#email-template-library{padding-block:20px;border-top:1px solid var(--line,#637891);margin-top:20px;min-width:0}.et-counts{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:12px}.et-counts dd{margin:4px 0}.et-counts dt{font-weight:600}[data-template-form]{max-width:720px;display:grid;gap:12px}[data-template-form] label{display:grid;gap:6px;min-width:0}[data-template-form] input:not([type=checkbox]),[data-template-form] select,[data-template-form] textarea{box-sizing:border-box;max-width:100%;width:100%;min-height:44px}[data-template-form] textarea{min-height:180px}[data-template-form] label:has(input[type=checkbox]){display:flex;align-items:center;min-height:44px;gap:10px}[data-template-form] input[type=checkbox]{width:auto;flex-shrink:0}#email-template-library button{min-height:44px;max-width:100%;white-space:normal}';document.head.appendChild(style);
 })(window);
