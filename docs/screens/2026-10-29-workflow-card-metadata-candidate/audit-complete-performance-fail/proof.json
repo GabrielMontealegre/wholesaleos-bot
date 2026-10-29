@@ -1,0 +1,361 @@
+{
+  "synthetic_only": true,
+  "baseline": "f6d7f52240df2d1f06b0032bc41a9cb993918edc",
+  "sizes": [
+    {
+      "mode": "before",
+      "view": "approvals",
+      "width": 1366,
+      "fcp": 495,
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "mode": "before",
+      "view": "approvals",
+      "width": 400,
+      "fcp": 83.59999999962747,
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "mode": "before",
+      "view": "approvals",
+      "width": 412,
+      "fcp": 80.29999999888241,
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "mode": "before",
+      "view": "pipeline",
+      "width": 1366,
+      "fcp": 129.5,
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "mode": "before",
+      "view": "pipeline",
+      "width": 400,
+      "fcp": 83.30000000074506,
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "mode": "before",
+      "view": "pipeline",
+      "width": 412,
+      "fcp": 79.5,
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "mode": "before",
+      "view": "conversations",
+      "width": 1366,
+      "fcp": 83.70000000111759,
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "mode": "before",
+      "view": "conversations",
+      "width": 400,
+      "fcp": 153.2999999988824,
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "mode": "before",
+      "view": "conversations",
+      "width": 412,
+      "fcp": 87.59999999962747,
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "mode": "before",
+      "view": "notifications",
+      "width": 1366,
+      "fcp": 81.40000000037253,
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "mode": "before",
+      "view": "notifications",
+      "width": 400,
+      "fcp": 79.40000000037253,
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "mode": "before",
+      "view": "notifications",
+      "width": 412,
+      "fcp": 77.20000000111759,
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "mode": "after",
+      "view": "approvals",
+      "width": 1366,
+      "fcp": 82.30000000074506,
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "mode": "after",
+      "view": "approvals",
+      "width": 400,
+      "fcp": 77.5,
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "mode": "after",
+      "view": "approvals",
+      "width": 412,
+      "fcp": 76.40000000037253,
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "mode": "after",
+      "view": "pipeline",
+      "width": 1366,
+      "fcp": 80.10000000149012,
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "mode": "after",
+      "view": "pipeline",
+      "width": 400,
+      "fcp": 77.30000000074506,
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "mode": "after",
+      "view": "pipeline",
+      "width": 412,
+      "fcp": 79.40000000037253,
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "mode": "after",
+      "view": "conversations",
+      "width": 1366,
+      "fcp": 91.40000000037253,
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "mode": "after",
+      "view": "conversations",
+      "width": 400,
+      "fcp": 52,
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "mode": "after",
+      "view": "conversations",
+      "width": 412,
+      "fcp": 97.69999999925494,
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "mode": "after",
+      "view": "notifications",
+      "width": 1366,
+      "fcp": 86.5,
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "mode": "after",
+      "view": "notifications",
+      "width": 400,
+      "fcp": 85.39999999850988,
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "mode": "after",
+      "view": "notifications",
+      "width": 412,
+      "fcp": 81.90000000037253,
+      "overflow": false,
+      "errors": []
+    }
+  ],
+  "lighthouse": [
+    {
+      "mode": "before",
+      "view": "approvals",
+      "width": 1366,
+      "version": "13.5.0",
+      "performance": 99,
+      "accessibility": 98,
+      "runtimeErrorCode": null,
+      "auditErrors": []
+    },
+    {
+      "mode": "before",
+      "view": "approvals",
+      "width": 412,
+      "version": "13.5.0",
+      "performance": 100,
+      "accessibility": 98,
+      "runtimeErrorCode": null,
+      "auditErrors": []
+    },
+    {
+      "mode": "before",
+      "view": "pipeline",
+      "width": 1366,
+      "version": "13.5.0",
+      "performance": 99,
+      "accessibility": 98,
+      "runtimeErrorCode": null,
+      "auditErrors": []
+    },
+    {
+      "mode": "before",
+      "view": "pipeline",
+      "width": 412,
+      "version": "13.5.0",
+      "performance": 100,
+      "accessibility": 98,
+      "runtimeErrorCode": null,
+      "auditErrors": []
+    },
+    {
+      "mode": "before",
+      "view": "conversations",
+      "width": 1366,
+      "version": "13.5.0",
+      "performance": 79,
+      "accessibility": 98,
+      "runtimeErrorCode": null,
+      "auditErrors": []
+    },
+    {
+      "mode": "before",
+      "view": "conversations",
+      "width": 412,
+      "version": "13.5.0",
+      "performance": 76,
+      "accessibility": 98,
+      "runtimeErrorCode": null,
+      "auditErrors": []
+    },
+    {
+      "mode": "before",
+      "view": "notifications",
+      "width": 1366,
+      "version": "13.5.0",
+      "performance": 89,
+      "accessibility": 100,
+      "runtimeErrorCode": null,
+      "auditErrors": []
+    },
+    {
+      "mode": "before",
+      "view": "notifications",
+      "width": 412,
+      "version": "13.5.0",
+      "performance": 99,
+      "accessibility": 100,
+      "runtimeErrorCode": null,
+      "auditErrors": []
+    },
+    {
+      "mode": "after",
+      "view": "approvals",
+      "width": 1366,
+      "version": "13.5.0",
+      "performance": 100,
+      "accessibility": 98,
+      "runtimeErrorCode": null,
+      "auditErrors": []
+    },
+    {
+      "mode": "after",
+      "view": "approvals",
+      "width": 412,
+      "version": "13.5.0",
+      "performance": 100,
+      "accessibility": 98,
+      "runtimeErrorCode": null,
+      "auditErrors": []
+    },
+    {
+      "mode": "after",
+      "view": "pipeline",
+      "width": 1366,
+      "version": "13.5.0",
+      "performance": 100,
+      "accessibility": 98,
+      "runtimeErrorCode": null,
+      "auditErrors": []
+    },
+    {
+      "mode": "after",
+      "view": "pipeline",
+      "width": 412,
+      "version": "13.5.0",
+      "performance": 100,
+      "accessibility": 98,
+      "runtimeErrorCode": null,
+      "auditErrors": []
+    },
+    {
+      "mode": "after",
+      "view": "conversations",
+      "width": 1366,
+      "version": "13.5.0",
+      "performance": 76,
+      "accessibility": 98,
+      "runtimeErrorCode": null,
+      "auditErrors": []
+    },
+    {
+      "mode": "after",
+      "view": "conversations",
+      "width": 412,
+      "version": "13.5.0",
+      "performance": 76,
+      "accessibility": 98,
+      "runtimeErrorCode": null,
+      "auditErrors": []
+    },
+    {
+      "mode": "after",
+      "view": "notifications",
+      "width": 1366,
+      "version": "13.5.0",
+      "performance": 88,
+      "accessibility": 100,
+      "runtimeErrorCode": null,
+      "auditErrors": []
+    },
+    {
+      "mode": "after",
+      "view": "notifications",
+      "width": 412,
+      "version": "13.5.0",
+      "performance": 90,
+      "accessibility": 100,
+      "runtimeErrorCode": null,
+      "auditErrors": []
+    }
+  ],
+  "notes": "Exact source-switch;GET-only synthetic payloads;actual full-index renderers;only synthetic initialization for conversation/bell;no production credentials/data/writes."
+}

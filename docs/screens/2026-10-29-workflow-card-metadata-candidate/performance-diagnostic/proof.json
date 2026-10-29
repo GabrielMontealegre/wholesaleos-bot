@@ -1,0 +1,776 @@
+{
+  "synthetic_only": true,
+  "baseline": "f6d7f52240df2d1f06b0032bc41a9cb993918edc",
+  "sizes": [],
+  "lighthouse": [
+    {
+      "mode": "before",
+      "view": "conversations",
+      "width": 1366,
+      "version": "13.5.0",
+      "performance": 46,
+      "accessibility": 98,
+      "runtimeErrorCode": null,
+      "auditErrors": [],
+      "metrics": {
+        "first-contentful-paint": 503.025,
+        "largest-contentful-paint": 4744.556,
+        "speed-index": 4564,
+        "total-blocking-time": 105.85299999999995,
+        "cumulative-layout-shift": 0.49937557142290606
+      },
+      "layout": [
+        {
+          "id": "cumulative-layout-shift",
+          "details": {
+            "type": "debugdata",
+            "items": [
+              {
+                "cumulativeLayoutShiftMainFrame": 0.49937557142290606,
+                "newEngineResult": {
+                  "cumulativeLayoutShift": 0.49937557142290606,
+                  "cumulativeLayoutShiftMainFrame": 0.49937557142290606
+                },
+                "newEngineResultDiffered": false
+              }
+            ]
+          }
+        },
+        {
+          "id": "layout-shifts",
+          "details": {
+            "type": "table",
+            "headings": [
+              {
+                "key": "node",
+                "valueType": "node",
+                "subItemsHeading": {
+                  "key": "extra"
+                },
+                "label": "Element"
+              },
+              {
+                "key": "score",
+                "valueType": "numeric",
+                "subItemsHeading": {
+                  "key": "cause",
+                  "valueType": "text"
+                },
+                "granularity": 0.001,
+                "label": "Layout shift score"
+              }
+            ],
+            "items": [
+              {
+                "node": {
+                  "type": "node",
+                  "lhId": "page-2-DETAILS",
+                  "path": "1,HTML,1,BODY,3,DIV,4,DIV,1,DIV,2,DETAILS",
+                  "selector": "div#app > div.main > div#content > details.today-tools",
+                  "boundingRect": {
+                    "top": 354,
+                    "bottom": 728,
+                    "left": 240,
+                    "right": 1350,
+                    "width": 1110,
+                    "height": 374
+                  },
+                  "snippet": "<details class=\"today-tools\" open=\"\">",
+                  "nodeLabel": "Conversation tools\nPeople waiting on you\nCheck linked email repliesSave linked …"
+                },
+                "score": 0.49937557142290606
+              }
+            ]
+          }
+        },
+        {
+          "id": "cls-culprits-insight",
+          "details": {
+            "type": "list",
+            "items": [
+              {
+                "type": "table",
+                "headings": [
+                  {
+                    "key": "node",
+                    "valueType": "node",
+                    "subItemsHeading": {
+                      "key": "extra"
+                    },
+                    "label": "Element"
+                  },
+                  {
+                    "key": "score",
+                    "valueType": "numeric",
+                    "subItemsHeading": {
+                      "key": "cause",
+                      "valueType": "text"
+                    },
+                    "granularity": 0.001,
+                    "label": "Layout shift score"
+                  }
+                ],
+                "items": [
+                  {
+                    "node": {
+                      "type": "text",
+                      "value": "Total"
+                    },
+                    "score": 0.49937557142290606
+                  },
+                  {
+                    "node": {
+                      "type": "node",
+                      "lhId": "page-2-DETAILS",
+                      "path": "1,HTML,1,BODY,3,DIV,4,DIV,1,DIV,2,DETAILS",
+                      "selector": "div#app > div.main > div#content > details.today-tools",
+                      "boundingRect": {
+                        "top": 354,
+                        "bottom": 728,
+                        "left": 240,
+                        "right": 1350,
+                        "width": 1110,
+                        "height": 374
+                      },
+                      "snippet": "<details class=\"today-tools\" open=\"\">",
+                      "nodeLabel": "Conversation tools\nPeople waiting on you\nCheck linked email repliesSave linked …"
+                    },
+                    "score": 0.49937557142290606
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "lcp-breakdown-insight",
+          "details": {
+            "type": "list",
+            "items": [
+              {
+                "type": "table",
+                "headings": [
+                  {
+                    "key": "label",
+                    "valueType": "text",
+                    "label": "Subpart"
+                  },
+                  {
+                    "key": "duration",
+                    "valueType": "ms",
+                    "label": "Duration"
+                  }
+                ],
+                "items": [
+                  {
+                    "subpart": "timeToFirstByte",
+                    "label": "Time to first byte",
+                    "duration": 192.616
+                  },
+                  {
+                    "subpart": "elementRenderDelay",
+                    "label": "Element render delay",
+                    "duration": 4551.94
+                  }
+                ]
+              },
+              {
+                "type": "node",
+                "lhId": "page-0-DIV",
+                "path": "1,HTML,1,BODY,3,DIV,4,DIV,1,DIV,1,SECTION,1,DIV,3,DIV,1,DIV",
+                "selector": "section#wos-public-deals > div.wos-public-deals-body > div > div",
+                "boundingRect": {
+                  "top": 256,
+                  "bottom": 296,
+                  "left": 282,
+                  "right": 1308,
+                  "width": 1026,
+                  "height": 40
+                },
+                "snippet": "<div style=\"font-size: var(--body-size); color: var(--ink); margin-bottom: 6px;\">",
+                "nodeLabel": "Open the prepared research links, take screenshots, upload them to the matching…"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "mode": "before",
+      "view": "notifications",
+      "width": 1366,
+      "version": "13.5.0",
+      "performance": 89,
+      "accessibility": 100,
+      "runtimeErrorCode": null,
+      "auditErrors": [],
+      "metrics": {
+        "first-contentful-paint": 115.333,
+        "largest-contentful-paint": 578.88,
+        "speed-index": 509,
+        "total-blocking-time": 28.47399999999999,
+        "cumulative-layout-shift": 0.2295358857771834
+      },
+      "layout": [
+        {
+          "id": "cumulative-layout-shift",
+          "details": {
+            "type": "debugdata",
+            "items": [
+              {
+                "cumulativeLayoutShiftMainFrame": 0.2295358857771834,
+                "newEngineResult": {
+                  "cumulativeLayoutShift": 0.2295358857771834,
+                  "cumulativeLayoutShiftMainFrame": 0.2295358857771834
+                },
+                "newEngineResultDiffered": false
+              }
+            ]
+          }
+        },
+        {
+          "id": "layout-shifts",
+          "details": {
+            "type": "table",
+            "headings": [
+              {
+                "key": "node",
+                "valueType": "node",
+                "subItemsHeading": {
+                  "key": "extra"
+                },
+                "label": "Element"
+              },
+              {
+                "key": "score",
+                "valueType": "numeric",
+                "subItemsHeading": {
+                  "key": "cause",
+                  "valueType": "text"
+                },
+                "granularity": 0.001,
+                "label": "Layout shift score"
+              }
+            ],
+            "items": [
+              {
+                "node": {
+                  "type": "node",
+                  "lhId": "page-1-SECTION",
+                  "path": "1,HTML,1,BODY,3,DIV,4,DIV,1,DIV,1,SECTION",
+                  "selector": "div#app > div.main > div#content > section#wos-public-deals",
+                  "boundingRect": {
+                    "top": 617,
+                    "bottom": 1319,
+                    "left": 252,
+                    "right": 1338,
+                    "width": 1086,
+                    "height": 702
+                  },
+                  "snippet": "<section id=\"wos-public-deals\" data-wos-target=\"dashboard\" style=\"margin: 12px; padding: 14px 16px; border-width: 1px; border-style: solid;\">",
+                  "nodeLabel": "Today's Deal Desk free sources - Preview: not saved yet\nMarket\nDallas County, T…"
+                },
+                "score": 0.2295358857771834
+              }
+            ]
+          }
+        },
+        {
+          "id": "cls-culprits-insight",
+          "details": {
+            "type": "list",
+            "items": [
+              {
+                "type": "table",
+                "headings": [
+                  {
+                    "key": "node",
+                    "valueType": "node",
+                    "subItemsHeading": {
+                      "key": "extra"
+                    },
+                    "label": "Element"
+                  },
+                  {
+                    "key": "score",
+                    "valueType": "numeric",
+                    "subItemsHeading": {
+                      "key": "cause",
+                      "valueType": "text"
+                    },
+                    "granularity": 0.001,
+                    "label": "Layout shift score"
+                  }
+                ],
+                "items": [
+                  {
+                    "node": {
+                      "type": "text",
+                      "value": "Total"
+                    },
+                    "score": 0.2295358857771834
+                  },
+                  {
+                    "node": {
+                      "type": "node",
+                      "lhId": "page-1-SECTION",
+                      "path": "1,HTML,1,BODY,3,DIV,4,DIV,1,DIV,1,SECTION",
+                      "selector": "div#app > div.main > div#content > section#wos-public-deals",
+                      "boundingRect": {
+                        "top": 617,
+                        "bottom": 1319,
+                        "left": 252,
+                        "right": 1338,
+                        "width": 1086,
+                        "height": 702
+                      },
+                      "snippet": "<section id=\"wos-public-deals\" data-wos-target=\"dashboard\" style=\"margin: 12px; padding: 14px 16px; border-width: 1px; border-style: solid;\">",
+                      "nodeLabel": "Today's Deal Desk free sources - Preview: not saved yet\nMarket\nDallas County, T…"
+                    },
+                    "score": 0.2295358857771834
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "lcp-breakdown-insight",
+          "details": {
+            "type": "list",
+            "items": [
+              {
+                "type": "table",
+                "headings": [
+                  {
+                    "key": "label",
+                    "valueType": "text",
+                    "label": "Subpart"
+                  },
+                  {
+                    "key": "duration",
+                    "valueType": "ms",
+                    "label": "Duration"
+                  }
+                ],
+                "items": [
+                  {
+                    "subpart": "timeToFirstByte",
+                    "label": "Time to first byte",
+                    "duration": 15.114
+                  },
+                  {
+                    "subpart": "elementRenderDelay",
+                    "label": "Element render delay",
+                    "duration": 563.766
+                  }
+                ]
+              },
+              {
+                "type": "node",
+                "lhId": "page-0-FOOTER",
+                "path": "1,HTML,1,BODY,3,DIV,4,DIV,1,DIV,0,SECTION,3,FOOTER",
+                "selector": "div.main > div#content > section#wos-today-workspace > footer.today-coverage",
+                "boundingRect": {
+                  "top": 553,
+                  "bottom": 593,
+                  "left": 240,
+                  "right": 1350,
+                  "width": 1110,
+                  "height": 40
+                },
+                "snippet": "<footer class=\"today-coverage\">",
+                "nodeLabel": "Email activity: recorded reports, not delivery proof. Records-request and routi…"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "mode": "after",
+      "view": "conversations",
+      "width": 1366,
+      "version": "13.5.0",
+      "performance": 79,
+      "accessibility": 98,
+      "runtimeErrorCode": null,
+      "auditErrors": [],
+      "metrics": {
+        "first-contentful-paint": 117.927,
+        "largest-contentful-paint": 648.939,
+        "speed-index": 494,
+        "total-blocking-time": 24.73100000000005,
+        "cumulative-layout-shift": 0.49937557142290606
+      },
+      "layout": [
+        {
+          "id": "cumulative-layout-shift",
+          "details": {
+            "type": "debugdata",
+            "items": [
+              {
+                "cumulativeLayoutShiftMainFrame": 0.49937557142290606,
+                "newEngineResult": {
+                  "cumulativeLayoutShift": 0.49937557142290606,
+                  "cumulativeLayoutShiftMainFrame": 0.49937557142290606
+                },
+                "newEngineResultDiffered": false
+              }
+            ]
+          }
+        },
+        {
+          "id": "layout-shifts",
+          "details": {
+            "type": "table",
+            "headings": [
+              {
+                "key": "node",
+                "valueType": "node",
+                "subItemsHeading": {
+                  "key": "extra"
+                },
+                "label": "Element"
+              },
+              {
+                "key": "score",
+                "valueType": "numeric",
+                "subItemsHeading": {
+                  "key": "cause",
+                  "valueType": "text"
+                },
+                "granularity": 0.001,
+                "label": "Layout shift score"
+              }
+            ],
+            "items": [
+              {
+                "node": {
+                  "type": "node",
+                  "lhId": "page-2-DETAILS",
+                  "path": "1,HTML,1,BODY,3,DIV,4,DIV,1,DIV,2,DETAILS",
+                  "selector": "div#app > div.main > div#content > details.today-tools",
+                  "boundingRect": {
+                    "top": 354,
+                    "bottom": 728,
+                    "left": 240,
+                    "right": 1350,
+                    "width": 1110,
+                    "height": 374
+                  },
+                  "snippet": "<details class=\"today-tools\" open=\"\">",
+                  "nodeLabel": "Conversation tools\nPeople waiting on you\nCheck linked email repliesSave linked …"
+                },
+                "score": 0.49937557142290606
+              }
+            ]
+          }
+        },
+        {
+          "id": "cls-culprits-insight",
+          "details": {
+            "type": "list",
+            "items": [
+              {
+                "type": "table",
+                "headings": [
+                  {
+                    "key": "node",
+                    "valueType": "node",
+                    "subItemsHeading": {
+                      "key": "extra"
+                    },
+                    "label": "Element"
+                  },
+                  {
+                    "key": "score",
+                    "valueType": "numeric",
+                    "subItemsHeading": {
+                      "key": "cause",
+                      "valueType": "text"
+                    },
+                    "granularity": 0.001,
+                    "label": "Layout shift score"
+                  }
+                ],
+                "items": [
+                  {
+                    "node": {
+                      "type": "text",
+                      "value": "Total"
+                    },
+                    "score": 0.49937557142290606
+                  },
+                  {
+                    "node": {
+                      "type": "node",
+                      "lhId": "page-2-DETAILS",
+                      "path": "1,HTML,1,BODY,3,DIV,4,DIV,1,DIV,2,DETAILS",
+                      "selector": "div#app > div.main > div#content > details.today-tools",
+                      "boundingRect": {
+                        "top": 354,
+                        "bottom": 728,
+                        "left": 240,
+                        "right": 1350,
+                        "width": 1110,
+                        "height": 374
+                      },
+                      "snippet": "<details class=\"today-tools\" open=\"\">",
+                      "nodeLabel": "Conversation tools\nPeople waiting on you\nCheck linked email repliesSave linked …"
+                    },
+                    "score": 0.49937557142290606
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "lcp-breakdown-insight",
+          "details": {
+            "type": "list",
+            "items": [
+              {
+                "type": "table",
+                "headings": [
+                  {
+                    "key": "label",
+                    "valueType": "text",
+                    "label": "Subpart"
+                  },
+                  {
+                    "key": "duration",
+                    "valueType": "ms",
+                    "label": "Duration"
+                  }
+                ],
+                "items": [
+                  {
+                    "subpart": "timeToFirstByte",
+                    "label": "Time to first byte",
+                    "duration": 18.727
+                  },
+                  {
+                    "subpart": "elementRenderDelay",
+                    "label": "Element render delay",
+                    "duration": 630.212
+                  }
+                ]
+              },
+              {
+                "type": "node",
+                "lhId": "page-0-DIV",
+                "path": "1,HTML,1,BODY,3,DIV,4,DIV,1,DIV,1,SECTION,1,DIV,3,DIV,1,DIV",
+                "selector": "section#wos-public-deals > div.wos-public-deals-body > div > div",
+                "boundingRect": {
+                  "top": 256,
+                  "bottom": 296,
+                  "left": 282,
+                  "right": 1308,
+                  "width": 1026,
+                  "height": 40
+                },
+                "snippet": "<div style=\"font-size: var(--body-size); color: var(--ink); margin-bottom: 6px;\">",
+                "nodeLabel": "Open the prepared research links, take screenshots, upload them to the matching…"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "mode": "after",
+      "view": "notifications",
+      "width": 1366,
+      "version": "13.5.0",
+      "performance": 89,
+      "accessibility": 100,
+      "runtimeErrorCode": null,
+      "auditErrors": [],
+      "metrics": {
+        "first-contentful-paint": 102.63,
+        "largest-contentful-paint": 551.199,
+        "speed-index": 486,
+        "total-blocking-time": 26.964,
+        "cumulative-layout-shift": 0.2295358857771834
+      },
+      "layout": [
+        {
+          "id": "cumulative-layout-shift",
+          "details": {
+            "type": "debugdata",
+            "items": [
+              {
+                "cumulativeLayoutShiftMainFrame": 0.2295358857771834,
+                "newEngineResult": {
+                  "cumulativeLayoutShift": 0.2295358857771834,
+                  "cumulativeLayoutShiftMainFrame": 0.2295358857771834
+                },
+                "newEngineResultDiffered": false
+              }
+            ]
+          }
+        },
+        {
+          "id": "layout-shifts",
+          "details": {
+            "type": "table",
+            "headings": [
+              {
+                "key": "node",
+                "valueType": "node",
+                "subItemsHeading": {
+                  "key": "extra"
+                },
+                "label": "Element"
+              },
+              {
+                "key": "score",
+                "valueType": "numeric",
+                "subItemsHeading": {
+                  "key": "cause",
+                  "valueType": "text"
+                },
+                "granularity": 0.001,
+                "label": "Layout shift score"
+              }
+            ],
+            "items": [
+              {
+                "node": {
+                  "type": "node",
+                  "lhId": "page-1-SECTION",
+                  "path": "1,HTML,1,BODY,3,DIV,4,DIV,1,DIV,1,SECTION",
+                  "selector": "div#app > div.main > div#content > section#wos-public-deals",
+                  "boundingRect": {
+                    "top": 617,
+                    "bottom": 1319,
+                    "left": 252,
+                    "right": 1338,
+                    "width": 1086,
+                    "height": 702
+                  },
+                  "snippet": "<section id=\"wos-public-deals\" data-wos-target=\"dashboard\" style=\"margin: 12px; padding: 14px 16px; border-width: 1px; border-style: solid;\">",
+                  "nodeLabel": "Today's Deal Desk free sources - Preview: not saved yet\nMarket\nDallas County, T…"
+                },
+                "score": 0.2295358857771834
+              }
+            ]
+          }
+        },
+        {
+          "id": "cls-culprits-insight",
+          "details": {
+            "type": "list",
+            "items": [
+              {
+                "type": "table",
+                "headings": [
+                  {
+                    "key": "node",
+                    "valueType": "node",
+                    "subItemsHeading": {
+                      "key": "extra"
+                    },
+                    "label": "Element"
+                  },
+                  {
+                    "key": "score",
+                    "valueType": "numeric",
+                    "subItemsHeading": {
+                      "key": "cause",
+                      "valueType": "text"
+                    },
+                    "granularity": 0.001,
+                    "label": "Layout shift score"
+                  }
+                ],
+                "items": [
+                  {
+                    "node": {
+                      "type": "text",
+                      "value": "Total"
+                    },
+                    "score": 0.2295358857771834
+                  },
+                  {
+                    "node": {
+                      "type": "node",
+                      "lhId": "page-1-SECTION",
+                      "path": "1,HTML,1,BODY,3,DIV,4,DIV,1,DIV,1,SECTION",
+                      "selector": "div#app > div.main > div#content > section#wos-public-deals",
+                      "boundingRect": {
+                        "top": 617,
+                        "bottom": 1319,
+                        "left": 252,
+                        "right": 1338,
+                        "width": 1086,
+                        "height": 702
+                      },
+                      "snippet": "<section id=\"wos-public-deals\" data-wos-target=\"dashboard\" style=\"margin: 12px; padding: 14px 16px; border-width: 1px; border-style: solid;\">",
+                      "nodeLabel": "Today's Deal Desk free sources - Preview: not saved yet\nMarket\nDallas County, T…"
+                    },
+                    "score": 0.2295358857771834
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "lcp-breakdown-insight",
+          "details": {
+            "type": "list",
+            "items": [
+              {
+                "type": "table",
+                "headings": [
+                  {
+                    "key": "label",
+                    "valueType": "text",
+                    "label": "Subpart"
+                  },
+                  {
+                    "key": "duration",
+                    "valueType": "ms",
+                    "label": "Duration"
+                  }
+                ],
+                "items": [
+                  {
+                    "subpart": "timeToFirstByte",
+                    "label": "Time to first byte",
+                    "duration": 18.354
+                  },
+                  {
+                    "subpart": "elementRenderDelay",
+                    "label": "Element render delay",
+                    "duration": 532.845
+                  }
+                ]
+              },
+              {
+                "type": "node",
+                "lhId": "page-0-FOOTER",
+                "path": "1,HTML,1,BODY,3,DIV,4,DIV,1,DIV,0,SECTION,3,FOOTER",
+                "selector": "div.main > div#content > section#wos-today-workspace > footer.today-coverage",
+                "boundingRect": {
+                  "top": 553,
+                  "bottom": 593,
+                  "left": 240,
+                  "right": 1350,
+                  "width": 1110,
+                  "height": 40
+                },
+                "snippet": "<footer class=\"today-coverage\">",
+                "nodeLabel": "Email activity: recorded reports, not delivery proof. Records-request and routi…"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "notes": "Exact source-switch;GET-only synthetic payloads;actual full-index renderers;only synthetic initialization for conversation/bell;no production credentials/data/writes."
+}

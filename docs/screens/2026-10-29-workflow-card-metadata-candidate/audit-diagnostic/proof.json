@@ -1,0 +1,16 @@
+{
+  "synthetic_only": true,
+  "baseline": "f6d7f52240df2d1f06b0032bc41a9cb993918edc",
+  "sizes": [
+    {
+      "mode": "before",
+      "view": "conversations",
+      "width": 1366,
+      "fcp": 331.59999999962747,
+      "overflow": false,
+      "errors": []
+    }
+  ],
+  "lighthouse": [],
+  "notes": "Exact source-switch;GET-only synthetic payloads;actual full-index renderers;only synthetic initialization for conversation/bell;no production credentials/data/writes."
+}

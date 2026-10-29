@@ -63,3 +63,50 @@ required. No data migration/deletion;rollback restores display-only code.
 Buyer detailedrecord refs/timelines/subjects remain valid identity,while nested
 buyer-match card faces and legacy list metadata need separate trace/slice.
 Owner5%5-hourreservepolicy/no earlyweeklyconservation;warnTOPbacklogwhen<10%left.
+
+## Audit Harness History
+
+Initialfourviewaudit stopped before a complete report;onlybeforeApprovals and
+Pipeline images exist. Errorcause was not serialized,so NOTcalledflaky,
+environment or productdefect. Initialconversationstate screenshots place the
+changedcard belowfold;not validpositivevisualproof for thatcard. Retained under
+audit-initial-incomplete plus originalstates. Oneboundedconversationdesktop
+initialization diagnostic PASS331.6ms/noerrors,not a wholeaudit success and not
+proof of the original cause. Harnessnow requires actualview readiness and
+scrolls changedconversation into viewport/assertsgeometry beforecapture;no
+productchange orFCP/performance/accessibilitythresholdchange. Strengthenedfull
+audit running;no failed/incomplete/diagnostic results reused as gate.
+
+Firstharnessfixfullaudit also stopped BEFOREbaselineconversation: retained
+diagnostic shows nodes1/toolsOpenfalse/authenticated/dashboard/no pageerrors.
+Syntheticinitializer stored a startedboolean while Todayhydration replaced
+the expandedsection with a new foldedDOMsection. Secondharnesscorrection uses
+currentsection.open/currentrow identity,keeps observing replacement andscrolls
+only a new visible row. No productchange/failed-headtestretry/gateweakening.
+Secondcorrectedcompleteauditrequired;allinitial/incompletehistoryretained.
+
+## Blocked Candidate / 478
+
+SecondcorrectedCOMPLETEaudit reachedallfourviews. AfterApprovals/Pipelineeach
+100/100performance98/98access;Conversations76/76performance98/98access,
+Notifications88/90performance100/100access. AllFCP<2s/nooverflow/runtimeerrors.
+This is a FAILEDUIgate,notrelease. BaselineConversation79/76/Bell89/99also
+below90;no waiver/flaky/environment/wordingcause claim. Oneboundedmetric
+diagnostic on SAMEsource identifies CLS0.4994atdetails.today-tools for both
+conversationversions;candidateLCP649ms/baseline4745ms. BellCLS0.2295at
+section#wos-public-deals bothversions,candidateLCP551ms/baseline579ms.
+ParentTodaylayoutstabilization affects two consumers;needs-architect478 asks
+for one bounded repair/acceptance prompt without weakening90+gates. PR477
+remainsDRAFT/UNMERGED/UNDEPLOYED/BLOCKEDonly478;production476unchanged.
+
+Actualfull40892998131/job123514499202 REAL277/1/0(all278),600s/file,17m09job,
+sum964.65sNOTwall;all278rowsretained. Scannerflagged syntheticfixedworkflow
+key at tests/helpers/workflow-card-metadata-fixture.js:7. FIRSTlocalcorrection
+adds existing same-line tests-onlysynthetic-secret-fixture annotation;no
+literal/assertion/scannerpolicychange. ActualofflinegatePASSlocallyafterfix.
+Runtimeidentical47170f6. No newfull dispatch while478boundarypending;local
+correction/proof retained deliberately,not falselyreported remote/fullgreen.
+Initialpublicissuecreation auto-reviewdenied;aftercheckingdirectownerAGENTS10
+authorization,one same-actionreviewretry permitted478. No alternativechannel
+or denialbypass/no ownerbusinessoutreach/privatecontent posted.
+Independentbuyer-match/legacycardmetadata can continuefromverifiedcurrentmain.
