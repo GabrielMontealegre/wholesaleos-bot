@@ -112,6 +112,12 @@ ASSUMED:455.8B3 independentbuyer matching/near-missfaces use Open deal+existing
 location;exactIDs/projections/sharing gates/fullrecordrefs/subjects/history remain.
 Do not bundleblocked477workflowcode;onlyitsreviewedboundary478blocksB2,notthis
 consumer. No sourcecode-like stringcensorship/nativeDeals. --AGENTS2/3--2026-10-29.
+Historical owned PR477 display-boundary assumption:
+ASSUMED:455.8B2 removes only standalone reference metadata on Approvals,
+conversationcards,Pipeline and notificationWorkqueue. Canonicaldata/keys/refs/
+links/fullrecord/search/history/source labels/messages/alerts remain intact.
+Buyer-match and legacyfaces are laterbounded8B work;do not call whole8done.
+--AGENTS2/3/owner455.8/data provenance--2026-10-29.
 
 ASSUMED: Continue455.8B as ordered consumer-boundary PRs;B1 removes standalone
 reference metadata from native/classicToday only, preserving exact handlers,

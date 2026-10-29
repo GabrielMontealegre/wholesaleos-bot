@@ -309,6 +309,16 @@ authoritywithoutlowering90+gates. OnlyB2blocked;wholebacklogcontinues. Main/live
 476f6d7f522unchanged. 4558NOTcomplete/overall5of9(56%),legacyfaces remainafterB3.
 Owned476proof deliberatelycarriedas98cb65c,no unrelatedloss. OWNER5%policy/no
 earlyweeklyhold;latest61%primary78%weeklyused,22%weeklyleft/no warningthreshold.
+HISTORICAL PR477 preparation (current-main D065c rebase supersedes its hold):
+2026-10-29 LOCAL455.8B2 workflowcardmetadata IMPLEMENTED/focused9PASS;
+full278/fourviewaudit/releasePENDING. Approvals/conversation/Pipeline/bellWorkqueue
+standalone reference lines removed;exactIDs/keys/links/review/source text/data/
+history unchanged/no backend/auth/provider/clock/writer changes. Existingtests
+UNCHANGED;newactualfullindex4views3size metadata/source-escaping/no-write proof.
+Main/live476f6d7f522 unchanged. Remainingbuyer-match/legacyfaces afterthisslice;
+4558NOTcomplete,overall5/9(56%). Owned476proof fb81561 deliberatelycarriedonto
+actualmain as30138e0/no unrelatedloss. OWNER5%policy/no weeklyhold. Trace
+docs/cycles/issue-455-workflow-card-metadata.md.
 
 2026-10-29 PR476 RELEASED/VERIFIED 455.8B1TodaymetadataONLY. Actualmainf6d7f522
 complete tree42f41945 identicaltested9874671. AutomaticRailway23b82e52 exact
