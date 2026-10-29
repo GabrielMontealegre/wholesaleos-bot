@@ -35,7 +35,8 @@ ready vs unavailable unchecked email selections,near-miss never selectable,
 exact matchingdealOpen/Back/fullrecordidentity,no writes/external/errors/
 overflow,immutablefixture/projection/store. Existingassertions changed:NONE.
 SixfocusedfilesPASS newmetadataUI,buyerworkspaceUI+unit,dealcardnavigation,
-recordactivityUI,offlinegate(currenttrackedfiles;newfilesstagedscanstillrequired).
+recordactivityUI,offlinegate;stagednewfiles rescannedPASSbeforecommit. The same
+sixfiles alsoPASS afteractualmerge/runtime-treeidentityverified.
 Actualfull278PR+MAIN/currenthead+selfreview/exactautomaticdeployment/public15/
 sameSHAsynthetic/signedSTRUCTURALONLY andbeforeafter FCP<2s/performanceAND
 access90+three-size UIaudit required. Currentaudit usesfixedcanonicalbuyerroute
@@ -50,4 +51,6 @@ remain accessible. Whole455.8 NOTcomplete:477blocked478 andlegacyfaces remain.
 
 477retainedbranch412ed2e hasFIRSTsyntheticfixtureannotationfix+failedproof
 UNPUSHED;remote47170f6 real277/1/0 andUIperformancefailed. No runtime bundled
-or unchangedgate rerun. Production remainsverified476/f6d7f522.
+or unchangedgate rerun. PR479actualmerge2a74029 deployedautomatically with exact
+sourceverified;fullMAIN278/0/0 andallreadonlygatesPASS,RELEASEVERIFIED. See
+docs/screens/2026-10-29-pr479-release/README.md for allgates and prooflimits.
