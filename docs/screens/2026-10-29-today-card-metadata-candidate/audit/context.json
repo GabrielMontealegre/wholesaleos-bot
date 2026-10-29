@@ -1,0 +1,24 @@
+{
+  "source_sha": "98746710e18d616baa17aac1b5def6d63690b076",
+  "baseline": "7a7e354e5f8519bf10f6514dbf9abf9a2602a3fe",
+  "sources": [
+    {
+      "file": "workspace/app.js",
+      "normalized_sha256": "a5ce078aac5d59f34969e4fcd82ac67036c11e9333f36d1e5fa08131c84fd67f"
+    },
+    {
+      "file": "workspace/index.html",
+      "normalized_sha256": "cf529bf26767d594551d6e05fe50560fab16dc096e0efae903396136a950209d"
+    },
+    {
+      "file": "wos-today-workspace.js",
+      "normalized_sha256": "85088706565d46768c1732fe858f4070d5a53fdc17e572e7976286bdd12ea1fb"
+    },
+    {
+      "file": "index.html",
+      "normalized_sha256": "30daf0ae3771a271d2d8dc3cddf41ed4b79501ad8533a0e25d9610a691c3edda"
+    }
+  ],
+  "audit_helper_sha256": "3cfcbf5ccb3a5a8d105a9c97f317375c39c88e9eedccb399f833eb1e763e907d",
+  "route_authority": "Native populated .ws-today-action;classic explicit?workspace=today with APP.page dashboard and populated #wos-today-workspace;GET-only synthetic API"
+}
