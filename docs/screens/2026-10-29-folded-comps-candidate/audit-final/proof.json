@@ -1,0 +1,117 @@
+{
+  "synthetic_only": true,
+  "baseline": "2a74029a5d08afdf7ef724e25dda740f87b865bd",
+  "source_sha": "59992171f12ac4c79bc1ff329572a57604c5135b",
+  "sizes": [
+    {
+      "mode": "before",
+      "width": 1366,
+      "fcp": 212.19999999925494,
+      "overflow": false,
+      "record": "fixture-deal",
+      "rows": 3,
+      "folded": false,
+      "errors": []
+    },
+    {
+      "mode": "before",
+      "width": 400,
+      "fcp": 115,
+      "overflow": false,
+      "record": "fixture-deal",
+      "rows": 3,
+      "folded": false,
+      "errors": []
+    },
+    {
+      "mode": "before",
+      "width": 412,
+      "fcp": 188.29999999701977,
+      "overflow": false,
+      "record": "fixture-deal",
+      "rows": 3,
+      "folded": false,
+      "errors": []
+    },
+    {
+      "mode": "after",
+      "width": 1366,
+      "fcp": 178.39999999850988,
+      "overflow": false,
+      "record": "fixture-deal",
+      "rows": 3,
+      "folded": true,
+      "errors": []
+    },
+    {
+      "mode": "after",
+      "width": 400,
+      "fcp": 127.39999999850988,
+      "overflow": false,
+      "record": "fixture-deal",
+      "rows": 3,
+      "folded": true,
+      "errors": []
+    },
+    {
+      "mode": "after",
+      "width": 412,
+      "fcp": 124.70000000298023,
+      "overflow": false,
+      "record": "fixture-deal",
+      "rows": 3,
+      "folded": true,
+      "errors": []
+    }
+  ],
+  "lighthouse": [
+    {
+      "mode": "before",
+      "width": 1366,
+      "version": "13.5.0",
+      "performance": 41,
+      "accessibility": 95,
+      "runtimeErrorCode": null,
+      "auditErrors": []
+    },
+    {
+      "mode": "before",
+      "width": 412,
+      "version": "13.5.0",
+      "performance": 99,
+      "accessibility": 95,
+      "runtimeErrorCode": null,
+      "auditErrors": []
+    },
+    {
+      "mode": "after",
+      "width": 1366,
+      "version": "13.5.0",
+      "performance": 98,
+      "accessibility": 95,
+      "runtimeErrorCode": null,
+      "auditErrors": []
+    },
+    {
+      "mode": "after",
+      "width": 412,
+      "version": "13.5.0",
+      "performance": 97,
+      "accessibility": 95,
+      "runtimeErrorCode": null,
+      "auditErrors": []
+    }
+  ],
+  "notes": "Actual fullindex canonicalrecord route;no parentlayout freezing or initializer;GET-only synthetic APIs,no credentials/production writes.",
+  "sources": [
+    {
+      "file": "index.html",
+      "normalized_sha256": "2b03c87cd6fc449d5318ef3876ec2f831c65a429a2cccec1b5d9ad37cb14a065"
+    },
+    {
+      "file": "wos-todays-deals.js",
+      "normalized_sha256": "bebb864620d29146763da61cab7289e3efe2ace4dbd4cc4340e43d5ef3a04921"
+    }
+  ],
+  "audit_helper_sha256": "2b634edcf3d949ffd370725d0b07ef0cf64e5da4f81904bebd690f030457ced1"
+}

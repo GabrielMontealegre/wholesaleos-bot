@@ -1,0 +1,30 @@
+{
+  "synthetic_only": true,
+  "baseline": "2a74029a5d08afdf7ef724e25dda740f87b865bd",
+  "source_sha": "59992171f12ac4c79bc1ff329572a57604c5135b",
+  "sizes": [
+    {
+      "mode": "before",
+      "width": 1366,
+      "fcp": 978.1999999992549,
+      "overflow": false,
+      "record": "fixture-deal",
+      "rows": 3,
+      "folded": false,
+      "errors": []
+    }
+  ],
+  "lighthouse": [],
+  "notes": "Actual fullindex canonicalrecord route;no parentlayout freezing or initializer;GET-only synthetic APIs,no credentials/production writes.",
+  "sources": [
+    {
+      "file": "index.html",
+      "normalized_sha256": "2b03c87cd6fc449d5318ef3876ec2f831c65a429a2cccec1b5d9ad37cb14a065"
+    },
+    {
+      "file": "wos-todays-deals.js",
+      "normalized_sha256": "bebb864620d29146763da61cab7289e3efe2ace4dbd4cc4340e43d5ef3a04921"
+    }
+  ],
+  "audit_helper_sha256": "4da7bc1ca7e9f1c849045a2c9263f27a06f8acf1d14987465601de370c8844b9"
+}

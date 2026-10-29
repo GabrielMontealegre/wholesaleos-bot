@@ -1,5 +1,32 @@
 # Backlog
 
+2026-10-29 WEEKLY USAGE WARNING: 9% remains (91% used). Architect: check the
+live app and this run's verified release evidence. Gabriel alone handles any
+manual weekly reset; Codex will not reset or purchase usage. Continuing normal
+backlog work under the owner's about5% five-hour revert reserve,not stopping
+early for the weekly budget. Currentwindow45%used;PR480merged5c81e46 with
+candidate279/0/0+MAIN279/0/0+allpublic/livegatespassed. No earlyweeklyhold.
+
+2026-10-29 PR480 RELEASED/VERIFIED:455.9 foldedcomps/explicitrowreason only.
+Actualmain5c81e46be528fa177f1679d39c069fc12c5fd80c tree714a6bc identical5999217.
+AutomaticRailwayfbe5008c exactsourceActive/successful/Detailsaria-selected.
+PR40936614384/job123668718693279/0/0,17m07job,sum965.31s;
+MAIN40939426269/job123678552692279/0/0,16m52job,sum949.46s;600s/file,
+ALL558timings,sumsNOTwall/no fullfailures/reruns/cancellations/assertionchanges.
+Public15 unchanged44px/security/exactDeals19+entry/true3sizes andmergedfocused8
+PASS. SyntheticFCP178.4/127.4/124.7ms,LHperformance98/97/access95/95;baseline
+41/99retainednotgreen/no causalclaim. Initialharnessfailure/diag/prewarmfix
+retainedtruthfully. ActualsignedChrome4 1280x529STRUCTURALONLY19->1/closedfold
+3rows/explicitreasonshow+Cancel/focus(no typing/values/Confirm/PATCH)->Back6
+skeletons->19/0open/nooverflow SAMEtransition. No privatecaptures/AX/text/values/
+credentials/businesswrites/authtransfer. Browser3disconnected/absentinventory;
+documentedfreshsoleChrome4connectionrecovery,notSAME3or staletab reselection.
+Proof docs/screens/2026-10-29-pr480-release. 455.9DONE;items1,2,3,6,7,9DONE
+6/9(67%). 4A471/fixture5-472/workflow8B2-478 stillblocked;whole455/backlogactive.
+Independentnext392 legacycontractrepair tracebegun:static literal-redacted
+sourceonly,no privateprofile/files/contracts/generatedoutput inspected. Hardcoded
+defaults/clock+percentage/AIcall stillpresent;no392branch/edit/test/deployyet.
+
 2026-10-29 capacityreturned4%window85%weeklyused(15%left). 455.9 foldedcomps
 LOCALIMPLEMENTATION/new3size test pending;notmerged/deployed/verified. Proposed
 8B4legacyDailyAcquisitionQueue isshadowed by actualdefaultTodayrenderer;no
