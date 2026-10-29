@@ -1,5 +1,14 @@
 # Backlog
 
+2026-10-29 LOCAL455.6 loading-state candidate,NOT released: native Email metadata
+skeleton/body2sStillloading+explicit retries,Today Retry,classic Deals skeleton/
+error Retry. No backend/auth/provider/clock/data writes. Three-size held-read
+synthetic proof and existing six-file mailbox/navigation/Today/clock focused
+journeys PASS; final source/full274/UI audits/release gates still required.
+Trace docs/cycles/issue-455-loading-states.md. Main/live remains verified87a6078.
+455 items1-3 done(3/9),4A blocked471,5 runtime identity blocked472;6 in progress.
+No privacy restriction relaxed; no real credentials/private captures/business writes.
+
 2026-10-28 PR469 FAILED actual live geometry gate; rolled back FIRST by PR470.
 Current main87a6078ccbecd619a9ee25d7fe640eb665c797d6 complete tree equals
 verified46880660c6 and tested rollbackfba9ef9. Automatic Railway09f173c5 exact
