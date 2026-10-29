@@ -39,5 +39,16 @@ without rerunning full suites or Lighthouse. All30 final synthetic images were
 inspected; initial stretched layout remains historical. NOTlive speed.
 Self-review: current main base, bounded CSS15/app13 only, no changed existing
 assertions, no storage/API/role/provider/clock changes; fixed routes intact.
-Full suite and exact automatic live release remain pending.
+RELEASED/VERIFIED:474 main71f32fc exact tested338906f complete tree,
+automaticRailway51497a20 exactActive/successful/Details sourceverified.
+PR40843985299/job123346898462275/0/0,15m59job,sum887.38s NOTwall;
+MAIN40846129112/job123353956830275/0/0,15m24job,sum864.61s NOTwall.
+All550timings retained; no full failures/reruns/changed existing assertions.
+Public15 true3sizes/original44px/security/currentsource and exactmerged six-file
+synthetic journeys PASS. Actual signed1280x585 structural More/Settings/Email/
+classic19->1->Back->19 PASS; mobile positive proof synthetic only because the
+browser viewport override did not change actual dimensions. No private captures/
+body text/values/credentials/business writes. See pr474-release README for
+tooling limits,non-authoritative absent-selector observations and log-tab default.
+455.7 DONE;1,2,3,6,7 are5/9(56%);next8 when releaseANDrollback reserve permits.
 No production private capture, text read, credential or business action allowed.

@@ -1,5 +1,21 @@
 # Backlog
 
+2026-10-29 PR474 RELEASED/VERIFIED: main71f32fc4a96a33f1f89f2d1ef7381c146f567543
+complete tree IDENTICAL tested338906f. AutomaticRailway51497a20 exactsource
+Active/successful/Details selected. PR40843985299/job123346898462275/0/0,
+15m59job,sum887.38s;MAIN40846129112/job123353956830275/0/0,15m24job,
+sum864.61s;sums NOTwall,600s/file,ALL550timings retained. No full failures/reruns.
+Public15 true3sizes/original44px/security/currentCSS15+app13 gates and six-file
+exactmerged synthetic journeys PASS. Mobile drawer full-height/outside tap,
+compact44px rows/X/Escape/focus verified synthetically400/412/shortphone.
+Signed1280x585 structural More/Settings/Email/classic19->1->Back->19; viewport
+tool did NOTproduce signed mobile dimensions;no such claim/privatecapture/text/
+values/credentials/businesswrites. Safeproof docs/screens/2026-10-29-pr474-release.
+455.7 DONE;items1,2,3,6,7 are5/9(56%),4A471/fixtureidentity472 blocked,
+next independent8plaincardwords when fullimplementation/releaseANDrollback
+reserve permits. NativeDeals unauthorized;454ownerkey/routine pending/alreadyasked,
+463Notyet/450unanswered/456deferred. Whole455/412/backlogNOTcomplete.
+
 2026-10-29 LOCAL455.7 mobile-menu candidate: native Today/Email mobile navigation
 is full-height at400/412 with compact44px rows, outside-tap/X/Escape dismissal,
 keyboard focus containment/return and existing singleMore handoff. Six focused
