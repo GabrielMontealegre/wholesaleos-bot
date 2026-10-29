@@ -58,6 +58,21 @@ external-empty assertion remains unchanged. No productfailure/CIrerunclaim.
 Finalfocused8PASS:expandednew3size+missingkey/recordedexcludedescaping/empty
 negativecases,marketplace,widerareaUI+unit,compgridfingerprint,wholecardkeyboard/
 valueprivacy,actualBackrace,offlinegateincludingstagednewfiles. No fullCIyet.
+Candidate5999217 published asDRAFT480;automaticfull27940936614384 pending.
+Initialaudit stopped atAssertionError beforefirstimage;no metricserialized,
+causeunknown/notflaky/environment. Oneboundedbaseline1366diagnostic passed
+FCP978.2ms/3rows/exactfixture-deal/nooverflow/errors;notwholeaudit/causeproof.
+Harness firstcorrection preloads exactbaselineHTML/JS/CSS beforemeasured
+navigation:oldbaseline source() synchronouslyspawnedGitpernewasset whileafter
+readsdisk,an asymmetricmeasurementcost. Actualroute/layout/clock/thresholds
+unchanged;newcompleteaudit pending. Diagnostic retained separately;no proofreuse.
+CorrectedcompleteauditPASSexact599source:afterFCP178.4/127.4/124.7ms true
+1366/400/412;LH13.5performance98/97/access95/95/nullruntime/emptyaudit/nooverflow.
+Baselineperformance41/99/access95/95 retainedtruthfully;baseline41causeunknown,
+notrelabeledgreen/no causalperformanceimprovementclaim. Candidateall90+passes.
+All15finalaudit+6stateimagesinspected. Initialframesplaceclosedfoldbelowviewport;
+threeadditionalexact-sourceclosed-summaryviewsinspectedwithnoLH/fullrerun.
+Diagnostic andcapture-only reports separatefromcompleteaudit. SYNTHETICnotlive.
 
 ## Release Gates
 
@@ -65,3 +80,13 @@ Focused8/full279PR+MAIN/selfreview/currenthead/exactautomaticdeployment/
 public15unchanged44px+source/security/sameSHAsynthetic3sizeUI/FCP<2s+
 performanceANDaccess90+/approvedstructural-onlysigned proof required.
 Whole455.8/455/backlog remainactive/notcomplete.
+
+## Verified Release
+
+PR480actualmain5c81e46 tree714a6bc identicaltested5999217. AutomaticRailway
+fbe5008c exactsourceActive/successful/Detailsselected. PR279/0/0+MAIN279/0/0,
+600s/file/ALL558timings. Public15 unchanged44px/security/exactsource andmerged
+focused8PASS. ActualsignedChrome4structural19->1/closedfold3rows/rowreason
+show+Cancel/focus/Back6skeletons->19 with no writes/privatecontent inspection.
+See docs/screens/2026-10-29-pr480-release/README.md forfullnumbers/prooflimits.
+455.9 DONE;items1,2,3,6,7,9=6/9(67%). 4/5/8 remainblocked/partial,notcomplete.
