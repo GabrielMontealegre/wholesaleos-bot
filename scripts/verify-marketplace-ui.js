@@ -136,7 +136,9 @@ async function prove({ screenshots = false,wider=false } = {}) {
           await page.locator('[data-deal-open]').click();
           assert.ok(await page.locator('.td-open-view .td-detail').isVisible());
           assert.strictEqual(await page.locator('.td-card tbody tr').count(),3);
+          await page.locator('.td-comps > summary').click();
           if(wider){assert.strictEqual(await page.locator('[data-wider-comp]').count(),2);assert.ok((await page.locator('[data-wider-area-label]').innerText()).includes('up to 2.5 miles'));assert.ok((await page.locator('.td-math').innerText()).includes('Preliminary'));}
+          await page.locator('[data-comp-exclusion-open]').first().click();
           await page.locator('[data-deal-action="exclude_comp"]').first().click();
           assert.ok((await page.locator('[data-deal-error]').innerText()).includes('written reason'),'an empty exclusion must not send a request');
           await page.locator('[data-deal-action="approve"]').click();

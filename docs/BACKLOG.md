@@ -1,5 +1,13 @@
 # Backlog
 
+2026-10-29 capacityreturned4%window85%weeklyused(15%left). 455.9 foldedcomps
+LOCALIMPLEMENTATION/new3size test pending;notmerged/deployed/verified. Proposed
+8B4legacyDailyAcquisitionQueue isshadowed by actualdefaultTodayrenderer;no
+deadcodecleanup/manufacturedvisualproof. 8B2stillblocked478/noanswer;8notdone.
+Currentmain/live479unchanged. Owner5%policy/no earlyweeklyhold;no warningyet.
+Trace docs/cycles/issue-455-folded-comps.md. Owned479proof deliberatelycarried;
+477local412ed2e remainsuntouched/unpushed. No dependencies/locks/backendwrites.
+
 2026-10-29 PR479 RELEASED/VERIFIED:455.8B3 buyer matching/near-miss commands.
 Actualmain2a74029a5d08afdf7ef724e25dda740f87b865bd complete tree1d715f21
 identicaltested79c184c. AutomaticRailway100397b8 exactsourceActive/successful/

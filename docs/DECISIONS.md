@@ -1,5 +1,12 @@
 # Decisions
 
+ASSUMED:455.9 uses nativeclosed comparable-sales details and row-local explicit
+reason disclosure;opening orCancel cannot write/refetch or markreview complete.
+OnlyConfirm exclusion invokes the existing key/index/reason-boundPATCH. Preserve
+allcomps/source/value/review/identity semantics. Proposed8B4legacyDashboard
+nodes are shadowed by currentTodayrenderer;do not editdeadpaths orclaim8done.
+Independent9 mayproceed while8B2 awaits478. --AGENTS2/3,owner455.9--2026-10-29.
+
 ASSUMED:455.8B3 independentbuyer matching/near-missfaces use Open deal+existing
 location;exactIDs/projections/sharing gates/fullrecordrefs/subjects/history remain.
 Do not bundleblocked477workflowcode;onlyitsreviewedboundary478blocksB2,notthis
