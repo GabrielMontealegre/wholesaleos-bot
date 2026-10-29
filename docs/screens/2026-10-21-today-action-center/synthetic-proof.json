@@ -1,0 +1,38 @@
+{
+  "synthetic_only": true,
+  "widths": [
+    {
+      "width": 1366,
+      "height": 768,
+      "first_contentful_paint_ms": 223,
+      "horizontal_overflow": false,
+      "stylesheet_count": 1
+    },
+    {
+      "width": 400,
+      "height": 915,
+      "first_contentful_paint_ms": 117.90000009536743,
+      "horizontal_overflow": false,
+      "stylesheet_count": 1
+    },
+    {
+      "width": 412,
+      "height": 915,
+      "first_contentful_paint_ms": 46.40000009536743,
+      "horizontal_overflow": false,
+      "stylesheet_count": 1
+    }
+  ],
+  "accessibility": [
+    {
+      "width": 1366,
+      "score": 100,
+      "lighthouse_version": "13.5.0"
+    },
+    {
+      "width": 412,
+      "score": 100,
+      "lighthouse_version": "13.5.0"
+    }
+  ]
+}

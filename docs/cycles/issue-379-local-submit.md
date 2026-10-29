@@ -14,7 +14,10 @@ node scripts/submit-assistant-finds.js --input-dir exports/assistant
 
 This is offline by default: no network, pairing-config read, file write,
 approval or outreach. Output contains counts and fixed reasons only.
-Input must be an array, or an object containing only an items array.
+Input can be an array, an object containing only an items array, or the
+file's exact named array with sibling metadata: buyers for buyers.json and
+land-buyers.json, deals for deals.json, agents for agents.json. Metadata is
+ignored, not posted. Wrong or ambiguous payload keys are rejected.
 Buyer/deal fields must already satisfy the existing importer contract.
 No address, date, source, identity, price or buy box is filled in by the tool.
 Land buyers are ordinary buyer records only if their supplied fields validate.
@@ -48,7 +51,13 @@ POST /api/assistant/finds with the existing signed agent token. New rows
 remain pending. Existing operator edits/approvals are preserved by the same
 canonical importer; the CLI adds no approval or update-by-ref workflow.
 
-Limits:4MiB per file,500 rows,50 records/256KiB per request and10 requests
+Each file reports raw rows, considered rows and truncated_count; the report
+also sums truncation. A file over500 rows is an input_row_limit error and
+blocks submit before credentials/network. The offline prefix is not a silent
+partial submit. Multiple valid files can be previewed above500 total, but
+the unchanged10-request live budget still applies to any explicit run.
+
+Limits:4MiB and500 considered rows per file,50 records/256KiB per request and10 requests
 per invocation. Requests are sequential with at least1s between completed
 requests and the next start. Existing server12/hour limit still applies
 across repeated invocations; the CLI does not bypass or reset it.

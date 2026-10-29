@@ -1,4 +1,12 @@
 node_modules/
+# Local configuration and credential containers never belong in Git.
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
 exports/*
 !exports/cycle-37-egress-proof.json
 !exports/cycle-37-local-proof.json
@@ -93,4 +101,7 @@ deal-board-jobs.json
 deal-board-auto-run.json
 # Private reference-operation backups must never enter version control.
 **/private-record-backups/
+# The runtime store can contain private assistant imports and contact details.
+/data/db.json
+/data/db.json.tmp
 /dashboard/vendor/tabler-1.6.1/package.tgz

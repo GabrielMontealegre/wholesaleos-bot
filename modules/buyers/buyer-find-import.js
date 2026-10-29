@@ -4,6 +4,7 @@ const finds = require('./assistant-finds');
 const deals = require('../deals/reviewed-deals');
 const activity = require('../records/record-activity');
 const conversations = require('../records/conversations');
+const pipeline = require('../records/pipeline-reports');
 const BULK_APPROVAL_CLASSES = new Set(['end_buyer', 'end_buyer_strict', 'end_buyer_stale']);
 function fail(code, status = 400) { const error = new Error(code); error.code = code; error.status = status; throw error; }
 
@@ -11,7 +12,7 @@ function validateAgentItems(body, now) {
   if (!body || typeof body !== 'object' || Array.isArray(body) || Object.keys(body).some(key => key !== 'items')) fail('find_request_invalid');
   if (Buffer.byteLength(JSON.stringify(body)) > finds.MAX_REQUEST_BYTES) fail('find_request_too_large', 413);
   if (!Array.isArray(body.items) || !body.items.length || body.items.length > finds.MAX_ITEMS) fail('find_item_limit');
-  return body.items.map(item => item?.kind === 'conversation' ? conversations.validate(item,now) :
+  return body.items.map(item => item?.kind === 'pipeline_item' ? pipeline.validate(item,now) : item?.kind === 'conversation' ? conversations.validate(item,now) :
     item?.kind === 'interaction' ? activity.validateInteraction(item,now) :
     item?.kind === 'deal' ? deals.validate(item,now) :
     finds.validateItems({items:[item?.kind === 'buyer' ? Object.fromEntries(Object.entries(item).filter(([key])=>key!=='kind')) : item]},now)[0]);
@@ -25,7 +26,8 @@ function prepareImport(store, body, { now }) {
   const rejected = [];
   body.items.forEach((item, index) => {
     try {
-      if (item && item.kind === 'conversation') items.push(conversations.validate(item, now));
+      if (item && item.kind === 'pipeline_item') items.push(pipeline.validate(item, now));
+      else if (item && item.kind === 'conversation') items.push(conversations.validate(item, now));
       else if (item && item.kind === 'interaction') items.push(activity.validateInteraction(item, now));
       else if (item && item.kind === 'deal') items.push(deals.validate(item, now));
       else if (item && item.kind === 'deal_update') items.push(deals.validateDealUpdate(store,item,now));
@@ -68,7 +70,7 @@ function commitImport(store, plan, { now, operatorId, createId, bulkApprove = fa
 function ingestMixed(store, items, context) {
   let updated = store; const results = [];
   for (const item of items) {
-    const result = item.kind === 'conversation' ? conversations.upsert(updated,item,context) : item.kind === 'interaction' ? activity.importInteraction(updated, item, context) : ['deal','deal_update'].includes(item.kind) ? deals.ingest(updated, [item], context) : finds.ingest(updated, [item], context);
+    const result = item.kind === 'pipeline_item' ? pipeline.upsert(updated,item,context) : item.kind === 'conversation' ? conversations.upsert(updated,item,context) : item.kind === 'interaction' ? activity.importInteraction(updated, item, context) : ['deal','deal_update'].includes(item.kind) ? deals.ingest(updated, [item], context) : finds.ingest(updated, [item], context);
     updated = result.store; results.push(result.results[0]);
   }
   return { store: updated, results };

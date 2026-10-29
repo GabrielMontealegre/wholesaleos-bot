@@ -1,0 +1,14 @@
+{
+  "synthetic_only": true,
+  "production_failure": false,
+  "held_candidate": "77e3a5c35cf614f9452da51f04b62acc08ab4163",
+  "baseline": "dd04d989ebf74fe7c208554024b93f6a5bc4fd90",
+  "lighthouse_version": "13.5.0",
+  "baseline_performance_desktop_phone": [99, 96],
+  "candidate_performance_desktop_phone": [82, 80],
+  "candidate_accessibility_desktop_phone": [100, 100],
+  "phone_cumulative_layout_shift": 0.46774182317364316,
+  "diagnosed_largest_shift": "Canonical Today painted before assistant hydration,then moved below the expanded sheet",
+  "release_action": "Merge withheld despite green functional workflow;requires corrected head with performance>=90 and own full gate",
+  "correction": "Stable initial placement plus explicit access to recorded work during slow assistant reads;no artificial blank spacer"
+}

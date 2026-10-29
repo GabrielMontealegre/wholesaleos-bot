@@ -2,3 +2,25 @@
 .wos-kit *{letter-spacing:0}
 .wos-kit .approval-card.card{box-shadow:none;border-radius:8px}
 [data-wos-scheme] body[data-wos-design="marketplace"] #app #wos-approvals .approval-card.card{background:var(--card)!important;color:var(--ink)!important}
+.wos-settings-form{padding:16px 0;margin-bottom:16px;max-width:760px;min-width:0;border-bottom:1px solid var(--line,#41464b);color:var(--ink,#e9edf0)}
+.wos-settings-form h2{font-size:20px;margin:0 0 12px}
+.wos-settings-form p{font-size:14px;line-height:1.5;overflow-wrap:anywhere}
+.wos-settings-form form{display:grid;gap:12px}
+.wos-settings-form .wos-form-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.wos-settings-form label{display:grid;gap:6px;font-size:14px;min-width:0}
+.wos-settings-form input:not([type=checkbox]),.wos-settings-form textarea{box-sizing:border-box;width:100%;min-height:44px;background:var(--card,#22282c);color:inherit;border:1px solid var(--line,#656d75);border-radius:6px;padding:10px;font:inherit;min-width:0}
+.wos-settings-form textarea{min-height:88px;resize:vertical}
+.wos-settings-form .wos-form-review{display:flex;align-items:center;min-height:44px;gap:10px}
+.wos-settings-form input[type=checkbox]{width:18px;height:18px;flex-shrink:0}
+.wos-settings-form button{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;min-width:44px;max-width:100%;border:1px solid var(--line,#656d75);border-radius:6px;padding:8px 14px;background:var(--card,#22282c);color:inherit;white-space:normal;font:inherit;cursor:pointer}
+.wos-settings-form button[type=submit]{background:#226b49;border-color:#3d9b6e;color:#fff}
+.wos-settings-form button:disabled{opacity:.55;cursor:default}
+.wos-settings-form .wos-form-actions{display:flex;gap:8px;flex-wrap:wrap}
+.wos-settings-form .wos-control-icon{flex:none;width:20px;height:20px;filter:invert(1)}
+.wos-settings-form :is(input,textarea,button):focus-visible{outline:2px solid #65b8f4;outline-offset:2px}
+.wos-settings-form figure{margin:0;max-width:100%}
+.wos-settings-form figure img{max-width:240px;max-height:100px;object-fit:contain;background:#fff}
+.wos-settings-form figcaption{font-size:12px;margin-top:6px}
+@media(max-width:600px){.wos-settings-form .wos-form-fields{grid-template-columns:minmax(0,1fr)}}
+.et-profile-preview{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit}
+html[data-wos-scheme=light] .wos-settings-form .wos-control-icon{filter:none}

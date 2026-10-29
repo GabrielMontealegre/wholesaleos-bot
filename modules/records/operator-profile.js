@@ -60,6 +60,19 @@ function fill(template,context){
   const values={operator_legal_name:p?.legal_name,operator_llc:p?.llc,operator_email:p?.email,operator_phone:p?.phone,operator_mailing_address:p?.mailing_address,operator_signature:context.signature_block};
   return String(template).replace(/\{\{(operator_[a-z_]+)\}\}/g,(token,key)=>Object.hasOwn(values,key)?values[key]||'[Not supplied]':token);
 }
+function noStore(req,res,next){res.set('Cache-Control','no-store');next();}
+function requireProfilePayload(req,res,next){
+  if(!['GET','POST'].includes(req.method))return res.status(405).json({code:'operator_profile_method_invalid'});
+  if(req.method==='GET'){
+    if(req.headers['transfer-encoding']||Number(req.headers['content-length']||0)>0)return res.status(400).json({code:'operator_profile_request_invalid'});
+    return next();
+  }
+  if(!req.is('application/json'))return res.status(415).json({code:'operator_profile_json_required'});
+  require('express').json({strict:true,limit:96*1024})(req,res,error=>{
+    if(error)return res.status(error.type==='entity.too.large'?413:400).json({code:'operator_profile_request_invalid'});
+    next();
+  });
+}
 function registerRoutes(app,{db,requireAdmin,now=()=>new Date().toISOString()}){
   const error=(res,e)=>res.status(/^operator_profile_[a-z_]+$/.test(e?.code||'')?e.status||400:503).json({code:/^operator_profile_[a-z_]+$/.test(e?.code||'')?e.code:'operator_profile_unavailable'});
   app.get('/api/dashboard/operator-profile',requireAdmin,(req,res)=>{
@@ -74,4 +87,4 @@ function registerRoutes(app,{db,requireAdmin,now=()=>new Date().toISOString()}){
     }catch(e){error(res,e);}
   });
 }
-module.exports={FIELDS,MAX_IMAGE_BYTES,validate,read,save,draft,fill,registerRoutes};
+module.exports={FIELDS,MAX_IMAGE_BYTES,validate,read,save,draft,fill,noStore,requireProfilePayload,registerRoutes};

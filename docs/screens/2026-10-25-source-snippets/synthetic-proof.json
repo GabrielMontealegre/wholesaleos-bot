@@ -1,0 +1,44 @@
+{
+  "synthetic_only": true,
+  "widths": [
+    {
+      "width": 1366,
+      "first_contentful_paint_ms": 51.5,
+      "reading_height": 645,
+      "reading_top": 123.1875,
+      "body_top": 201.1875,
+      "sendFits": true,
+      "overflow": false
+    },
+    {
+      "width": 400,
+      "first_contentful_paint_ms": 49.099999997764826,
+      "reading_height": 740,
+      "reading_top": 175.1875,
+      "body_top": 274.1875,
+      "sendFits": true,
+      "overflow": false
+    },
+    {
+      "width": 412,
+      "first_contentful_paint_ms": 27.5,
+      "reading_height": 740,
+      "reading_top": 175.1875,
+      "body_top": 274.1875,
+      "sendFits": true,
+      "overflow": false
+    }
+  ],
+  "accessibility": [
+    {
+      "width": 1366,
+      "score": 98,
+      "lighthouse_version": "13.5.0"
+    },
+    {
+      "width": 412,
+      "score": 98,
+      "lighthouse_version": "13.5.0"
+    }
+  ]
+}

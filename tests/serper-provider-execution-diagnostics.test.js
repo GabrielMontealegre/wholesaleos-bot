@@ -4,7 +4,7 @@ const assert = require('assert');
 
 const searchWorker = require('../modules/research/search-provider-worker');
 
-const DUMMY_KEY = 'serper_dummy_secret_value_should_never_leak_123456';
+const DUMMY_KEY = 'serper_dummy_secret_value_should_never_leak_123456'; // synthetic-secret-fixture
 const BASE_ENV = {
   ENABLE_SEARCH_PROVIDER: 'true',
   SEARCH_PROVIDER: 'serper',

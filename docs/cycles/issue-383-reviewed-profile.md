@@ -2,6 +2,11 @@
 
 ## Boundary
 
+2026-10-29 RECONCILIATION IN PROGRESS, existing PR394. Main7262b11 separately
+released392; it remains excluded from Profile integration. Historical218 green
+below is not a current gate. Fresh current unit/routes/private-parser boundary
+and actual1366/400/412 UI tests pass; full/audit/release gates remain pending.
+
 D-059 authorizes storage and canonical unsigned JV, template and buyer email
 draft consumers only. The existing legacy contract-fill route is unchanged
 and is not a profile consumer. Its separate repair is #392. A typed or image
@@ -38,18 +43,54 @@ deposits stay blank for review or buyer-funded at assignment, not Gabriel-funded
 * UI: Settings render replaces only the old Company Info block using DOM parsing.
   Security, Drive, Email and other settings remain. Private caches and pending
   responses clear on sign-out/login display. No persistent browser storage.
-  Cache URLs: Profile JS/CSS1, template JS2.
+  Reconciled cache URLs: Profile JS2, template JS2, shared UI kit CSS2. The old
+  unmerged Profile-only CSS is removed; generic Settings form rules live in
+  the existing shared UI kit. All other current asset versions are preserved.
+* New private request boundary precedes generic body parsers: no-store/admin
+  before parsing, GET/POST only, JSON96KB cap, value-free malformed/oversize/
+  content-type errors. No raw Profile input is echoed in parser diagnostics.
+* Buyer-email review fingerprints retain current profit_review in addition to
+  optional Profile version. No-profile compatibility and current profit gates
+  remain intact. Current Calendar test is byte-identical to main; its historical
+  driver correction is not replayed over newer code.
+* Profile occupies the removed Company Info slot rather than prepending above
+  remembered-device/upload-key controls. Original device in-viewport44px and
+  key-dialog ownership gates pass. Profile read/save clears derived template
+  preview caches and invalidates late responses without another request/write;
+  current three-size UI tests assert that stale preview forms disappear.
+
+## 2026-10-29 Reconciliation Checks
+
+Nineteen focused files passed across the original fifteen successful checks,
+the completed four-file tail and rechecking the three UI files affected by final
+placement/cache invalidation. The first remembered-device UI run failed at
+synthetic-server startup before routing any request. A bounded startup probe
+also hit its60s deadline without recognized error flags; a further readiness/
+fixed-flag diagnostic reached ready. The original timeout cause is UNKNOWN,
+not called flaky/environment or fixed by the unrelated placement change. The
+original startup deadline/assertions/runtime server code were not loosened.
+The device file then passed, plus Calendar/auth/offline and current affected UI.
+No full CI run yet. Current actual test inventory is284, not the old218.
+
+Merge conflict resolution deliberately preserves current shared shell/docs/
+Calendar and combines profit_review plus optional Profile version in buyer-email
+review hashes. Existing old Profile checkpoint6626a93 and current481proof2f8d45a
+are retained, not blindly reset or bundled with another runtime feature.
 
 ## Evidence
 
-New tests: `operator-profile.test.js`, `operator-profile-ui.test.js`.
+New tests: `operator-profile.test.js`, `operator-profile-ui.test.js`, and the
+reconciliation's `operator-profile-boundary.test.js`.
 Negative cases include forged actor/fields, bank field, review missing, stale
 version, future/corrupt history, injected email header/HTML, remote/SVG/bad magic/
 oversize image, wrong operator, no-profile compatibility, changed-profile send,
 JV failure before write, and late GET after logout. Pure functions are spied for
 network/clock/writes. Actual UI fixture checks 1366/400/412, 44px controls,
 no horizontal overflow, image draft-only behavior, insertion/save/preview,
-and no external request/console errors. Existing assertions changed: none.
+and no external request/console errors. Reconciliation changes two incidental
+UI signature-image selectors from all Profile img nodes to figure img, retaining
+the same1/0 assertions, because decorative Lucide button icons now exist. No
+safety assertion is weakened. Pure tests keep current profit fingerprints.
 
 Screenshots in `docs/screens/2026-10-19-366-i/` are **synthetic local evidence**,
 not live production proof. No real profile, email, contract, signature or source
@@ -66,7 +107,12 @@ suite rerun required; never substitute the local pass for that gate.
 
 ## Release Gate
 
-Do not merge this draft until Chrome control permits the outstanding live UI
+Historical2026-10-19 gate below is superseded by current435 mixed-proof approval
+and working Chrome4. Reconciliation still needs fresh UI FCP<2s/performance AND
+accessibility90+, full candidate/main suites, exact automatic deployment and
+approved read-only verification. No old218 result or old screenshot substitutes.
+
+Historical: Do not merge this draft until Chrome control permits the outstanding live UI
 verification. Prior PR391 exact Railway deploy succeeded and health was200;
 browser operations still time out before dispatch, despite the owner reconnect
 reply. No speculative product rollback or new Railway deployment was performed.

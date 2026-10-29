@@ -1,0 +1,19 @@
+{
+  "key_management": {
+    "count": 0,
+    "metadataOnly": true,
+    "noSecret": true,
+    "ok": true
+  },
+  "snapshots": {
+    "canImport": true,
+    "hasLatest": false,
+    "maxBytes": 1048576,
+    "ok": true,
+    "schemaVersion": 1,
+    "viewerScopeValid": true
+  },
+  "get_only": true,
+  "private_values_logged": false,
+  "probe_mapping_note": "Initial probe used incorrect top-level capability fields; actual route nests them under capabilities. Corrected helper only,no product failure or request retry."
+}

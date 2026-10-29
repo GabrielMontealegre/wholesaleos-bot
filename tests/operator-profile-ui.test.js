@@ -61,13 +61,15 @@ const profiles=require('../modules/records/operator-profile'),templates=require(
    await page.locator('[data-profile-image]').setInputFiles({name:'invalid.svg',mimeType:'image/svg+xml',buffer:Buffer.from('<svg/>')});await page.locator('[data-profile-status]').filter({hasText:'Choose a PNG or JPEG'}).waitFor();
    await page.locator('[data-profile-image]').setInputFiles({name:'invalid.png',mimeType:'image/png',buffer:Buffer.alloc(20)});await page.locator('[data-profile-status]').filter({hasText:'Image could not be read'}).waitFor();
    const png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a8s8AAAAASUVORK5CYII=','base64');
-   await page.locator('[data-profile-image]').setInputFiles({name:'synthetic.png',mimeType:'image/png',buffer:png});await page.locator('[data-profile-status]').filter({hasText:'Image added to draft'}).waitFor();assert.equal(await page.locator('#operator-profile img').count(),1);
-   await page.getByRole('button',{name:'Remove image from draft',exact:true}).click();assert.equal(await page.locator('#operator-profile img').count(),0);assert.equal(store.operator_profile_history.length,1,'local image draft does not write');
+   await page.locator('[data-profile-image]').setInputFiles({name:'synthetic.png',mimeType:'image/png',buffer:png});await page.locator('[data-profile-status]').filter({hasText:'Image added to draft'}).waitFor();assert.equal(await page.locator('#operator-profile figure img').count(),1);
+   await page.getByRole('button',{name:'Remove image from draft',exact:true}).click();assert.equal(await page.locator('#operator-profile figure img').count(),0);assert.equal(store.operator_profile_history.length,1,'local image draft does not write');
    await page.evaluate(()=>navigate('gmail',null));await page.getByRole('button',{name:'Load reviewed templates',exact:true}).click();await page.locator('[data-template-profile-field]').waitFor();
    await page.locator('[data-template-profile-field]').selectOption('operator_signature');assert.ok((await page.locator('[data-template-form] [name=body]').inputValue()).includes('{{operator_signature}}'));assert.equal(await page.locator('[data-template-form] [name=reviewed]').isChecked(),false);
    await page.locator('[data-template-form] [name=reviewed]').check();await page.getByRole('button',{name:'Save reviewed template',exact:true}).click();await page.locator('[data-template-status]').filter({hasText:'Reviewed template saved'}).waitFor();
    await page.getByText('Preview with my saved profile',{exact:true}).click();await page.locator('.et-profile-preview').filter({hasText:'SYNTHETIC DRAFT SIGNATURE'}).waitFor();
    if(process.argv.includes('--screenshots')){await page.locator('#email-template-library').scrollIntoViewIfNeeded();await page.mouse.move(0,0);await page.screenshot({path:path.join(__dirname,'../docs/screens/2026-10-19-366-i/synthetic-template-'+width+'.png')});}
+   await page.evaluate(()=>navigate('settings',null));await page.locator('[data-profile-status]').filter({hasText:'Saved profile loaded'}).waitFor();
+   await page.evaluate(()=>navigate('gmail',null));assert.equal(await page.locator('[data-template-form],.et-profile-preview').count(),0,'Profile reload invalidates cached template previews');
    await page.evaluate(()=>navigate('settings',null));await page.locator('[data-profile-status]').filter({hasText:'Saved profile loaded'}).waitFor();
   }
   // Late private GET cannot rehydrate the profile after sign-out.

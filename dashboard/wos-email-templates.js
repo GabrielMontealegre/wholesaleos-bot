@@ -20,9 +20,11 @@
   function paint(){var element=document.querySelector('#email-template-library');if(element)element.outerHTML=markup();}
   async function load(){if(busy)return;var identity=actor(),ticket=++sequence;busy=true;error='';paint();try{var response=await fetch('/api/dashboard/email-templates');if(!response.ok)throw Error();var value=await response.json();if(ticket!==sequence||actor()!==identity)return;if(!Array.isArray(value.items))throw Error();data=value;}catch(_){if(ticket!==sequence||actor()!==identity)return;data=null;error='Templates unavailable. Check your admin session.';}finally{if(ticket===sequence){busy=false;paint();}}}
   var gmail=root.renderGmail;root.renderGmail=function(){return gmail()+markup();};
-  var signout=root.signOutDashboard;if(signout)root.signOutDashboard=function(){++sequence;data=null;busy=false;status='';error='Dashboard login required.';paint();return signout.apply(this,arguments);};
-  var login=root.showDashboardLogin;if(login)root.showDashboardLogin=function(){++sequence;data=null;busy=false;status='';error='Dashboard login required.';paint();return login.apply(this,arguments);};
-  var previewStyle=document.createElement('style');previewStyle.textContent='.et-profile-preview{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit}';document.head.appendChild(previewStyle);
+  function clear(message){++sequence;data=null;busy=false;status='';error=message;paint();}
+  var signout=root.signOutDashboard;if(signout)root.signOutDashboard=function(){clear('Dashboard login required.');return signout.apply(this,arguments);};
+  var login=root.showDashboardLogin;if(login)root.showDashboardLogin=function(){clear('Dashboard login required.');return login.apply(this,arguments);};
+  root.addEventListener('wos:session-ended',()=>clear('Dashboard login required.'));
+  root.addEventListener('wos:profile-changed',()=>clear('Profile details loaded or changed. Reload templates before reviewing a preview.'));
   document.addEventListener('click',event=>{if(event.target.closest('[data-template-load]'))load();});
   document.addEventListener('change',event=>{if(event.target.matches('[data-template-kind]')){chosen=event.target.value;status='';error='';paint();}});
   document.addEventListener('change',event=>{if(event.target.matches('[data-template-profile-field]')&&event.target.value){var form=event.target.closest('form'),body=form.elements.body;body.setRangeText('{{'+event.target.value+'}}',body.selectionStart,body.selectionEnd,'end');form.elements.reviewed.checked=false;event.target.value='';body.focus();}});

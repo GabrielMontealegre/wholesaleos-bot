@@ -1,0 +1,72 @@
+{
+  "synthetic_only": true,
+  "baseline_sha": "ca483e7042a6f77d16c6d36b9181ab572f9ff647",
+  "cases": [
+    {
+      "width": 1366,
+      "height": 768,
+      "baseline": true,
+      "initial_cards": 2,
+      "after_back_cards": 1,
+      "first_contentful_paint_ms": 479.1000000014901,
+      "screenshot": "before-back-1366.png"
+    },
+    {
+      "width": 1366,
+      "height": 768,
+      "baseline": false,
+      "initial_cards": 2,
+      "after_back_cards": 2,
+      "first_contentful_paint_ms": 373.70000000298023,
+      "screenshot": "after-back-1366.png"
+    },
+    {
+      "width": 400,
+      "height": 915,
+      "baseline": true,
+      "initial_cards": 2,
+      "after_back_cards": 1,
+      "first_contentful_paint_ms": 109.89999999850988,
+      "screenshot": "before-back-400.png"
+    },
+    {
+      "width": 400,
+      "height": 915,
+      "baseline": false,
+      "initial_cards": 2,
+      "after_back_cards": 2,
+      "first_contentful_paint_ms": 71.30000000447035,
+      "screenshot": "after-back-400.png"
+    },
+    {
+      "width": 412,
+      "height": 915,
+      "baseline": true,
+      "initial_cards": 2,
+      "after_back_cards": 1,
+      "first_contentful_paint_ms": 115.5,
+      "screenshot": "before-back-412.png"
+    },
+    {
+      "width": 412,
+      "height": 915,
+      "baseline": false,
+      "initial_cards": 2,
+      "after_back_cards": 2,
+      "first_contentful_paint_ms": 72.59999999403954,
+      "screenshot": "after-back-412.png"
+    }
+  ],
+  "accessibility": [
+    {
+      "width": 1366,
+      "score": 98,
+      "lighthouse_version": "13.5.0"
+    },
+    {
+      "width": 412,
+      "score": 98,
+      "lighthouse_version": "13.5.0"
+    }
+  ]
+}

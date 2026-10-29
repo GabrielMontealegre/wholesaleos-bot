@@ -343,9 +343,10 @@ function synchronizeMatchReferences(store, context) {
   return updated;
 }
 function list(store, { now, includeHidden = false, jv = false, state = '', county = '', city = '', recordId = '', locationExact = false, jvStage = '', jvSearch = '' }) {
+  const profit = require('./match-profit').build(store, {now});
   const all = (store.reviewed_deals || []).map(d => {
     const evaluation = evaluate(d, store.buyers, now);
-    evaluation.matches = evaluation.matches.map(m => ({ ...m, match_ref: activity.matchReference(store, d.id, m.id) }));
+    evaluation.matches = evaluation.matches.map(m => ({ ...m, match_ref: activity.matchReference(store, d.id, m.id), profit:profit.forMatch(d,m,evaluation) }));
     const row = { ...d, jv_workflow:d.deal_kind === 'jv' ? jvWorkflow.view(d,now) : null, comp_review_keys:(d.comps||[]).map(compReviewKey), email_subject: d.record_ref ? '[' + d.record_ref + '] Deal enquiry' : '', evaluation };
     row.jv_section = require('./jv-list-view').section(row);
     return row;

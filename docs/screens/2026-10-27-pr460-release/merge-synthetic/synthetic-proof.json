@@ -1,0 +1,30 @@
+{
+  "synthetic_only": true,
+  "production_writes": 0,
+  "cases": [
+    {
+      "width": 1366,
+      "height": 768,
+      "first_contentful_paint_ms": 49.400000005960464,
+      "local_synthetic_imports": 4,
+      "external_requests": 0,
+      "page_errors": 0
+    },
+    {
+      "width": 400,
+      "height": 915,
+      "first_contentful_paint_ms": 59.30000001192093,
+      "local_synthetic_imports": 4,
+      "external_requests": 0,
+      "page_errors": 0
+    },
+    {
+      "width": 412,
+      "height": 915,
+      "first_contentful_paint_ms": 44.80000001192093,
+      "local_synthetic_imports": 4,
+      "external_requests": 0,
+      "page_errors": 0
+    }
+  ]
+}

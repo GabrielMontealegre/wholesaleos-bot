@@ -1,0 +1,11 @@
+# PR446 Source-Backed Snippets: Verified
+
+- Final testeddb6c5b2f5063b391eb6991aa8588d0a1ddf8cb30;full40215946479/job121236979272:251 passed,0 failed,0 skipped,600s/file,11m56s job. Per-file sum661.98s is not wall time;new source test0.90s/UI9.89s.
+- Exact merged327fd7c4ec5efcab8e63ef2a86ae7eb8213a68a8 matches the tested product tree. Automatic Railwayee6eea25-68d7-401e-89a6-28e3c8601e20 Active/successful;authoritative Details links that source. No manual build/retry/settings changes.
+- Public pinned Playwright1.44.0/Chromium1117:12 signed-out root/classic/Email/Today GET cases at1366x768,400x915,412x915;health200;unsigned identity401;no auth transfer/writes.
+- Exact merge-source three-size snippet and five-size containment synthetic journeys pass. Candidate before/after app baseline,first paint and Lighthouse evidence remain separately labeled SYNTHETIC in ../2026-10-25-source-snippets;not live timings or authenticated phone screenshots.
+- Existing signed Chrome actual DOM/image1038x559:49 loaded threads,0 unopened IMAP previews,new layout-modelv2/Emailv11. Explicit open shows4795-character source body;Back produces one500-character preview exactly equal to normalized opened source. Only lengths/booleans recorded;no real source text or private JSON persisted. Search clears the preview. This is not global/body search or automatic unopened preview fetching.
+- Empty Reply keeps Preview/Send disabled and final unavailable/Gmail status;all controls fit;Close restores4795-character source. Classic19 Open deal controls hydrate,one opens its card,Back restores results. Zero console errors. Signed status enabled=false,configured=true,automatic_send_allowed=false,max_per_hour=30.
+- One reopened source wait exceeded the browser observation deadline;the same request completed on subsequent observation without retry or error. Do not infer live sub2s source latency from synthetic paint metrics.
+- All source/sender/subject/header and composer input regions were opaque-masked BEFORE disk. No raw private screenshots,real Preview/Send,typed production draft,settings or business-data writes.
+- Whole412 owner design approval,unopened IMAP previews,attachments,folder totals,cursors,labels/search and C remain outside this bounded release. Native Deals remains owner-design gated.
