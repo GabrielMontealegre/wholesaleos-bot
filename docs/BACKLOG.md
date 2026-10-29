@@ -1,5 +1,14 @@
 # Backlog
 
+2026-10-29 capacityreturned1%primary69%weeklyused(31%left),OWNER5%reservepolicy.
+455.8B1 Todaymetadata implementation/focused7 PASS,full277/audit/releasePENDING.
+Native/classicToday standalone reference lines removed;exactroutes/keys/full
+record identity/source text/history/data unchanged. No existing assertions
+changed/no backend/auth/provider/clock/writer/nativeDeals rewrite. Subsequent8B
+faces remain;4558NOTcomplete,overall5/9(56%). Currentmain/live4757a7e354unchanged.
+Trace docs/cycles/issue-455-today-card-metadata.md. Owned475proof7960f50deliberately
+carried onto actualmain as e2ce60b;no unrelatedloss/proofonlydeploy.
+
 2026-10-29 PR475 RELEASED/VERIFIED 455.8A only. Main7a7e354e5f8519bf10f6514dbf9abf9a2602a3fe
 complete tree IDENTICAL testedabcb5a2. AutomaticRailway933e0678 exactsource
 ACTIVE/successful/Details selected. PR40869171909/job123431504145276/0/0,

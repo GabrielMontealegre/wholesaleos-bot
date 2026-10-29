@@ -156,7 +156,7 @@
     var label = item.heading || item.label || 'Recorded item';
     return '<li><button type="button" class="ws-today-action ws-today-action--' + group + '" data-row="actions:' + index + '" aria-label="Open ' + c.escape(label + ', ' + (item.action_label || 'record')) + '">' +
       '<span class="ws-today-action-main"><strong>' + c.escape(label) + '</strong><span>' + c.escape(detail.join(' · ')) + '</span>' +
-      (item.ref ? '<small>' + c.escape(item.ref) + '</small>' : '') + '</span>' + c.badge(urgencyLabel(group), urgencyTone(group)) + c.icon('arrow-up-right') + '</button></li>';
+      '</span>' + c.badge(urgencyLabel(group), urgencyTone(group)) + c.icon('arrow-up-right') + '</button></li>';
   }
 
   function actionGroup(group, entries, title) {
@@ -184,7 +184,7 @@
     var when = time(item.at);
     var title = item.label || 'Recorded activity';
     var body = '<span><strong>' + c.escape(title) + '</strong><small>' + c.escape(when || 'Recorded time not available') +
-      (item.ref ? ' · ' + c.escape(item.ref) : '') + '</small></span>' + c.badge(item.source_kind === 'verified_release_record' ? 'Verified release' : 'Reported activity', 'green');
+      '</small></span>' + c.badge(item.source_kind === 'verified_release_record' ? 'Verified release' : 'Reported activity', 'green');
     if (item.source_url) return '<li><a class="ws-today-event" href="' + c.escape(item.source_url) + '" target="_blank" rel="noopener noreferrer">' + body + '</a></li>';
     return '<li><button type="button" class="ws-today-event" data-row="activity:' + index + '">' + body + c.icon('arrow-up-right') + '</button></li>';
   }
