@@ -1,21 +1,27 @@
 # Backlog
 
-2026-10-29 WEEKLY USAGE WARNING: 9% remains (91% used). Architect: check the
+2026-10-29 WEEKLY USAGE WARNING: latest2% remains (98% used; initialwarning91%). Architect: check the
 live app and this run's verified release evidence. Gabriel alone handles any
 manual weekly reset; Codex will not reset or purchase usage. Continuing normal
 backlog work under the owner's about5% five-hour revert reserve,not stopping
-early for the weekly budget. Currentwindow45%used;PR480merged5c81e46 with
-candidate279/0/0+MAIN279/0/0+allpublic/livegatespassed. No earlyweeklyhold.
+early for the weekly budget. Currentwindow85%used;PR481merged7262b11 with
+candidate281/0/0+MAIN281/0/0+allpublic/livegatespassed. No earlyweeklyhold.
 
-2026-10-29 #392 legacy contract safety IMPLEMENTED LOCALLY, not released.
-Branch item/392-legacy-contract-safety from current main5c81e46 plus owned480
-proof. Removes unsupported personal/clock/deposit/AI defaults; preserves actual
-record address/offer and explicit seller/title/notes as unsigned review fields.
-Admin-first/no-store/allowlisted input/unique-ID/no-writer route. New pure and
-synthetic loopback focused tests PASS; full PR/main/exact automatic deploy and
-read-only gates PENDING. No real contract/profile/private file/production POST.
-Trace docs/cycles/issue-392-legacy-contract-safety.md. Weekly warning above
-remains active; latest window73%/weekly96% used, no early weekly hold or reset.
+2026-10-29 #392 DONE via PR481 RELEASED/VERIFIED. Actualmain7262b1114f5db3543cfb13a8cd304ad529a6f99a
+treead2a9394e8e30dcf092d367e132fddcb16a298c3 IDENTICALtested0ccc7b9.
+PR40943640399/job123693179856281/0/0,14m45job,sum813.78s;
+MAIN40946017461/job123701444872281/0/0,12m31job,sum703.91s. ALL562rows,
+600s/file/sumsNOTwall/no fullfailures/reruns/cancel/skips/assertionchanges.
+AutomaticRailwayc39a8dbe-fde5-4d12-9d34-7fd8ea19e5e1 Active/successful/
+Detailsaria-selected/exact7262sourceanchorverified. Public15/security/44px/
+currentcacheguardsPASS/all15unsignedimagesinspected;exactmergedfocused2PASS.
+ActualsignedChrome4STRUCTURALONLY19->Open1->Backloading->19/0open/nooverflow.
+No personal/clock/deposit/AI defaults; actual record address/offer and explicit
+seller/title/notes remain unsigned review fields. Admin-first/no-store/strict
+input/unique-ID/no-writer route. No actual contract generation/profile/file/
+privatecontent/values/productionPOST/businesswrites/authtransfer. Backendonly,
+no newUI/performanceclaim. Trace docs/cycles/issue-392-legacy-contract-safety.md;
+proof docs/screens/2026-10-29-pr481-release. 455still6/9(67%),wholebacklogactive.
 
 2026-10-29 PR480 RELEASED/VERIFIED:455.9 foldedcomps/explicitrowreason only.
 Actualmain5c81e46be528fa177f1679d39c069fc12c5fd80c tree714a6bc identical5999217.
