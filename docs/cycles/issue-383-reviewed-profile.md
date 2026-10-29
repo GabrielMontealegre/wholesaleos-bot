@@ -72,6 +72,24 @@ original startup deadline/assertions/runtime server code were not loosened.
 The device file then passed, plus Calendar/auth/offline and current affected UI.
 No full CI run yet. Current actual test inventory is284, not the old218.
 
+Initial complete UI audit on frozenfcbbd8d passed candidate Settings performance
+97/100 and template99/100, accessibility98 throughout; FCP all below2s. Baseline
+desktop63/36 was not green and its cause is unknown; no causal improvement claim.
+That audit is retained as history, not reused after the subsequent slow-response
+client repair. Profile fields now lock until source loading completes, one30s
+deadline spans fetch+JSON with no automatic retry, logout/pagehide cancels pending
+requests, and a delayed image read keeps the latest typed draft fields. Fresh
+synthetic UI tests passed those cases, including a real30s held-read timeout,
+explicit reload, local image-edit preservation and late logout cancellation.
+Existing PIN/key/device controls are explicitly retained. Final audit/full gates
+still required for the changed runtime.
+
+Privacy disclosure: an earlier usage-check orchestration emitted account/reset-
+credit identifiers instead of only percentages into tool output. No identifiers
+are repeated here; no reset/purchase was called. Subsequent checks are filtered.
+This does not relabel the already disclosed468/470 private-content incidents or
+claim that no metadata was ever logged.
+
 Merge conflict resolution deliberately preserves current shared shell/docs/
 Calendar and combines profit_review plus optional Profile version in buyer-email
 review hashes. Existing old Profile checkpoint6626a93 and current481proof2f8d45a

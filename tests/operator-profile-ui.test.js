@@ -4,7 +4,7 @@ const {createFixtureApp}=require('../scripts/verify-marketplace-ui'),{launchChro
 const profiles=require('../modules/records/operator-profile'),templates=require('../modules/email/template-approvals');
 (async()=>{
  const fixture=createFixtureApp(),server=await new Promise(resolve=>{const s=fixture.app.listen(0,'127.0.0.1',()=>resolve(s));}),base='http://127.0.0.1:'+server.address().port;
- let browser,store={},posts=0,templatePosts=0,conflict=false,hold=false,release=null;const errors=[],external=[],unexpected=[];
+ let browser,store={},posts=0,profileReads=0,templatePosts=0,conflict=false,hold=false,release=null;const errors=[],external=[],unexpected=[];
  const now='2026-10-07T12:00:00.000Z',operatorId='fixture-admin';
  try{
   browser=(await launchChromiumWithResolvedBrowser(require('playwright'),{headless:true})).browser;const context=await browser.newContext();
@@ -22,9 +22,10 @@ const profiles=require('../modules/records/operator-profile'),templates=require(
    }
    if(u.pathname==='/api/dashboard/operator-profile'){
     if(req.method()==='GET'){
+     profileReads++;
      const body=profiles.read(store,operatorId,{now});
-     if(hold){hold=false;await new Promise(resolve=>release=resolve);}
-     return route.fulfill({json:body});
+     const delayed=hold;if(delayed){hold=false;await new Promise(resolve=>release=resolve);}
+     try{return await route.fulfill({json:body});}catch(error){if(delayed&&req.failure()?.errorText.includes('ERR_ABORTED'))return;throw error;}
     }
     if(req.method()==='POST'){
      posts++;if(conflict)return route.fulfill({status:409,json:{code:'operator_profile_changed'}});
@@ -43,6 +44,8 @@ const profiles=require('../modules/records/operator-profile'),templates=require(
    await page.evaluate(()=>navigate('settings',null));await page.locator('[data-profile-status]').filter({hasText:'No saved profile'}).waitFor();
    assert.equal(await page.locator('#s-company,#s-name,#s-address,#s-email').count(),0,'obsolete fake-save profile removed');
    assert.equal(await page.locator('#operator-profile').count(),1);assert.equal(posts,start,'no writes on load');
+   assert.equal(await page.locator('#s-old-pin,#s-new-pin').count(),2,'existing PIN controls preserved');
+   assert.equal(await page.locator('#assistant-upload-settings,#remembered-device-settings').count(),2,'existing private Settings components preserved');
    const form=page.locator('[data-profile-form]');await form.locator('[name=legal_name]').fill('SYNTHETIC OPERATOR, an individual');
    await form.locator('[name=email]').fill('operator@example.test');await form.locator('[name=typed_signature]').fill('SYNTHETIC DRAFT SIGNATURE');
    await page.getByRole('button',{name:'Save profile',exact:true}).click();await page.locator('[data-profile-status]').filter({hasText:'tick the checkbox'}).waitFor();assert.equal(posts,start);
@@ -63,6 +66,13 @@ const profiles=require('../modules/records/operator-profile'),templates=require(
    const png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a8s8AAAAASUVORK5CYII=','base64');
    await page.locator('[data-profile-image]').setInputFiles({name:'synthetic.png',mimeType:'image/png',buffer:png});await page.locator('[data-profile-status]').filter({hasText:'Image added to draft'}).waitFor();assert.equal(await page.locator('#operator-profile figure img').count(),1);
    await page.getByRole('button',{name:'Remove image from draft',exact:true}).click();assert.equal(await page.locator('#operator-profile figure img').count(),0);assert.equal(store.operator_profile_history.length,1,'local image draft does not write');
+   if(width===412){
+    await page.evaluate(()=>{const original=window.FileReader;window.__profileOriginalReader=original;window.FileReader=class{readAsDataURL(file){const reader=new original();reader.onload=()=>{this.result=reader.result;window.__profileReleaseImage=()=>this.onload();};reader.onerror=()=>this.onerror();reader.readAsDataURL(file);}};});
+    await page.locator('[data-profile-image]').setInputFiles({name:'delayed-synthetic.png',mimeType:'image/png',buffer:png});await page.waitForFunction(()=>typeof window.__profileReleaseImage==='function');
+    await form.locator('[name=llc]').fill('SYNTHETIC EDIT WHILE IMAGE LOADS');await page.evaluate(()=>window.__profileReleaseImage());await page.locator('[data-profile-status]').filter({hasText:'Image added to draft'}).waitFor();
+    assert.equal(await form.locator('[name=llc]').inputValue(),'SYNTHETIC EDIT WHILE IMAGE LOADS');assert.equal(store.operator_profile_history.length,1);
+    await page.evaluate(()=>{window.FileReader=window.__profileOriginalReader;delete window.__profileOriginalReader;delete window.__profileReleaseImage;});await page.getByRole('button',{name:'Remove image from draft',exact:true}).click();
+   }
    await page.evaluate(()=>navigate('gmail',null));await page.getByRole('button',{name:'Load reviewed templates',exact:true}).click();await page.locator('[data-template-profile-field]').waitFor();
    await page.locator('[data-template-profile-field]').selectOption('operator_signature');assert.ok((await page.locator('[data-template-form] [name=body]').inputValue()).includes('{{operator_signature}}'));assert.equal(await page.locator('[data-template-form] [name=reviewed]').isChecked(),false);
    await page.locator('[data-template-form] [name=reviewed]').check();await page.getByRole('button',{name:'Save reviewed template',exact:true}).click();await page.locator('[data-template-status]').filter({hasText:'Reviewed template saved'}).waitFor();
@@ -72,6 +82,13 @@ const profiles=require('../modules/records/operator-profile'),templates=require(
    await page.evaluate(()=>navigate('gmail',null));assert.equal(await page.locator('[data-template-form],.et-profile-preview').count(),0,'Profile reload invalidates cached template previews');
    await page.evaluate(()=>navigate('settings',null));await page.locator('[data-profile-status]').filter({hasText:'Saved profile loaded'}).waitFor();
   }
+  // A slow read locks fields, times out once and requires an explicit reload.
+  const readsBefore=profileReads;hold=true;await page.getByRole('button',{name:'Reload saved profile',exact:true}).click();
+  assert.equal(await page.locator('[data-profile-form] input:not([disabled]),[data-profile-form] textarea:not([disabled])').count(),0);
+  await page.locator('[data-profile-status]').filter({hasText:'Profile unavailable'}).waitFor({timeout:35000});
+  assert.equal(profileReads,readsBefore+1,'no automatic read retry');assert.equal(await page.getByRole('button',{name:'Save profile',exact:true}).isEnabled(),false);
+  assert.equal(await page.getByRole('button',{name:'Reload saved profile',exact:true}).isEnabled(),true);if(release){release();release=null;}
+  await page.getByRole('button',{name:'Reload saved profile',exact:true}).click();await page.locator('[data-profile-status]').filter({hasText:'Saved profile loaded'}).waitFor();assert.equal(profileReads,readsBefore+2);
   // Late private GET cannot rehydrate the profile after sign-out.
   hold=true;await page.getByRole('button',{name:'Reload saved profile',exact:true}).click();
   await page.waitForFunction(()=>document.querySelector('[data-profile-status]')?.textContent.includes('Loading'));
