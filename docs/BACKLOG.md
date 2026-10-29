@@ -1,5 +1,30 @@
 # Backlog
 
+2026-10-29 Independent455.8B3 buyer-matchlabels IMPLEMENTED/focused6PASS;
+full278/audit/releasePENDING. Nestedmatch/near-missbuttons nowOpen deal+existing
+location;exactIDs/fullrecordrefs/review/email-selection/value/source/data guards
+unchanged,no477runtimebundled. OnlybuyerJS12new. 477BLOCKEDneeds-architect478,
+retainedlocal412ed2eUNPUSHED(firstfixtureannotationfix/offlinePASS+failedproof);
+remote47170f6 REAL277/1/0 andcompleteUIperfConversation76/76/Bell88/90failed,
+notflaky/environment/green. 478 requestsboundedparentTodaylayoutrepair/proof
+authoritywithoutlowering90+gates. OnlyB2blocked;wholebacklogcontinues. Main/live
+476f6d7f522unchanged. 4558NOTcomplete/overall5of9(56%),legacyfaces remainafterB3.
+Owned476proof deliberatelycarriedas98cb65c,no unrelatedloss. OWNER5%policy/no
+earlyweeklyhold;latest61%primary78%weeklyused,22%weeklyleft/no warningthreshold.
+
+2026-10-29 PR476 RELEASED/VERIFIED 455.8B1TodaymetadataONLY. Actualmainf6d7f522
+complete tree42f41945 identicaltested9874671. AutomaticRailway23b82e52 exact
+sourceActive/successful/Detailsselected. PR40885969508/job123489636449277/0/0,
+13m26job,sum752.98s;MAIN40888440891/job123498351048277/0/0,16m56job,
+sum946.70s;sumsNOTwall,600s/file,ALL554timingsretained/no failedfull/rerun/
+cancellation/changedassertions. Public15 unchanged44px/security/true3sizes/current
+app14+classicToday6 andmergedfocused7PASS. SyntheticFCPall<2s,LHperformance
+99/96native94/100classic/access100/100native98/98classic/noerrors/overflow.
+Signed1280x529STRUCTURALONLY native67actions/0ref-smallnodes/classic67actions/
+Deals19->1->Back6skeletons->19/0open;no privatecontent/values/captures/businesswrites.
+Safeproof docs/screens/2026-10-29-pr476-release. 8B1DONE,remainingconsumerfaces
+NEXT;4558NOTcomplete,overallitems1,2,3,6,7=5/9(56%). Owner5%policy/no weeklyhold.
+
 2026-10-29 capacityreturned1%primary69%weeklyused(31%left),OWNER5%reservepolicy.
 455.8B1 Todaymetadata implementation/focused7 PASS,full277/audit/releasePENDING.
 Native/classicToday standalone reference lines removed;exactroutes/keys/full

@@ -1,0 +1,5 @@
+'use strict';
+const now='2026-10-07T12:00:00Z';
+const buyer={id:'fixture-buyer',name:'Recorded buyer',record_ref:'BUY-0001',classification:'end_buyer',approval:'approved',status:'new',states:['FL'],areas:['Example City'],buy_box:{types:['house'],price_max:200000},captured_at:now,first_seen_at:now,source_url:'https://records.example.test/buyer',profile_url:'https://records.example.test/buyer',email_subject:'[BUY-0001] Buyer enquiry',email:'buyer@example.test',fits:{count:0},deal_fit:{count:2,matches:[{id:'fixture-deal',ref:'WOS-FL-1031',city:'Example City',state:'FL',zip:'33000',asking:150000,buyer_max:170000,teaser_ready:true,checks:['Source note mentions BUY-7654 <img src=x>']},{id:'unready-deal',ref:'WOS-FL-1032',city:'',state:'',zip:'',asking:150000,buyer_max:170000,teaser_ready:false}],near_misses:[{id:'near-deal',ref:'WOS-FL-1033',city:'Example City',state:'FL',zip:'33000',reason:'Price needs review.'}]}};
+const payload={items:[buyer],counts:{total:1,new_today:1,messaged_this_week:0},capabilities:{can_import:true},last_import_at:now};
+module.exports={now,buyer,payload};
