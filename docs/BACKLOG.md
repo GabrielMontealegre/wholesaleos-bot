@@ -7,6 +7,16 @@ backlog work under the owner's about5% five-hour revert reserve,not stopping
 early for the weekly budget. Currentwindow45%used;PR480merged5c81e46 with
 candidate279/0/0+MAIN279/0/0+allpublic/livegatespassed. No earlyweeklyhold.
 
+2026-10-29 #392 legacy contract safety IMPLEMENTED LOCALLY, not released.
+Branch item/392-legacy-contract-safety from current main5c81e46 plus owned480
+proof. Removes unsupported personal/clock/deposit/AI defaults; preserves actual
+record address/offer and explicit seller/title/notes as unsigned review fields.
+Admin-first/no-store/allowlisted input/unique-ID/no-writer route. New pure and
+synthetic loopback focused tests PASS; full PR/main/exact automatic deploy and
+read-only gates PENDING. No real contract/profile/private file/production POST.
+Trace docs/cycles/issue-392-legacy-contract-safety.md. Weekly warning above
+remains active; latest window73%/weekly96% used, no early weekly hold or reset.
+
 2026-10-29 PR480 RELEASED/VERIFIED:455.9 foldedcomps/explicitrowreason only.
 Actualmain5c81e46be528fa177f1679d39c069fc12c5fd80c tree714a6bc identical5999217.
 AutomaticRailwayfbe5008c exactsourceActive/successful/Detailsaria-selected.

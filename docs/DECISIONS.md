@@ -547,6 +547,16 @@ the existing signed pending path and preserves operator edits/approvals.
 No PII output, no automatic submit or approval. Fixture-only tests. Read-only
 live reconciliation follows the first separately authorized real submission.
 
+ASSUMED: #392 legacy fill has no reviewed date, buyer, jurisdiction, deposit or
+signature input authority in its four-field request schema. Leave those terms
+blank even when unreviewed similarly named record fields exist; retain actual
+record address/offer and explicit seller/title/notes without stored writes.
+Replace unconsumed legacy legal text export with an unsigned field worksheet,
+not a signed/legal instrument. D-059 and AGENTS truth/provenance take precedence
+over unsupported historical defaults. Independent #392 follows #455.9 while
+#455.4A/#455.5/#455.8B2 await #471/#472/#478; do not edit shadowed legacy UI,
+native Deals or Claude-owned #433/#434 to manufacture progress. -- 2026-10-29
+
 D-059 -- Architect#383 and Gabriel,2026-10-19: profile I is limited to
 storage and canonical reviewed JV/template/email draft consumers. Legacy
 contracts/fill remains unavailable for profile autofill; repair separately.
