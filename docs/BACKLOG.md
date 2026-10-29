@@ -1,5 +1,40 @@
 # Backlog
 
+2026-10-29 PR475 first full40866755234 TERMINAL275/1/0(all276),600s/file,
+16m33job,sum914.56s NOTwall. Oldrecord-activity-ui compactreference assertion
+conflicted with455.8;firsttest-onlycorrection requires exactdeal1identity and
+no compactref,retainingALLdetail/timeline/search/privacy/nowritechecks.
+Correctedrecordactivity1366/400/412 PASS. RuntimeUNCHANGED;newfullgate required.
+PR475 remains DRAFT/unmerged/undeployed;main/live474unchanged. Usage83%primary/
+66%weekly used;weekly34%remaining,NOunder10warning. Owner5%reservepolicyactive.
+
+2026-10-29 OWNERusagepolicy ACTIVE:new5%5-hourrevertreserve replaces ALLolder
+largereserveholds. Workbacklog untilwindowexhausts,resumeautomatically;no early
+weeklyconservation. Owneralone handlesmanualreset;weeklyremainingunder10%must
+be flagged HERE forarchitectliveappcheck. Atstartprimary40%used/weekly59%used,
+weekly41%remaining,NOlowweeklywarningthresholdcrossed. Heartbeat15min/quietwhile
+inprogress. AGENTS safety/release/readonly/rollbackrulesUNCHANGED.
+LOCAL455.8A inprogress:fourrequestedphrases+revieweddealcompactreference label,
+canonicaldata/links/fullrecordreferencesunchanged. Remaining8Bcardfacemetadata
+separate;455items1,2,3,6,7 remain5/9(56%),8NOTcomplete. Main/live47471f32fc
+unchangedpendingfull276/audit/release. Trace docs/cycles/issue-455-plain-card-words.md.
+
+2026-10-29 PR474 RELEASED/VERIFIED: main71f32fc4a96a33f1f89f2d1ef7381c146f567543
+complete tree IDENTICAL tested338906f. AutomaticRailway51497a20 exactsource
+Active/successful/Details selected. PR40843985299/job123346898462275/0/0,
+15m59job,sum887.38s;MAIN40846129112/job123353956830275/0/0,15m24job,
+sum864.61s;sums NOTwall,600s/file,ALL550timings retained. No full failures/reruns.
+Public15 true3sizes/original44px/security/currentCSS15+app13 gates and six-file
+exactmerged synthetic journeys PASS. Mobile drawer full-height/outside tap,
+compact44px rows/X/Escape/focus verified synthetically400/412/shortphone.
+Signed1280x585 structural More/Settings/Email/classic19->1->Back->19; viewport
+tool did NOTproduce signed mobile dimensions;no such claim/privatecapture/text/
+values/credentials/businesswrites. Safeproof docs/screens/2026-10-29-pr474-release.
+455.7 DONE;items1,2,3,6,7 are5/9(56%),4A471/fixtureidentity472 blocked,
+next independent8plaincardwords when fullimplementation/releaseANDrollback
+reserve permits. NativeDeals unauthorized;454ownerkey/routine pending/alreadyasked,
+463Notyet/450unanswered/456deferred. Whole455/412/backlogNOTcomplete.
+
 2026-10-29 LOCAL455.7 mobile-menu candidate: native Today/Email mobile navigation
 is full-height at400/412 with compact44px rows, outside-tap/X/Escape dismissal,
 keyboard focus containment/return and existing singleMore handoff. Six focused

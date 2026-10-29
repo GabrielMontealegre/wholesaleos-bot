@@ -1,0 +1,19 @@
+{
+  "source_sha": "71f32fc4a96a33f1f89f2d1ef7381c146f567543",
+  "tested_head": "338906f8fa0dcde8c00afcd43961c09e9b4626de",
+  "complete_tree_identical": true,
+  "deployment_id": "51497a20-e91a-46a8-a972-6c524b961f6c",
+  "automatic": true,
+  "active": true,
+  "detailsSelected": true,
+  "exactSourceLink": true,
+  "height": 793,
+  "successful": true,
+  "width": 1920,
+  "manual_build_retry_settings_variables_actions": false,
+  "notes": [
+    "Details is authoritatively selected via aria-selected, not a whitespace-sensitive first-tab text comparison.",
+    "Initial activity link opened the default Deploy Logs tab and its startup AX metadata appeared; immediately switched to Details. No Variables/settings/actions opened, no raw logs saved into proof.",
+    "Fresh default viewport1920x793; signed tab1280x585. Requested viewport override did not yield mobile signed evidence."
+  ]
+}

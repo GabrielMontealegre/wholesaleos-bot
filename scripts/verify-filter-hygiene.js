@@ -37,7 +37,7 @@ async function prove({screenshots = false} = {}) {
         await page.evaluate(tab => navigate(tab, null), tab);
         await page.locator('.td-summary').first().waitFor();
         assert.ok(!(await page.locator('.td-counts').innerText()).includes('Not measured'));
-        assert.equal(await page.locator('.td-counts').getByText('Vetted today:', {exact: false}).count(), 0);
+        assert.equal(await page.locator('.td-counts').getByText('Checked today:', {exact: false}).count(), 0);
         assert.equal(await page.locator('.td-counts').getByText('Eligible JV:', {exact: false}).count(), 0);
         assert.equal(await page.locator('.td-filter-bar [data-open-deal-import],.td-filter-bar [data-open-glossary]').count(), 0);
         assert.equal(await page.locator('.td-page-tools button').count(), 2);
@@ -64,8 +64,8 @@ async function prove({screenshots = false} = {}) {
       await page.evaluate(() => navigate('todays_deals', null)); await page.locator('.td-summary').first().waitFor();
       if (!(await page.locator('.td-filter-bar').evaluate(e => e.open))) await page.locator('.td-filter-bar summary').click();
       await page.locator('[data-deal-reload]').click();
-      await page.waitForFunction(() => document.querySelector('.td-counts')?.textContent.includes('Vetted today: 0'));
-      assert.ok((await page.locator('.td-counts').innerText()).includes('Eligible JV: 0'));
+      await page.waitForFunction(() => document.querySelector('.td-counts')?.textContent.includes('Checked today: 0 of 10'));
+      assert.ok(!(await page.locator('.td-counts').innerText()).includes('Eligible JV:'), 'Owner455.8 removes the jargon count, not the underlying eligibility gate');
     }
     fixture.assertUnchanged(); assert.deepEqual(writes, []); assert.deepEqual(external, []); assert.deepEqual(errors, []);
     console.log('Filter hygiene1366/1920/400/412: absent metrics hidden, measured0 retained, phone collapsed/openable, tools outside filters and normal navigation, no overflow/writes/external requests.');
