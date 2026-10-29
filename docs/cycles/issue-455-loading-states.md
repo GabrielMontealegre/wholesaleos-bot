@@ -1,5 +1,13 @@
 # 455.6 Loading States
 
+Corrected89b23db full40820982621/job123273133416 REAL273/1/0,all274 retained,
+600s/file,15m25job,sum869.76s NOTwall. Back test now PASSED; different existing
+deal-card-navigation-ui failed32.42s waiting for buyer-match focus. Pending paint
+consumed matchFocus before final response replaced its DOM. Second product fix
+defers consuming that focus intent until loading finishes. Original whole-card/
+keyboard/matches/Back/escaping/unsigned-JV/value assertions stay UNCHANGED.
+No flaky/environmental claim; new exact-head full gate required.
+
 Initial798c689 full40818897917/job123266443363 REAL273/1/0,all274timings,
 600s/file,16m49job,sum934.16s NOTwall. Existing classic-deal-back-ui failed:
 pending record refresh hid the cached record and Back. First PRODUCT fix retains

@@ -1,5 +1,19 @@
 # Synthetic Loading Candidate
 
+Intermediate89b23db full40820982621/job123273133416 also FAILED273/1/0,
+600s/file,15m25job,sum869.76s NOTwall(all274 retained separately). Back PASS;
+existing buyer-match focus test failed. Second product correction defers focus
+until the final response paint. Original assertions unchanged. The89b23db audit
+below is valid historical proof for that intermediate source, NOT the final fix.
+Final corrected-source audit and full gate required before any release.
+
+FINAL corrected89b23db serialized audit PASS: audit/final-89b23db/proof.json.
+After FCP (1366/400/412): Today121.7/115.8/102ms,Email111.4/33.7/34.3ms,
+Deals103.2/79.9/94.3ms. LH13.5 performance99/96,99/96,98/100;
+accessibility100/100,100/100,98/98; runtime null/audit errors empty/nooverflow.
+All before metrics retained. SYNTHETIC not live speed. Final states/27images
+includes uncached pending-record Back. Exact corrected full274 still pending.
+
 Initial798c689 full40818897917/job123266443363 FAILED273/1/0,all274 retained
 in initial-failed-timings.json,600s/file,16m49job,sum934.16s NOTwall. Existing
 classic-deal-back-ui detected a genuine pending-record Back regression. First
@@ -18,7 +32,7 @@ Three-size held-read/error/Retry/slow/reopened/stale/401/403/429/focus negatives
 PASS; six-file existing mailbox/shell/navigation/Today/clock journeys PASS.
 All existing assertions retained. Full274 and release proof still required.
 
-Serialized pinnedPW1.44/Chromium1117/Lighthouse13.5 before/after87a6078 audit:
+INITIAL798c689 pinnedPW1.44/Chromium1117/Lighthouse13.5 audit (NOT final source):
 after FCP (1366/400/412) Today41.2/38.5/35.4ms, Email37.5/32.3/43.5ms,
 Deals99.6/98.5/82.3ms. Performance desktop/mobile Today99/96,Email99/96,
 Deals99/100; accessibility100/100,100/100,98/98. Null runtime errors, empty
