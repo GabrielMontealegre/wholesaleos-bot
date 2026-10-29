@@ -1,5 +1,13 @@
 # Backlog
 
+2026-10-29 PR475 first full40866755234 TERMINAL275/1/0(all276),600s/file,
+16m33job,sum914.56s NOTwall. Oldrecord-activity-ui compactreference assertion
+conflicted with455.8;firsttest-onlycorrection requires exactdeal1identity and
+no compactref,retainingALLdetail/timeline/search/privacy/nowritechecks.
+Correctedrecordactivity1366/400/412 PASS. RuntimeUNCHANGED;newfullgate required.
+PR475 remains DRAFT/unmerged/undeployed;main/live474unchanged. Usage83%primary/
+66%weekly used;weekly34%remaining,NOunder10warning. Owner5%reservepolicyactive.
+
 2026-10-29 OWNERusagepolicy ACTIVE:new5%5-hourrevertreserve replaces ALLolder
 largereserveholds. Workbacklog untilwindowexhausts,resumeautomatically;no early
 weeklyconservation. Owneralone handlesmanualreset;weeklyremainingunder10%must

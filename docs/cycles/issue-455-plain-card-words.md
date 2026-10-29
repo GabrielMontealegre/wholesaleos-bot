@@ -89,6 +89,18 @@ no merge/deploy yet. Existingassertionchanges remain documented above.
 
 ## Owner Usage Policy
 
+### First Full Gate Correction
+
+Full40866755234/job123423339447 on50c38e3 TERMINAL275/1/0(all276),600s/file,
+16m33job,sum914.56s NOTwall;all276timings retained in failed-pr-50c38e3-timings.json.
+scripts/verify-record-activity-ui.js:29 expectedcompactcardWOS-FL-1031;owner455.8
+intentionallyremoves thismetadata. Firsttest-onlycorrection requires exactdeal1
+dataidentity,zero compactreference nodes and no compactreference text. ALLlater
+detailreference/email-subject/timeline/buyer+matchrefs/search/history/privacy/
+immutability/nowrite assertions UNCHANGED. CorrectedtestPASS1366/400/412.
+Runtimeidenticaltested50c38e3;notflaky/environment/cancellation/reusedsuccess.
+Newexactfull276required;no merge/deploy untilgreen.
+
 Gabriel2026-10-29 explicitly replaces oldlarge-reserveholds:work until about95%
 5-hour usage,keep about5%forrevert/redeploy;resumeautomaticallyafterreset. Do not
 stop early forweekly budget;owner alone handles his manualreset. Under10%weekly
