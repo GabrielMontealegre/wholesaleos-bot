@@ -89,6 +89,20 @@ no merge/deploy yet. Existingassertionchanges remain documented above.
 
 ## Owner Usage Policy
 
+### Verified Release
+
+PR475 merged7a7e354e5f8519bf10f6514dbf9abf9a2602a3fe,complete tree
+a4e9b5f2c28657e33b8a3303e11bf7be04186763 identicaltestedabcb5a2.
+PR40869171909/job123431504145276/0/0,14m53job,sum835.19s;
+MAIN40871367857/job123438978734276/0/0,13m16job,sum742.60s;
+600s/file,sumsNOTwall,ALL552timingrows retained. ExactautomaticRailway
+933e0678-1bbf-4a31-82d0-cffe338adc38 ACTIVE/successful/Detailsselected/sourceverified.
+Originalpublic15 three-size44px/security/source gatePASS;mergedfocused7PASS.
+Signedstructural19->1->Back6skeletons->19/0open,previewlabel/Market/nooverflow.
+No privatecontent/values/captures/credentials/businesswrites. Contentidentity
+and positivevalue proofSYNTHETICONLY. No liveconsolelogs/zeroerrorclaim.
+Proof docs/screens/2026-10-29-pr475-release. ONLY8A done;8B stillrequired.
+
 ### First Full Gate Correction
 
 Full40866755234/job123423339447 on50c38e3 TERMINAL275/1/0(all276),600s/file,

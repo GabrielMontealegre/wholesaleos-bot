@@ -1,5 +1,22 @@
 # Backlog
 
+2026-10-29 PR475 RELEASED/VERIFIED 455.8A only. Main7a7e354e5f8519bf10f6514dbf9abf9a2602a3fe
+complete tree IDENTICAL testedabcb5a2. AutomaticRailway933e0678 exactsource
+ACTIVE/successful/Details selected. PR40869171909/job123431504145276/0/0,
+14m53job,sum835.19s;MAIN40871367857/job123438978734276/0/0,13m16job,
+sum742.60s;sumsNOTwall,600s/file,ALL552timings retained. First275/1/0 genuine
+oldcompactreference assertion corrected per455.8;ALLlateridentity/history/
+search/privacy/nowrite checks retained,notflaky/environment/reusedsuccess.
+Public15 original44px/security/source3size and mergedfocused7 PASS. Actual
+signed1280x529 structural19->1->Back6skeletons->19/0open;previewstaticlabel/
+Market/nooverflow. No privatecontent/captures/values/credentials/businesswrites.
+FrozenexactsourceUIaudit performance100/100Deals94/90Preview/access98/98both,
+allFCP<2s,true3sizes,SYNTHETICnotlive. Safeproof docs/screens/2026-10-29-pr475-release.
+8A DONE,8Bremainingcardmetadata NEXT;4558NOTcomplete,items1,2,3,6,7=5/9(56%).
+Latestusage94%primary68%weeklyused,weekly32%left(no under10warning). Checkpoint
+around95%perOWNER5%reservepolicy;resume8Bautomaticallywhenwindowresets.
+No oldlarge-reserve/weeklyprotectionhold;wholebacklogactive/notcomplete.
+
 2026-10-29 PR475 first full40866755234 TERMINAL275/1/0(all276),600s/file,
 16m33job,sum914.56s NOTwall. Oldrecord-activity-ui compactreference assertion
 conflicted with455.8;firsttest-onlycorrection requires exactdeal1identity and
