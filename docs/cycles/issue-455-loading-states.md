@@ -1,5 +1,13 @@
 # 455.6 Loading States
 
+Initial798c689 full40818897917/job123266443363 REAL273/1/0,all274timings,
+600s/file,16m49job,sum934.16s NOTwall. Existing classic-deal-back-ui failed:
+pending record refresh hid the cached record and Back. First PRODUCT fix retains
+the exact cached selected record with a refreshing status; uncached pending
+records get Back plus skeletons. Original Back/race assertions UNCHANGED and
+locally PASS. New uncached-record escape/late response test added. Not flaky,
+environmental or reused gate. Initial failed timings retained separately.
+
 Candidate only until exact-head/full/main/automatic deployment/live gates pass.
 Base87a6078, prior verified rollback470/468 tree. Owned rollback proof deliberately
 carried as aa29ad4; no unrelated work reset. Dates4A blocked471; runtime test-label

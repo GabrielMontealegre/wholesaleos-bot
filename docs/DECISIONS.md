@@ -1188,4 +1188,3 @@ two-second email label is local, current-selection-bound and does not repaint or
 persist data. Existing auth/clock/source/draft authority remains unchanged; Deals
 uses the existing classic destination, not an unapproved native screen.
 --Owner455.6,AGENTS source truth/additive consistency--2026-10-29.
-

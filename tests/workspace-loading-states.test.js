@@ -113,6 +113,24 @@ async function prove() {
       await page.locator('#wos-todays-deals[aria-busy="false"]').waitFor();
       assert.equal(await page.locator('.td-loading-row').count(), 0);
       assert.equal(requests.filter(x => x === 'deals').length, 2);
+      // An uncached record must also offer Back before its request completes.
+      nextDeals = deferred();
+      const oldRecord = nextDeals;
+      const recordRead = page.waitForRequest(req => new URL(req.url()).pathname === '/api/dashboard/todays-deals' && !!new URL(req.url()).searchParams.get('record_id'));
+      await page.evaluate(() => { window.navigate = () => { document.querySelector('#content').innerHTML = renderTodaysDeals(); }; openReviewedDeal('synthetic-unloaded'); });
+      await recordRead;
+      await page.getByRole('button', { name: 'Back to results', exact: true }).waitFor();
+      await capture('deals-record-pending');
+      nextDeals = deferred();
+      const listRead = page.waitForRequest(req => new URL(req.url()).pathname === '/api/dashboard/todays-deals' && !new URL(req.url()).searchParams.get('record_id'));
+      await page.getByRole('button', { name: 'Back to results', exact: true }).click();
+      await listRead;
+      oldRecord.resolve({ json: { items: [], counts: { shown: 0 } } });
+      await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+      assert.equal(await page.locator('.td-loading-row').count(), 6);
+      nextDeals.resolve({ json: { items: [], counts: { shown: 0 } } });
+      await page.locator('#wos-todays-deals[aria-busy="false"]').waitFor();
+      assert.equal(requests.filter(x => x === 'deals').length, 4);
       assert.deepEqual(forbidden, []); assert.deepEqual(errors, []);
       await page.close();
     }

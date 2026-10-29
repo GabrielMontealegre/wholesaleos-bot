@@ -1,5 +1,16 @@
 # Synthetic Loading Candidate
 
+Initial798c689 full40818897917/job123266443363 FAILED273/1/0,all274 retained
+in initial-failed-timings.json,600s/file,16m49job,sum934.16s NOTwall. Existing
+classic-deal-back-ui detected a genuine pending-record Back regression. First
+product correction retains cached selected record/Back with refreshing status,
+or Back plus skeletons when uncached. Original Back-race test locally PASS,
+assertions unchanged. Its new uncached-case test initially treated record_id=
+as a record request; corrected the fixture predicate to nonempty query value,
+retaining the same one-record/one-list/late-response assertions. No flaky claim.
+Initial audit images/metrics are retained under audit/initial-head-798c689;
+final corrected-source serialized audit and full gate still required.
+
 NOT a live release. Actual product source based on87a6078; no real credentials,
 private records or production requests in these browser tests/screenshots.
 
@@ -15,7 +26,7 @@ audit errors/page errors/no overflow. Full before values retained in audit/proof
 These are SYNTHETIC, not production timing. Eighteen before/after screenshots
 inspected as a contact sheet; synthetic inputs masked before disk.
 
-states/ holds24 final isolated loading/error screenshots. Native views use actual
+states/ holds isolated loading/error screenshots. Native views use actual
 entry/renderers/styles; isolated Deals component now includes existing marketplace/
 desk styles and strict44px/in-viewport Retry assertion. This is component-state
 proof, not an authenticated production full-shell capture. Actual classic shell
