@@ -2,6 +2,8 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
 const {createFixtureApp}=require('../scripts/verify-marketplace-ui'),{launchChromiumWithResolvedBrowser}=require('../modules/research/playwright-browser-resolver');
 const profiles=require('../modules/records/operator-profile'),templates=require('../modules/email/template-approvals');
+const proofDir=process.env.WOS_PROFILE_UI_PROOF_DIR;
+if(process.argv.includes('--screenshots'))assert.ok(proofDir&&path.isAbsolute(proofDir),'Screenshot capture requires an explicit output directory');
 (async()=>{
  const fixture=createFixtureApp(),server=await new Promise(resolve=>{const s=fixture.app.listen(0,'127.0.0.1',()=>resolve(s));}),base='http://127.0.0.1:'+server.address().port;
  let browser,store={},posts=0,profileReads=0,templatePosts=0,conflict=false,hold=false,release=null;const errors=[],external=[],unexpected=[];
@@ -56,7 +58,9 @@ const profiles=require('../modules/records/operator-profile'),templates=require(
    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
    for(const button of await page.locator('#operator-profile button').all())assert.ok(await button.evaluate(el=>el.getBoundingClientRect().height>=44));
    if(process.argv.includes('--screenshots')){
-    const dir=path.join(__dirname,'../docs/screens/2026-10-19-366-i');fs.mkdirSync(dir,{recursive:true});await page.locator('#operator-profile').scrollIntoViewIfNeeded();await page.mouse.move(0,0);await page.screenshot({path:path.join(dir,'synthetic-profile-'+width+'.png')});
+    const dir=proofDir;fs.mkdirSync(dir,{recursive:true});await page.locator('#operator-profile').scrollIntoViewIfNeeded();await page.mouse.move(0,0);
+    const team=page.getByText('Team Access',{exact:true}).locator('..');assert.equal(await team.count(),1);assert.ok((await team.boundingBox()).height>100);assert.ok(await team.locator('button').count());assert.equal(await team.locator('#operator-profile').count(),0);
+    await page.screenshot({path:path.join(dir,'synthetic-profile-'+width+'.png'),mask:[team],maskColor:'#000000'});
    }
    conflict=true;await form.locator('[name=llc]').fill('SYNTHETIC COMPANY');await form.locator('[name=reviewed]').check();await page.getByRole('button',{name:'Save profile',exact:true}).click();await page.locator('[data-profile-status]').filter({hasText:'Profile changed'}).waitFor();assert.equal(await page.getByRole('button',{name:'Save profile',exact:true}).isEnabled(),false);assert.equal(store.operator_profile_history.length,1);
    conflict=false;await page.getByRole('button',{name:'Reload saved profile',exact:true}).click();await page.locator('[data-profile-status]').filter({hasText:'Saved profile loaded'}).waitFor();assert.equal(await form.locator('[name=llc]').inputValue(),'');
@@ -77,7 +81,9 @@ const profiles=require('../modules/records/operator-profile'),templates=require(
    await page.locator('[data-template-profile-field]').selectOption('operator_signature');assert.ok((await page.locator('[data-template-form] [name=body]').inputValue()).includes('{{operator_signature}}'));assert.equal(await page.locator('[data-template-form] [name=reviewed]').isChecked(),false);
    await page.locator('[data-template-form] [name=reviewed]').check();await page.getByRole('button',{name:'Save reviewed template',exact:true}).click();await page.locator('[data-template-status]').filter({hasText:'Reviewed template saved'}).waitFor();
    await page.getByText('Preview with my saved profile',{exact:true}).click();await page.locator('.et-profile-preview').filter({hasText:'SYNTHETIC DRAFT SIGNATURE'}).waitFor();
-   if(process.argv.includes('--screenshots')){await page.locator('#email-template-library').scrollIntoViewIfNeeded();await page.mouse.move(0,0);await page.screenshot({path:path.join(__dirname,'../docs/screens/2026-10-19-366-i/synthetic-template-'+width+'.png')});}
+   if(process.argv.includes('--screenshots')){await page.locator('#email-template-library').scrollIntoViewIfNeeded();await page.mouse.move(0,0);await page.screenshot({path:path.join(proofDir,'synthetic-template-'+width+'.png')});}
+   await page.evaluate(()=>dispatchEvent(new PageTransitionEvent('pagehide',{persisted:true})));
+   assert.equal(await page.locator('[data-template-form],.et-profile-preview').count(),0,'pagehide clears private derived template previews');
    await page.evaluate(()=>navigate('settings',null));await page.locator('[data-profile-status]').filter({hasText:'Saved profile loaded'}).waitFor();
    await page.evaluate(()=>navigate('gmail',null));assert.equal(await page.locator('[data-template-form],.et-profile-preview').count(),0,'Profile reload invalidates cached template previews');
    await page.evaluate(()=>navigate('settings',null));await page.locator('[data-profile-status]').filter({hasText:'Saved profile loaded'}).waitFor();

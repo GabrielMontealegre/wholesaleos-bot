@@ -1,5 +1,16 @@
 # Backlog
 
+2026-10-29 #383/PR394 reconciliation remains LOCAL, not released. Main7262b11/
+PR481 unchanged. Measurement-phase Lighthouse scope corrected after post-return
+page changes made the earlier observer invalid; old mobile88 failed audit kept.
+Qualified e9b956c audit passed, then self-review reproduced a template pagehide
+cache gap (2 remaining nodes vs0). Repair and three-size lifecycle verification
+are in progress; fresh exact-source audit and full284 PR/main gates still due.
+Static baseline Team Access label appeared in a synthetic contact preview;
+unsafe uncommitted Settings images removed before stage/push, numeric history
+kept, replacements and optional test captures use validated whole-section masks.
+No real Profile/Gmail read or production write. See current383 trace. Not DONE.
+
 2026-10-29 CAPACITY RETURNED: observed0% five-hour/0% weekly used at resume.
 No agent reset, credit use or purchase. ExistingPR394/383 Profile reconciliation
 resumed after separate392/481 release; not a new duplicate. Owned394checkpoint

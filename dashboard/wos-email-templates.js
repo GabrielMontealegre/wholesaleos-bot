@@ -24,6 +24,7 @@
   var signout=root.signOutDashboard;if(signout)root.signOutDashboard=function(){clear('Dashboard login required.');return signout.apply(this,arguments);};
   var login=root.showDashboardLogin;if(login)root.showDashboardLogin=function(){clear('Dashboard login required.');return login.apply(this,arguments);};
   root.addEventListener('wos:session-ended',()=>clear('Dashboard login required.'));
+  root.addEventListener('pagehide',()=>clear('Reload templates before reviewing a preview.'));
   root.addEventListener('wos:profile-changed',()=>clear('Profile details loaded or changed. Reload templates before reviewing a preview.'));
   document.addEventListener('click',event=>{if(event.target.closest('[data-template-load]'))load();});
   document.addEventListener('change',event=>{if(event.target.matches('[data-template-kind]')){chosen=event.target.value;status='';error='';paint();}});

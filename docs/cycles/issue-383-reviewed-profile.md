@@ -84,6 +84,48 @@ explicit reload, local image-edit preservation and late logout cancellation.
 Existing PIN/key/device controls are explicitly retained. Final audit/full gates
 still required for the changed runtime.
 
+Fresh audit on e9b956c did not pass the release gate: Settings performance100/100,
+template100 desktop/88 mobile, accessibility98 throughout. FCP remained below2s.
+The mobile88 is retained, not waived; a concurrent supplemental capture is not
+a proven cause. One bounded mobile diagnostic scored100 with CLS0, but is not a
+replacement gate. A scope correction then checked the actual Lighthouse page,
+not only a separate Playwright route and final URL. Its baseline Settings run
+observed Dashboard after Lighthouse returned, so that score is unqualified.
+Installed Lighthouse13.5 source documents destructive gatherers and clears
+origin storage before returning. Measurement-phase scope probe v4 captured
+Settings with its original Company Info form during the required Accessibility
+artifact, then Leads after Lighthouse returned. The post-return scope check is
+therefore too late; the exact destructive phase is not isolated. Earlier probes
+failed config initialization twice, then found ViewportDimensions filtered out
+of these categories; none supplied a candidate gate. The corrected observer
+delegates the unchanged Accessibility implementation and records only structural
+state before it. No category, threshold, storage reset or app state is suppressed.
+Full corrected-protocol before/after audit on e9b956c then passed: Settings
+100/100, template97/100, accessibility98 for all candidate audits, FCP below2s.
+The diagnostic95/98 is not a candidate gate or an explanation of the old88.
+Self-review subsequently found derived template previews survived pagehide even
+though Profile itself cleared. A new synthetic regression failed exactly2!=0
+at the cache-empty assertion. Template pagehide now clears cached preview/forms
+and invalidates late responses via the same existing sequence guard, without
+requesting or writing anything. Fresh UI and exact-source audit remain required
+after this runtime repair; the e9b956c scores cannot substitute for that gate.
+The repaired three-size UI test then passed, including the two current PIN/key/
+device preservation assertions, pagehide clearing, slow-read timeout, explicit
+reload, image-draft preservation and late logout handling. All six newly masked
+captures were inspected; staged offline privacy gate passed. Exact-source UI
+audit and full284 PR/main suites remain pending.
+
+Additional capture disclosure: a static hardcoded owner label in baseline
+Settings Team Access appeared in a synthetic contact preview. This was tracked
+fixture markup, not a real Profile/Gmail read. Uncommitted Settings captures and
+unsafe contact sheets were removed before staging/push; numeric audit reports
+remain. Replacement capture-only views validate and mask the entire Team Access
+section before disk, plus baseline Settings inputs, without hiding Profile or
+security controls in the running application. Fifteen safe supplemental views
+were inspected. The UI test's optional Settings screenshot path now applies the
+same validated whole-Team-Access mask. Privacy-tainted original images are not retained;
+do not claim all original screenshots or zero historical metadata exposure.
+
 Privacy disclosure: an earlier usage-check orchestration emitted account/reset-
 credit identifiers instead of only percentages into tool output. No identifiers
 are repeated here; no reset/purchase was called. Subsequent checks are filtered.
