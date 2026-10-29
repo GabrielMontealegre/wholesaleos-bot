@@ -20,5 +20,8 @@ navigation-visual/:12 supplemental exact-source before/after screenshots with
 only synthetic input masking, no suite/Lighthouse rerun. Drawer fully inspectable.
 final-states/:6 explicit opened-menu screenshots, all synthetic.
 
-Full275 PR/live release gates pending. Exact private source preservation proof
-is synthetic only; no private screenshots/text/values may be used for release.
+474 RELEASED/VERIFIED via71f32fc exact338906f product. PR275/0/0 + MAIN275/0/0,
+all550timings/public15/current source/merged6focused pass. See sibling
+2026-10-29-pr474-release for final mixed proof and browser viewport limits.
+Exact private source preservation proof is synthetic only; no private screenshots/
+text/values may be used for release.
