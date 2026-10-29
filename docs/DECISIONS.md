@@ -1,5 +1,11 @@
 # Decisions
 
+ASSUMED:455.8B2 removes only standalone reference metadata on Approvals,
+conversationcards,Pipeline and notificationWorkqueue. Canonicaldata/keys/refs/
+links/fullrecord/search/history/source labels/messages/alerts remain intact.
+Buyer-match and legacyfaces are laterbounded8B work;do not call whole8done.
+--AGENTS2/3/owner455.8/data provenance--2026-10-29.
+
 ASSUMED: Continue455.8B as ordered consumer-boundary PRs;B1 removes standalone
 reference metadata from native/classicToday only, preserving exact handlers,
 refs/keys, record/search/history and source text. Buyer/match/approval/conversation/
