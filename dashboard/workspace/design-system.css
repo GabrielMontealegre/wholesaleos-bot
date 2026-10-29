@@ -271,6 +271,9 @@ h3 { font-size: var(--ws-type-base); line-height: 1.4; }
   .ws-shell { grid-template-columns: minmax(0, 1fr); }
   .ws-sidebar { display: none; }
   .ws-mobile-menu { display: inline-flex; }
+  .ws-mobile-navigation { position: fixed; inset: 0 auto 0 0; margin: 0; width: min(320px, calc(100% - 48px)); height: 100dvh; max-height: 100dvh; border-width: 0 1px 0 0; border-radius: 0; }
+  .ws-mobile-navigation .ws-dialog-body { flex: 1; min-height: 0; align-content: start; }
+  .ws-mobile-navigation .ws-dialog-body .ws-nav { grid-template-columns: minmax(0, 1fr); }
   .ws-topbar { padding: var(--ws-space-2) var(--ws-space-3); }
   .ws-help { padding-inline: var(--ws-space-3); min-height: 44px; }
   .ws-content { padding-inline: var(--ws-space-3); }

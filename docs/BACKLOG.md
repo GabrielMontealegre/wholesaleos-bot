@@ -1,5 +1,13 @@
 # Backlog
 
+2026-10-29 LOCAL455.7 mobile-menu candidate: native Today/Email mobile navigation
+is full-height at400/412 with compact44px rows, outside-tap/X/Escape dismissal,
+keyboard focus containment/return and existing singleMore handoff. Six focused
+synthetic files pass unchanged existing assertions. Full/audit/live gates pending;
+NOTreleased. Main/live473ccc48ef unchanged. Items1,2,3,6 remain4/9(44%);4A471
+and fixture identity472 blocked. No nativeDeals/backend/auth/provider/data rewrite.
+Trace docs/cycles/issue-455-mobile-menu.md; owned473 proof deliberately preserved.
+
 2026-10-29 PR473 RELEASED/VERIFIED: mainccc48ef1b068e580cbccaa23e6f14e552992cdd8
 complete tree IDENTICAL tested40a64cb. AutomaticRailwaye684a300 exactsource
 Active/successful. PR40822754553/job123278732010274/0/0,16m14job,sum910.15s;

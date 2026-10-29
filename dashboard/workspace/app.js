@@ -74,6 +74,19 @@
     if (screen === 'email') host.querySelectorAll('[data-help]').forEach(function (element) { element.title = element.dataset.help; });
     account.querySelector('[data-dialog-body]').innerHTML = '<p>Admin session</p>' + c.button({ label: 'Sign out', icon: 'log-out', id: 'signout' });
     var menu = c.bindDialog(mobile), user = c.bindDialog(account), more = c.bindDialog(moreNode);
+    mobile.classList.add('ws-mobile-navigation');
+    mobile.addEventListener('click', function (event) {
+      var bounds = mobile.getBoundingClientRect();
+      if (event.target === mobile && (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom)) menu.close();
+    });
+    mobile.addEventListener('keydown', function (event) {
+      if (event.key !== 'Tab' || event.ctrlKey || event.metaKey || event.altKey) return;
+      var controls = Array.from(mobile.querySelectorAll('a[href],button:not([disabled])')).filter(function (element) { return element.getClientRects().length; });
+      var first = controls[0], last = controls[controls.length - 1];
+      if ((event.shiftKey && document.activeElement === first) || (!event.shiftKey && document.activeElement === last)) {
+        event.preventDefault(); (event.shiftKey ? last : first).focus();
+      }
+    });
     host.querySelectorAll('[data-open-more]').forEach(function (button) {
       button.addEventListener('click', function () {
         if (mobile.open) { menu.close(); document.getElementById('menu-open').focus(); }

@@ -1,5 +1,11 @@
 # Decisions
 
+ASSUMED:455.7 changes only native mobile navigation at the existing720px
+breakpoint. Left-edge full-height drawer keeps a48px outside tap strip and
+compact44px rows; More/Account/Record dialogs and fixed tool URLs remain intact.
+No native Deals or session/data authority change. --Owner455.7,AGENTS additive
+architecture consistency--2026-10-29.
+
 ASSUMED:455item3 keeps Today and Email as native primary destinations and
 groups all seven existing non-native tools,including Settings,under one visible
 More entry. More uses the existing dialog/component/icon/navigation contracts;
