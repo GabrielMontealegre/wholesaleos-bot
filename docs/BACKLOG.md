@@ -1,5 +1,22 @@
 # Backlog
 
+2026-10-29 PR479 RELEASED/VERIFIED:455.8B3 buyer matching/near-miss commands.
+Actualmain2a74029a5d08afdf7ef724e25dda740f87b865bd complete tree1d715f21
+identicaltested79c184c. AutomaticRailway100397b8 exactsourceActive/successful/
+authoritativeDetailsselected;no manualactions. PR40898005224/job123532262029
+278/0/0,16m49job,sum948.22s;MAIN40901088880/job123543239344278/0/0,
+17m07job,sum963.93s;sumsNOTwall,600s/file,ALL556rowsretained. No fullfailures/
+reruns/cancellations/changedexistingassertions. Public15 original44px/security/
+exactbuyerJS12/currentassets andmergedfocused6PASS. Synthetic3sizeFCP<2s,
+LHperformance93/100/access98/98;18supplementalvisible-rowimagesinspected,
+originalauditretained. Signed1280x529STRUCTURALONLY80buyers->1/Matchingtab
+selected/0matchrows/0selections/nooverflow;NOpositivepopulatedlivecontentclaim.
+No privatecaptures/text/values/credentials/businesswrites/authtransfer.
+Proof docs/screens/2026-10-29-pr479-release. Whole455.8 NOTcomplete:legacylist
+faces remain;477BLOCKED478(no answer),4A471/fixture5-472/450stillblocked,
+456deferred/nativeDealsunauthorized. Overall5/9(56%). OWNER5%reservepolicy,
+no earlyweeklyhold;last86%window82%weeklyused(18%weeklyleft,no warningthreshold).
+
 2026-10-29 Independent455.8B3 buyer-matchlabels IMPLEMENTED/focused6PASS;
 full278/audit/releasePENDING. Nestedmatch/near-missbuttons nowOpen deal+existing
 location;exactIDs/fullrecordrefs/review/email-selection/value/source/data guards
