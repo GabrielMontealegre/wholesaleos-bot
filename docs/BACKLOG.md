@@ -15,7 +15,16 @@ No privatecaptures/text/values/credentials/businesswrites/authtransfer.
 Proof docs/screens/2026-10-29-pr479-release. Whole455.8 NOTcomplete:legacylist
 faces remain;477BLOCKED478(no answer),4A471/fixture5-472/450stillblocked,
 456deferred/nativeDealsunauthorized. Overall5/9(56%). OWNER5%reservepolicy,
-no earlyweeklyhold;last86%window82%weeklyused(18%weeklyleft,no warningthreshold).
+no earlyweeklyhold;checkpoint94%window83%weeklyused(17%weeklyleft,no warning).
+Next independent8B4 trace:actuallegacyDailyAcquisitionQueue itemmetadata in
+dashboard/index.html:7569 prependsgetLeadReferenceId;currentrender callsites
+5382/21127/21199. Purequeuebuilder7428 retains scores/reasons/order/caps;
+referenceformatter7660 reads canonicalreference_id/lead_reference_id or derives
+state/county/date/sequence. RemoveONLYdisplaymetadata afterfulltrace;retain
+data-lead-id/Open/fullrecord/search/source text andallwriters. LegacytableREF
+columns alsoexist but areseparate;do notsilentlybundle table/modelrewrite.
+No8B4branch/sourceedit/test/deployyet. Normalworkcheckpointsaround95%perowner;
+resumeautomaticallynextwindow,notblockedonweeklyreserve orGabrielaction.
 
 2026-10-29 Independent455.8B3 buyer-matchlabels IMPLEMENTED/focused6PASS;
 full278/audit/releasePENDING. Nestedmatch/near-missbuttons nowOpen deal+existing
