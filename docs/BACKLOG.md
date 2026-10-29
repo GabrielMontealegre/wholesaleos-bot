@@ -1,5 +1,13 @@
 # Backlog
 
+2026-10-29 FINAL473 remote40a64cb FULL40822754553/job123278732010 SUCCESS
+274/0/0,600s/file,all274timings retained,16m14job,sum910.15s NOTwall.
+Two real273/1 full failures exposed Back then match-focus regressions; two
+targeted product fixes retain ALL original tests. Final exact-source synthetic
+three-size/FCP/LH gates PASS. StillDRAFT/unmerged/undeployed until technical
+release gates;main/live87a6078 unchanged. Local proof may be ahead of tested
+remote;no docs-only push/CI churn.4556 not complete until verified deployment.
+
 2026-10-29 LOCAL455.6 loading-state candidate,NOT released: native Email metadata
 skeleton/body2sStillloading+explicit retries,Today Retry,classic Deals skeleton/
 error Retry. No backend/auth/provider/clock/data writes. Three-size held-read
