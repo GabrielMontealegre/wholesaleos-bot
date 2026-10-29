@@ -1,5 +1,19 @@
 # Decisions
 
+OWNER2026-10-29: Work backlog24/7 until finished. Replace old large usage reserve
+with about5%of5-hour window for revert/redeploy;pause normal work at window
+exhaustion and resume automatically after reset. Do not conserve weekly usage
+early;Gabriel alone handles his one manual reset. When weekly remaining UNDER10%,
+write warning in run summary at TOPdocs/BACKLOG.md forarchitectliveappcheck.
+Noagentreset/purchase. AGENTS safety/oneitemPR/fullgreen/readonlyverification/
+rollbackFIRST still apply. Historicallarge-reserveholds below are superseded.
+
+ASSUMED: Split455.8 into ordered boundedPRs underAGENTSsection2.8A covers four
+requested wording examples and compact reviewed-deal reference label;8B covers
+remaining card-face metadata. Remove display metadata,not canonical IDs/routes/
+history or arbitrary source/name/message strings. Fullrecord identity remains
+available.8A alone does NOTcomplete455.8. --Owner455.8/additiveconsistency--2026-10-29.
+
 ASSUMED:455.7 changes only native mobile navigation at the existing720px
 breakpoint. Left-edge full-height drawer keeps a48px outside tap strip and
 compact44px rows; More/Account/Record dialogs and fixed tool URLs remain intact.

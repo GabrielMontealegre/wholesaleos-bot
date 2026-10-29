@@ -1,5 +1,16 @@
 # Backlog
 
+2026-10-29 OWNERusagepolicy ACTIVE:new5%5-hourrevertreserve replaces ALLolder
+largereserveholds. Workbacklog untilwindowexhausts,resumeautomatically;no early
+weeklyconservation. Owneralone handlesmanualreset;weeklyremainingunder10%must
+be flagged HERE forarchitectliveappcheck. Atstartprimary40%used/weekly59%used,
+weekly41%remaining,NOlowweeklywarningthresholdcrossed. Heartbeat15min/quietwhile
+inprogress. AGENTS safety/release/readonly/rollbackrulesUNCHANGED.
+LOCAL455.8A inprogress:fourrequestedphrases+revieweddealcompactreference label,
+canonicaldata/links/fullrecordreferencesunchanged. Remaining8Bcardfacemetadata
+separate;455items1,2,3,6,7 remain5/9(56%),8NOTcomplete. Main/live47471f32fc
+unchangedpendingfull276/audit/release. Trace docs/cycles/issue-455-plain-card-words.md.
+
 2026-10-29 PR474 RELEASED/VERIFIED: main71f32fc4a96a33f1f89f2d1ef7381c146f567543
 complete tree IDENTICAL tested338906f. AutomaticRailway51497a20 exactsource
 Active/successful/Details selected. PR40843985299/job123346898462275/0/0,
