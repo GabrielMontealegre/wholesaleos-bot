@@ -5,7 +5,8 @@ PR481 unchanged. Measurement-phase Lighthouse scope corrected after post-return
 page changes made the earlier observer invalid; old mobile88 failed audit kept.
 Qualified e9b956c audit passed, then self-review reproduced a template pagehide
 cache gap (2 remaining nodes vs0). Repair and three-size lifecycle verification
-are in progress; fresh exact-source audit and full284 PR/main gates still due.
+PASS. Exactac3b348 audit PASS: Settings100/100,template99/100,allaccess98/FCP<2s;
+fresh full284 PR/main/current-head/deployment/live gates still due.
 Static baseline Team Access label appeared in a synthetic contact preview;
 unsafe uncommitted Settings images removed before stage/push, numeric history
 kept, replacements and optional test captures use validated whole-section masks.

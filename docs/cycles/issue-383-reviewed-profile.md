@@ -114,6 +114,15 @@ device preservation assertions, pagehide clearing, slow-read timeout, explicit
 reload, image-draft preservation and late logout handling. All six newly masked
 captures were inspected; staged offline privacy gate passed. Exact-source UI
 audit and full284 PR/main suites remain pending.
+Exact ac3b348 audit subsequently PASS: Settings FCP99.9/80.5/81.6ms and template
+95.5/234.4/137.7ms at1366/400/412. Lighthouse Settings100/100, template99/100,
+accessibility98 throughout; actual measurement-phase forms/route asserted,
+null runtime/audit errors, no overflow. Baseline Settings88 retained without a
+causal improvement claim. Existing template UI regression also passed after
+the lifecycle repair. Current six lifecycle images, six audit Email images and
+three action-footer views were inspected; footer buttons in view at all sizes.
+Safe candidate evidence lives in docs/screens/2026-10-29-profile-reconciliation-candidate.
+Full284 PR/main/current-head/self-review/deployment/live gates are still pending.
 
 Additional capture disclosure: a static hardcoded owner label in baseline
 Settings Team Access appeared in a synthetic contact preview. This was tracked

@@ -1,5 +1,15 @@
 # Profile Release Checkpoint -- Not Released
 
+2026-10-29 reconciliation supersedes the old technical block below. Current
+runtimeac3b348 on actualmain7262b11 passes current Profile lifecycle/template
+UI and exact-source synthetic audit (Settings100/100,templates99/100,access98,
+FCP<2s). Historical218 suite is not the required current284 gate. Current
+candidate proof/failed history is in2026-10-29-profile-reconciliation-candidate.
+PR394 remains draft and production remains verified481. No actual Profile,
+signature/file, business write, generation or send used. Current435 mixed proof
+and working Chrome4 apply, not the historical Chrome outage. Fresh full suites,
+self-review/exact automatic deployment/approved read-only proof remain pending.
+
 2026-10-19. Draft PR394. Tested head:
 `f5559cd9577570453a8438645b72c64c446a2a98`.
 Base main: `aba84a38e157f6824ea66fdd2875ab4e78e0aca9`.
