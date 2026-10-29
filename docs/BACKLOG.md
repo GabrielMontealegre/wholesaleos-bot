@@ -1,5 +1,28 @@
 # Backlog
 
+2026-10-29 LOCAL455.8B2 workflowcardmetadata IMPLEMENTED/focused9PASS;
+full278/fourviewaudit/releasePENDING. Approvals/conversation/Pipeline/bellWorkqueue
+standalone reference lines removed;exactIDs/keys/links/review/source text/data/
+history unchanged/no backend/auth/provider/clock/writer changes. Existingtests
+UNCHANGED;newactualfullindex4views3size metadata/source-escaping/no-write proof.
+Main/live476f6d7f522 unchanged. Remainingbuyer-match/legacyfaces afterthisslice;
+4558NOTcomplete,overall5/9(56%). Owned476proof fb81561 deliberatelycarriedonto
+actualmain as30138e0/no unrelatedloss. OWNER5%policy/no weeklyhold. Trace
+docs/cycles/issue-455-workflow-card-metadata.md.
+
+2026-10-29 PR476 RELEASED/VERIFIED 455.8B1TodaymetadataONLY. Actualmainf6d7f522
+complete tree42f41945 identicaltested9874671. AutomaticRailway23b82e52 exact
+sourceActive/successful/Detailsselected. PR40885969508/job123489636449277/0/0,
+13m26job,sum752.98s;MAIN40888440891/job123498351048277/0/0,16m56job,
+sum946.70s;sumsNOTwall,600s/file,ALL554timingsretained/no failedfull/rerun/
+cancellation/changedassertions. Public15 unchanged44px/security/true3sizes/current
+app14+classicToday6 andmergedfocused7PASS. SyntheticFCPall<2s,LHperformance
+99/96native94/100classic/access100/100native98/98classic/noerrors/overflow.
+Signed1280x529STRUCTURALONLY native67actions/0ref-smallnodes/classic67actions/
+Deals19->1->Back6skeletons->19/0open;no privatecontent/values/captures/businesswrites.
+Safeproof docs/screens/2026-10-29-pr476-release. 8B1DONE,remainingconsumerfaces
+NEXT;4558NOTcomplete,overallitems1,2,3,6,7=5/9(56%). Owner5%policy/no weeklyhold.
+
 2026-10-29 capacityreturned1%primary69%weeklyused(31%left),OWNER5%reservepolicy.
 455.8B1 Todaymetadata implementation/focused7 PASS,full277/audit/releasePENDING.
 Native/classicToday standalone reference lines removed;exactroutes/keys/full
