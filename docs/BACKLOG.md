@@ -1,5 +1,22 @@
 # Backlog
 
+2026-10-29 PR473 RELEASED/VERIFIED: mainccc48ef1b068e580cbccaa23e6f14e552992cdd8
+complete tree IDENTICAL tested40a64cb. AutomaticRailwaye684a300 exactsource
+Active/successful. PR40822754553/job123278732010274/0/0,16m14job,sum910.15s;
+MAIN40824721901/job123285012346274/0/0,15m50job,sum884.00s; sums NOTwall,
+600s/file,ALL548timings retained. Original public15/three-size44px/security and
+threeasset exactsource gates PASS; merged eight-file synthetic journeys PASS.
+Signed structural controls/counts only: Email49/bodySkeleton->onePanel/disabled
+Reply commands/Close;classic19->1pendingBack->0+sixSkeletons->19;Today+Settings
+same-session/no writes. Optional private body-read DENIED and honored; no text/
+length workaround/private capture/content locator/console-zero claim.
+455.6 DONE;1,2,3,6 DONE4/9(44%).4A blocked471/5runtimeidentity blocked472,
+next independent7mobilemenu when releaseANDrollback reserve permits. Two real
+273/1 regressions retained,original tests unchanged;final audit/source gatePASS.
+Proof docs/screens/2026-10-29-pr473-release;candidate/trace retain all history.
+454real ownerkey/firstupload/routine NOTactive/alreadyasked;463ownerNotyet separate;
+450unanswered/456deferred/Claudeownedcandidates untouched. Whole backlog NOTcomplete.
+
 2026-10-29 FINAL473 remote40a64cb FULL40822754553/job123278732010 SUCCESS
 274/0/0,600s/file,all274timings retained,16m14job,sum910.15s NOTwall.
 Two real273/1 full failures exposed Back then match-focus regressions; two
