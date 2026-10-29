@@ -7,7 +7,8 @@
   function create(options) {
     var host = options.host, state = { folder: 'inbox', category: 'primary', messages: [], threads: [], unavailable: [], selected: '', body: [], busy: false, error: '', composing: false, query: '', role: '', contextOpen: false };
     var sequence = 0, folderSequence = 0, metadataBusy = false, disposed = false, drafts = new Map(), outcomes = new Map(), replyBinding = null;
-    var selectedRows = new Set(), openedSnippets = new Map();
+    var selectedRows = new Set(), openedSnippets = new Map(), slowTimer = null, slowBody = false;
+    function clearSlowBody() { root.clearTimeout(slowTimer); slowTimer = null; slowBody = false; }
     function now() { return options.now ? options.now() : new Date().toISOString(); }
     function time(value) { return root.wosCardClock.formatTime(value, now()); }
     function projection() { return layout.project(state.messages, { now: now(), category: state.category, query: state.query, role: state.role, openedSnippets: openedSnippets }); }
@@ -54,7 +55,7 @@
     }
     function bodyMarkup() {
       if (!chosen()) return c.empty('Select a conversation', 'Choose a message to read it.');
-      if (!state.body.length) return state.busy ? c.skeleton('Loading conversation') : c.empty('Message unavailable', 'Refresh the folder or open it in Gmail.');
+      if (!state.body.length) return state.busy ? c.skeleton(slowBody ? 'Still loading...' : 'Loading conversation') : c.empty('Message unavailable', 'Try reading this conversation again, or open it in Gmail.') + c.button({ label: 'Retry conversation', icon: 'refresh-cw', id: 'mail-retry-body' });
       return state.body.map(function (message, index) {
         var header = '<strong>' + c.escape(message.from || 'Sender not recorded') + '</strong><time>' + c.escape(time(message.date)) + '</time>';
         var content = '<p class="ws-mail-body">' + c.escape(message.body || '(No readable text)') + '</p>';
@@ -73,6 +74,7 @@
     }
     function paint() {
       if (disposed) return;
+      if (!state.selected) clearSlowBody();
       if (replyBinding) { replyBinding.destroy(); replyBinding = null; }
       host.classList.add('ws-content--mail');
       host.setAttribute('aria-busy', String(state.busy));
@@ -85,8 +87,9 @@
         '<p class="ws-mail-status" role="status" data-mail-status-important="' + Boolean(state.error || state.busy || state.unavailable.length) + '">' + c.escape(state.error || (state.busy ? 'Loading email...' : 'Latest ' + state.threads.reduce(function (sum, row) { return sum + row.messages.length; }, 0) + ' messages in this folder')) +
         (state.unavailable.length ? ' / ' + state.unavailable.length + ' references need a refresh' : '') + '</p>' +
         '<div class="ws-mail-panes"><section class="ws-mail-list" id="mail-panel-' + state.category + '" role="tabpanel" aria-labelledby="mail-' + state.category + '" aria-label="Email conversations">' +
-        items.map(rowMarkup).join('') +
-        (!items.length && !state.busy ? c.empty(state.error ? 'Email unavailable' : 'No conversations in this view', state.error ? 'Use Refresh or open Gmail.' : 'Check the other view or folder.') : '') +
+        (metadataBusy ? c.skeleton('Loading email') : items.map(rowMarkup).join('')) +
+        (!items.length && !state.busy ? c.empty(state.error ? 'Email unavailable' : 'No conversations in this view', state.error ? 'Try loading this folder again, or open Gmail.' : 'Check the other view or folder.') : '') +
+        (state.error && !thread ? c.button({ label: 'Retry email', icon: 'refresh-cw', id: 'mail-retry-list' }) : '') +
         '</section><section class="ws-mail-reading" aria-label="Open conversation">' +
         '<header class="ws-mail-reading-head">' + (thread ? c.button({ label: 'Back to messages', icon: 'chevron-down', iconOnly: true, id: 'mail-back' }) + '<div class="ws-mail-heading"><h2>' + c.escape(thread.latest.subject || '(No subject)') + '</h2>' + roleChip(thread.role) + '</div>' : '') +
         '<div class="ws-mail-reading-actions">' + (thread ? c.button({ label: 'Conversation context', icon: 'users', iconOnly: true, id: 'mail-context' }) : '') + '<a class="ws-button" href="' + gmail() + '" target="_blank" rel="noopener noreferrer">Open in Gmail' + c.icon('arrow-up-right') + '</a></div></header>' +
@@ -108,6 +111,9 @@
       host.querySelector('#mail-labels-open').addEventListener('click', folderWidget.open);
       host.querySelector('#mail-labels-open').title = 'Mail labels';
       host.querySelector('#mail-refresh').addEventListener('click', function () { remember(); load(); });
+      var retryList = host.querySelector('#mail-retry-list'), retryBody = host.querySelector('#mail-retry-body');
+      if (retryList) retryList.addEventListener('click', function () { if (!state.busy) load(); });
+      if (retryBody) retryBody.addEventListener('click', function () { if (!state.busy) open(state.selected); });
       host.querySelectorAll('[data-mail-folder]').forEach(function (button) {
         button.addEventListener('click', function () { folderWidget.close(); if (state.folder !== button.dataset.mailFolder) { remember(); state.folder = button.dataset.mailFolder; state.category = 'primary'; state.role = ''; load(); } });
       });
@@ -158,6 +164,7 @@
       return disposed || ticket !== (folderRead ? folderSequence : sequence) ? null : value;
     }
     async function load() {
+      clearSlowBody();
       // Changing People/Alerts cancels body selection, not this folder's metadata.
       var ticket = ++folderSequence;
       sequence++; metadataBusy = true;
@@ -176,8 +183,16 @@
       remember();
       var thread = state.threads.find(function (row) { return row.key === key; });
       if (!thread) return;
+      clearSlowBody();
       var ticket = ++sequence;
       state.selected = key; state.body = []; state.composing = false; state.contextOpen = false; state.busy = true; state.error = ''; paint();
+      slowTimer = root.setTimeout(function () {
+        if (!disposed && ticket === sequence && state.selected === key && state.busy) {
+          slowBody = true;
+          var label = host.querySelector('.ws-mail-thread .ws-skeleton > span');
+          if (label) label.textContent = 'Still loading...';
+        }
+      }, 2000);
       var ids = thread.messages.map(function (row) { return row.id; });
       ids.forEach(function (id) { openedSnippets.delete(id); });
       try {
@@ -193,7 +208,7 @@
           if (preview) openedSnippets.set(body.id, preview); else openedSnippets.delete(body.id);
         });
       } catch (_) { if (ticket === sequence && !disposed) state.error = 'This conversation could not be read. Your list is still available.'; }
-      finally { if (ticket === sequence && !disposed) { state.busy = false; paint(); var heading = host.querySelector('.ws-mail-reading-head h2'); if (heading) { heading.tabIndex = -1; heading.focus(); } } }
+      finally { if (ticket === sequence && !disposed) { clearSlowBody(); state.busy = false; paint(); var heading = host.querySelector('.ws-mail-reading-head h2'); if (heading) { heading.tabIndex = -1; heading.focus(); } } }
     }
     function keydown(event) {
       if (!disposed && event.key === 'Escape' && state.composing && !event.target.closest('dialog')) { event.preventDefault(); remember(); state.composing = false; paint(); host.querySelector('#mail-reply').focus(); return; }
@@ -204,7 +219,7 @@
       else if (event.key === 'e') { event.preventDefault(); var earlier = host.querySelectorAll('.ws-mail-earlier'); earlier.forEach(function (item) { item.open = !item.open; }); }
     }
     function beforeUnload(event) { remember(); if (Array.from(drafts.values()).some(function (draft) { return draft.body.trim(); })) { event.preventDefault(); event.returnValue = ''; } }
-    function destroy() { disposed = true; sequence++; folderSequence++; metadataBusy = false; if (replyBinding) replyBinding.destroy(); drafts.clear(); outcomes.clear(); selectedRows.clear(); openedSnippets.clear(); state.messages = []; state.threads = []; state.body = []; state.query = ''; state.role = ''; host.classList.remove('ws-content--mail'); document.removeEventListener('keydown', keydown); root.removeEventListener('beforeunload', beforeUnload); host.replaceChildren(); }
+    function destroy() { clearSlowBody(); disposed = true; sequence++; folderSequence++; metadataBusy = false; if (replyBinding) replyBinding.destroy(); drafts.clear(); outcomes.clear(); selectedRows.clear(); openedSnippets.clear(); state.messages = []; state.threads = []; state.body = []; state.query = ''; state.role = ''; host.classList.remove('ws-content--mail'); document.removeEventListener('keydown', keydown); root.removeEventListener('beforeunload', beforeUnload); host.replaceChildren(); }
     document.addEventListener('keydown', keydown);
     root.addEventListener('beforeunload', beforeUnload);
     return { mount: load, refresh: function () { remember(); return load(); }, search: function (query) {

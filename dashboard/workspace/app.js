@@ -279,7 +279,8 @@
     } catch (_) {
       if (sequence !== generation || !app.unlocked) return;
       content.setAttribute('aria-busy', 'false');
-      content.innerHTML = c.empty('Recorded work is unavailable', 'Use Refresh to try again, or open the classic dashboard.');
+      content.innerHTML = c.empty('Recorded work is unavailable', 'Try loading your recorded work again.') + c.button({ label: 'Retry', icon: 'refresh-cw', id: 'today-retry' });
+      content.querySelector('#today-retry').addEventListener('click', load);
     } finally {
       if (sequence === generation && document.getElementById('refresh')) document.getElementById('refresh').disabled = false;
     }

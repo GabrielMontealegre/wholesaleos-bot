@@ -1182,3 +1182,9 @@ not proof of delivery. Queue and best-deal actions only open their existing
 record; they never send, approve, capture or change business data. Existing
 reviewed-deal evaluation remains the sole source of displayed value/spread --
 AGENTS sections3/5 and #412/#416 read-only Today scope -- 2026-10-21.
+ASSUMED:455.6 loading placeholders represent pending reads, not synthetic business
+rows. Retry is an explicit operator GET, never an automatic provider retry. The
+two-second email label is local, current-selection-bound and does not repaint or
+persist data. Existing auth/clock/source/draft authority remains unchanged; Deals
+uses the existing classic destination, not an unapproved native screen.
+--Owner455.6,AGENTS source truth/additive consistency--2026-10-29.

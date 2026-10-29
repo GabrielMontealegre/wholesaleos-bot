@@ -1,5 +1,30 @@
 # Backlog
 
+2026-10-29 LOCAL455.6 loading-state candidate,NOT released: native Email metadata
+skeleton/body2sStillloading+explicit retries,Today Retry,classic Deals skeleton/
+error Retry. No backend/auth/provider/clock/data writes. Three-size held-read
+synthetic proof and existing six-file mailbox/navigation/Today/clock focused
+journeys PASS; final source/full274/UI audits/release gates still required.
+Trace docs/cycles/issue-455-loading-states.md. Main/live remains verified87a6078.
+455 items1-3 done(3/9),4A blocked471,5 runtime identity blocked472;6 in progress.
+No privacy restriction relaxed; no real credentials/private captures/business writes.
+
+2026-10-28 PR469 FAILED actual live geometry gate; rolled back FIRST by PR470.
+Current main87a6078ccbecd619a9ee25d7fe640eb665c797d6 complete tree equals
+verified46880660c6 and tested rollbackfba9ef9. Automatic Railway09f173c5 exact
+source Active/successful. Rollback PR273/0/0 + MAIN273/0/0,600s/file,all546
+timings retained; unchanged public15/three-size geometry gate and seven focused
+same-source journeys PASS. Public contact sheet inspected. No new speed claim.
+455.4A BLOCKED pending needs-architect #471; cause unknown, no failed-head retry
+or weakened gate. 455 items1-3 remain DONE (3/9,33%); dates NOT shipped.
+Proof: docs/screens/2026-10-28-pr470-rollback and pr469-release; trace
+docs/cycles/issue-469-failed-live-rollback.md. Older candidate notes superseded.
+Browser timeout diagnostics exposed a private excerpt during rollback; content-
+bearing private locators and all private captures are disabled. Numeric DOM only;
+no excerpt copied into proof. No production credentials/business writes.
+454 owner key/first upload/routine remain separately pending;463 owner Not yet
+acknowledged;450 unanswered;456 deferred. Whole backlog ACTIVE, not complete.
+
 2026-10-28 LOCAL455item3 candidate:Today/Email plus one visible More entry for
 seven existing tools,plain names,no Classic view navigation labels. Same fixed
 classic destinations/roles/Back/record behavior;no backend/auth/data writes or
