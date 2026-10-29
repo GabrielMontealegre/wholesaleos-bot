@@ -7,7 +7,9 @@ No credentials/private files/production bodies or writes are used as proof.
 - states/: initial12functional images before accessible-name/header flow repair.
 - label-fix-hovered-states/:18images after first productfix,with incidental
   pointer-hover tooltip in preview header. Retained,not normal resting-state proof.
-- final-states/: pointer-neutral final synthetic state captures (pending refresh).
+- final-states/:18pointer-neutral final synthetic state captures,including visible
+  claimed-value and recheck-command closeups. Sourcecodes in fakepersonnames are
+  deliberately retained;only separatecompactrecordmetadata is removed.
 - audit/initial-access88/: original complete serialized before/after audit.
   Deals performance100/100/access98/98;preview94/90/access88/88 bothbefore/after.
   FCPunder2s/nooverflow/runtime errors. FAILED90+access gate,not flaky or live.
@@ -24,5 +26,17 @@ IDs/fullrecordhistory/OpenBack/strictvalue/privacy/promotion/autoRundefaultOFF.
 Firstlocalfocused pass caught oldliteral not saved leads;owner-approved test
 wording correction preserves preview-not-saved intent. Seven focused files passed
 before label repair; revised new test passes names/compactMarket/assertions.
-One bounded performance diagnosis is in progress;full276/finalaudit/release gates
-still required. Partial or failed audits are not verified release proof.
+performance-diagnostic/:unqualified root BEFORE actually showed legacyLeads empty
+state(LCP4.45s/performance69),AFTERpreview94. This was not valid preview baseline
+authority;cause of earlier78 remains unestablished. Audit helper corrected to
+explicit/dashboard/?workspace=today,requires APP.page/dashboard+actualpreview
+panel,and requires Lighthouse finalURL retain route. No product/gate softened.
+
+audit/final-correct-route-50c38e3/:correctly routed complete exactsource auditPASS.
+AfterDealsFCP91.3/72.8/74ms;Preview75.9/77.4/73.5ms at1366/400/412.
+LH13.5performance100/100Deals,94/90Preview;access98/98 BOTHviews,nullruntime/
+emptyauditerrors/nooverflow. BaselinePreviewaccess88 retained. Original paint<2s/
+performanceANDaccess>=90 thresholds unchanged. Runtimefiles match committed
+50c38e3;context.json records sourcehashes and explicitroute authority.
+All12finalaudit+18state images inspected. Numbers are SYNTHETIC,NOTlive speed.
+Full276 and exactlive release stillrequired;no failedaudit/diagnosticrow reused.

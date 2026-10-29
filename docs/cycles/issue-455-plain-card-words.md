@@ -78,6 +78,15 @@ and requires Lighthouse finalURLretain workspace=today. No product/gate change.
 All oldwrong-route/performance reports retained;cause of earlier78 not proved.
 Correctly routed exact-source fullUIaudit stillrequired;thresholdsUNCHANGED.
 
+Corrected complete audit PASS on productidentical50c38e3:actualpreviewroute
+asserted,AfterDealsFCP91.3/72.8/74ms;Preview75.9/77.4/73.5ms at1366/400/412.
+LH13.5performance100/100Deals,94/90Preview;access98/98bothviews,nullruntime/
+emptyauditerrors/nooverflow. BaselinePreview88 retained. All12audit+18finalstate
+images inspected;oldfailedreports untouched. SYNTHETICnotlive. No productchange
+was made for performance;verification nowchecks actualintendedview with stronger
+route/panel checks. PR475DRAFT50c38e3/full40866755234 job123423339447 pending;
+no merge/deploy yet. Existingassertionchanges remain documented above.
+
 ## Owner Usage Policy
 
 Gabriel2026-10-29 explicitly replaces oldlarge-reserveholds:work until about95%
