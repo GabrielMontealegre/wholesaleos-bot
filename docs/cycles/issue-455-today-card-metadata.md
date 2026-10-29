@@ -59,3 +59,19 @@ remaining faces are kept separate to avoid coupling unrelated readers/writers.
 Removing display nodes can shift spacing, hence true3size visual and layout
 checks. No migration or data deletion; rollback restores display-only source.
 Owner5%5-hour reserve policy applies; weeklywarning only when remaining<10%.
+
+## Candidate And Release Gates
+
+Frozen987 source auditPASS baseline7a7:NativeFCP49.3/32.7/39ms,classic82.3/
+133.5/76.7ms true1366/400/412;LH13.5performance99/96native94/100classic,
+access100/100native98/98classic,nullruntime/emptyaudit/nooverflow. Actual
+populatedTodayroute asserted. All12audit+6stateimages inspected,SYNTHETICnotlive.
+PR40885969508/job123489636449277/0/0,13m26job,sum752.98sNOTwall,600s/file,
+all277rows retained. No failedPRfull/audit/retries/changedexistingassertions.
+Actualmergef6d7f522 complete tree42f41945 identical987. ExactautomaticRailway
+23b82e52 Active/successful/Detailsselected/sourceverified. Public15 original
+geometry/security/currentassets andmergedfocused7PASS. SignedSTRUCTURALONLY
+native67actions/no ref-smallnodes/classic67actions/Deals19->1->Back->19.
+MAIN40888440891/job123498351048 SUCCESS277/0/0,600s/file,16m56job,
+sum946.70sNOTwall,all554PR+MAINrowsretained. ReleaseVERIFIED. No fullfailures/
+reruns/cancellations/changedassertions. Remaining8Bconsumerfaces stillrequired.
