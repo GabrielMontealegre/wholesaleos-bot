@@ -1,5 +1,10 @@
 # Decisions
 
+ASSUMED:455.8B3 independentbuyer matching/near-missfaces use Open deal+existing
+location;exactIDs/projections/sharing gates/fullrecordrefs/subjects/history remain.
+Do not bundleblocked477workflowcode;onlyitsreviewedboundary478blocksB2,notthis
+consumer. No sourcecode-like stringcensorship/nativeDeals. --AGENTS2/3--2026-10-29.
+
 ASSUMED: Continue455.8B as ordered consumer-boundary PRs;B1 removes standalone
 reference metadata from native/classicToday only, preserving exact handlers,
 refs/keys, record/search/history and source text. Buyer/match/approval/conversation/
