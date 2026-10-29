@@ -1,5 +1,39 @@
 # Backlog
 
+2026-10-29 capacityreturned4%window85%weeklyused(15%left). 455.9 foldedcomps
+LOCALIMPLEMENTATION/new3size test pending;notmerged/deployed/verified. Proposed
+8B4legacyDailyAcquisitionQueue isshadowed by actualdefaultTodayrenderer;no
+deadcodecleanup/manufacturedvisualproof. 8B2stillblocked478/noanswer;8notdone.
+Currentmain/live479unchanged. Owner5%policy/no earlyweeklyhold;no warningyet.
+Trace docs/cycles/issue-455-folded-comps.md. Owned479proof deliberatelycarried;
+477local412ed2e remainsuntouched/unpushed. No dependencies/locks/backendwrites.
+
+2026-10-29 PR479 RELEASED/VERIFIED:455.8B3 buyer matching/near-miss commands.
+Actualmain2a74029a5d08afdf7ef724e25dda740f87b865bd complete tree1d715f21
+identicaltested79c184c. AutomaticRailway100397b8 exactsourceActive/successful/
+authoritativeDetailsselected;no manualactions. PR40898005224/job123532262029
+278/0/0,16m49job,sum948.22s;MAIN40901088880/job123543239344278/0/0,
+17m07job,sum963.93s;sumsNOTwall,600s/file,ALL556rowsretained. No fullfailures/
+reruns/cancellations/changedexistingassertions. Public15 original44px/security/
+exactbuyerJS12/currentassets andmergedfocused6PASS. Synthetic3sizeFCP<2s,
+LHperformance93/100/access98/98;18supplementalvisible-rowimagesinspected,
+originalauditretained. Signed1280x529STRUCTURALONLY80buyers->1/Matchingtab
+selected/0matchrows/0selections/nooverflow;NOpositivepopulatedlivecontentclaim.
+No privatecaptures/text/values/credentials/businesswrites/authtransfer.
+Proof docs/screens/2026-10-29-pr479-release. Whole455.8 NOTcomplete:legacylist
+faces remain;477BLOCKED478(no answer),4A471/fixture5-472/450stillblocked,
+456deferred/nativeDealsunauthorized. Overall5/9(56%). OWNER5%reservepolicy,
+no earlyweeklyhold;checkpoint94%window83%weeklyused(17%weeklyleft,no warning).
+Next independent8B4 trace:actuallegacyDailyAcquisitionQueue itemmetadata in
+dashboard/index.html:7569 prependsgetLeadReferenceId;currentrender callsites
+5382/21127/21199. Purequeuebuilder7428 retains scores/reasons/order/caps;
+referenceformatter7660 reads canonicalreference_id/lead_reference_id or derives
+state/county/date/sequence. RemoveONLYdisplaymetadata afterfulltrace;retain
+data-lead-id/Open/fullrecord/search/source text andallwriters. LegacytableREF
+columns alsoexist but areseparate;do notsilentlybundle table/modelrewrite.
+No8B4branch/sourceedit/test/deployyet. Normalworkcheckpointsaround95%perowner;
+resumeautomaticallynextwindow,notblockedonweeklyreserve orGabrielaction.
+
 2026-10-29 Independent455.8B3 buyer-matchlabels IMPLEMENTED/focused6PASS;
 full278/audit/releasePENDING. Nestedmatch/near-missbuttons nowOpen deal+existing
 location;exactIDs/fullrecordrefs/review/email-selection/value/source/data guards
