@@ -1,5 +1,15 @@
 # 455.6 Loading States
 
+RELEASED / VERIFIED via473 mainccc48ef1b068e580cbccaa23e6f14e552992cdd8,
+complete tree identical tested40a64cb. Exact automaticRailwaye684a300 Active/
+successful. PR274/0/0+MAIN274/0/0/all548timings,600s/file; original public15 gate,
+eight merged-source focused files,final synthetic audit and safe signed structural
+GET-only journeys PASS. See ../screens/2026-10-29-pr473-release/README.md.
+Private body inspection was denied/honored, not replaced by text-length/hash or
+other workaround. No private screenshots; exact content/record identity remains
+synthetic-only. No live console-zero/full-private-body/readability claim.
+455.6 DONE;whole4554/9,not complete. Earlier candidate/pending notes are history.
+
 Corrected89b23db full40820982621/job123273133416 REAL273/1/0,all274 retained,
 600s/file,15m25job,sum869.76s NOTwall. Back test now PASSED; different existing
 deal-card-navigation-ui failed32.42s waiting for buyer-match focus. Pending paint

@@ -1,5 +1,10 @@
 # Synthetic Loading Candidate
 
+Superseding final outcome: PR473 RELEASED/VERIFIED atmainccc48ef,complete tree
+identical tested40a64cb; PR274/0/0+MAIN274/0/0 and read-only release gates PASS.
+See ../2026-10-29-pr473-release/README.md. Earlier pending statements below are
+historical checkpoints. Private content was not used as live verification proof.
+
 Final remote40a64cbd1abd9c8bd9d28eed7a5f80114fcf242e FULL40822754553/
 job123278732010 SUCCESS274/0/0,600s/file,16m14job,sum910.15s NOTwall.
 All274timings retained in final-pr-timings.json. Earlier273/1+273/1 remain
