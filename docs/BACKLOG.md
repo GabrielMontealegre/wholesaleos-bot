@@ -1,5 +1,38 @@
 # Backlog
 
+2026-10-29 LOCAL455.7 mobile-menu candidate: native Today/Email mobile navigation
+is full-height at400/412 with compact44px rows, outside-tap/X/Escape dismissal,
+keyboard focus containment/return and existing singleMore handoff. Six focused
+synthetic files pass unchanged existing assertions. Full/audit/live gates pending;
+NOTreleased. Main/live473ccc48ef unchanged. Items1,2,3,6 remain4/9(44%);4A471
+and fixture identity472 blocked. No nativeDeals/backend/auth/provider/data rewrite.
+Trace docs/cycles/issue-455-mobile-menu.md; owned473 proof deliberately preserved.
+
+2026-10-29 PR473 RELEASED/VERIFIED: mainccc48ef1b068e580cbccaa23e6f14e552992cdd8
+complete tree IDENTICAL tested40a64cb. AutomaticRailwaye684a300 exactsource
+Active/successful. PR40822754553/job123278732010274/0/0,16m14job,sum910.15s;
+MAIN40824721901/job123285012346274/0/0,15m50job,sum884.00s; sums NOTwall,
+600s/file,ALL548timings retained. Original public15/three-size44px/security and
+threeasset exactsource gates PASS; merged eight-file synthetic journeys PASS.
+Signed structural controls/counts only: Email49/bodySkeleton->onePanel/disabled
+Reply commands/Close;classic19->1pendingBack->0+sixSkeletons->19;Today+Settings
+same-session/no writes. Optional private body-read DENIED and honored; no text/
+length workaround/private capture/content locator/console-zero claim.
+455.6 DONE;1,2,3,6 DONE4/9(44%).4A blocked471/5runtimeidentity blocked472,
+next independent7mobilemenu when releaseANDrollback reserve permits. Two real
+273/1 regressions retained,original tests unchanged;final audit/source gatePASS.
+Proof docs/screens/2026-10-29-pr473-release;candidate/trace retain all history.
+454real ownerkey/firstupload/routine NOTactive/alreadyasked;463ownerNotyet separate;
+450unanswered/456deferred/Claudeownedcandidates untouched. Whole backlog NOTcomplete.
+
+2026-10-29 FINAL473 remote40a64cb FULL40822754553/job123278732010 SUCCESS
+274/0/0,600s/file,all274timings retained,16m14job,sum910.15s NOTwall.
+Two real273/1 full failures exposed Back then match-focus regressions; two
+targeted product fixes retain ALL original tests. Final exact-source synthetic
+three-size/FCP/LH gates PASS. StillDRAFT/unmerged/undeployed until technical
+release gates;main/live87a6078 unchanged. Local proof may be ahead of tested
+remote;no docs-only push/CI churn.4556 not complete until verified deployment.
+
 2026-10-29 LOCAL455.6 loading-state candidate,NOT released: native Email metadata
 skeleton/body2sStillloading+explicit retries,Today Retry,classic Deals skeleton/
 error Retry. No backend/auth/provider/clock/data writes. Three-size held-read

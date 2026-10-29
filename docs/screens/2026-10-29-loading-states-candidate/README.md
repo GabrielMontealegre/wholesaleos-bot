@@ -1,5 +1,24 @@
 # Synthetic Loading Candidate
 
+Superseding final outcome: PR473 RELEASED/VERIFIED atmainccc48ef,complete tree
+identical tested40a64cb; PR274/0/0+MAIN274/0/0 and read-only release gates PASS.
+See ../2026-10-29-pr473-release/README.md. Earlier pending statements below are
+historical checkpoints. Private content was not used as live verification proof.
+
+Final remote40a64cbd1abd9c8bd9d28eed7a5f80114fcf242e FULL40822754553/
+job123278732010 SUCCESS274/0/0,600s/file,16m14job,sum910.15s NOTwall.
+All274timings retained in final-pr-timings.json. Earlier273/1+273/1 remain
+failed historical runs, not flakes or reused success. Exact final audit PASS.
+Any local proof-only commit ahead of40a64cb does NOT change tested product.
+Deployment/main/live verification still required; this is not a released claim.
+
+FINAL40a64cb exactproduct serialized audit PASS: audit/final-40a64cb/proof.json.
+After FCP (1366/400/412): Today145.9/99.9/38.8ms,Email34.8/47.3/112.6ms,
+Deals139.4/159.6/167.6ms. Performance99/96,99/96,99/100; accessibility100/100,
+100/100,98/98; runtime null/audit errors empty/nooverflow/page errors. Synthetic,
+not live. Both earlier source audits remain historical; do not relabel them.
+Final full274 and deployment/live acceptance remain pending.
+
 Intermediate89b23db full40820982621/job123273133416 also FAILED273/1/0,
 600s/file,15m25job,sum869.76s NOTwall(all274 retained separately). Back PASS;
 existing buyer-match focus test failed. Second product correction defers focus
