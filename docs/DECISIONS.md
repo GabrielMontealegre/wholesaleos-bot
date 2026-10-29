@@ -1,5 +1,11 @@
 # Decisions
 
+ASSUMED: Continue455.8B as ordered consumer-boundary PRs;B1 removes standalone
+reference metadata from native/classicToday only, preserving exact handlers,
+refs/keys, record/search/history and source text. Buyer/match/approval/conversation/
+pipeline/notification/legacy faces remain subsequent slices. No regex censorship
+or backend/nativeDeals rewrite. --AGENTSsection2/3,owner455.8--2026-10-29.
+
 OWNER2026-10-29: Work backlog24/7 until finished. Replace old large usage reserve
 with about5%of5-hour window for revert/redeploy;pause normal work at window
 exhaustion and resume automatically after reset. Do not conserve weekly usage
