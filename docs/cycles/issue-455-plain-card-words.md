@@ -69,6 +69,15 @@ label-fix-access98-perf78. One bounded baseline/candidate desktop metric/shift
 diagnosis nowrequired;no unchanged-gate loops/no performance-threshold waiver.
 No full276 or production merge/deployment yet.
 
+Performance diagnostic on same source45c2a51: unqualified classic root BEFORE
+landed on Leads empty-state(LCP4.45s/performance69),AFTERpreview94 withCLS0.152.
+This is not a repeatable preview baseline or a passing retry. Audit helper had
+used unqualified/dashboard/,which can select legacy routes;corrected to fixed
+/dashboard/?workspace=today,requires APP.page=dashboard and actualpreviewpanel,
+and requires Lighthouse finalURLretain workspace=today. No product/gate change.
+All oldwrong-route/performance reports retained;cause of earlier78 not proved.
+Correctly routed exact-source fullUIaudit stillrequired;thresholdsUNCHANGED.
+
 ## Owner Usage Policy
 
 Gabriel2026-10-29 explicitly replaces oldlarge-reserveholds:work until about95%

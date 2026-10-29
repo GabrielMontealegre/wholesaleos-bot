@@ -1,0 +1,374 @@
+{
+  "synthetic_only": true,
+  "baseline": "71f32fc4a96a33f1f89f2d1ef7381c146f567543",
+  "sizes": [],
+  "lighthouse": [
+    {
+      "mode": "before",
+      "view": "preview",
+      "width": 1366,
+      "version": "13.5.0",
+      "performance": 69,
+      "accessibility": 98,
+      "runtimeErrorCode": null,
+      "auditErrors": [],
+      "failedAccessibility": [
+        {
+          "id": "label-content-name-mismatch",
+          "nodes": [
+            {
+              "selector": "div#app > div.sidebar > details.desk-user-menu > summary",
+              "explanation": "Fix any of the following:\n  Text inside the element is not included in the accessible name",
+              "related": []
+            }
+          ]
+        },
+        {
+          "id": "landmark-one-main",
+          "nodes": [
+            {
+              "selector": "html",
+              "explanation": "Fix all of the following:\n  Document does not have a main landmark",
+              "related": []
+            }
+          ]
+        }
+      ],
+      "performanceMetrics": {
+        "first-contentful-paint": 463.625,
+        "largest-contentful-paint": 4453.012,
+        "speed-index": 4384,
+        "total-blocking-time": 46.60399999999913,
+        "cumulative-layout-shift": 0
+      },
+      "layoutDiagnostics": [
+        {
+          "id": "cumulative-layout-shift",
+          "score": 1,
+          "numericValue": 0,
+          "details": {
+            "type": "debugdata",
+            "items": [
+              {
+                "cumulativeLayoutShiftMainFrame": 0,
+                "newEngineResult": {
+                  "cumulativeLayoutShift": 0,
+                  "cumulativeLayoutShiftMainFrame": 0
+                },
+                "newEngineResultDiffered": false
+              }
+            ]
+          }
+        },
+        {
+          "id": "layout-shifts",
+          "score": null,
+          "details": {
+            "type": "table",
+            "headings": [
+              {
+                "key": "node",
+                "valueType": "node",
+                "subItemsHeading": {
+                  "key": "extra"
+                },
+                "label": "Element"
+              },
+              {
+                "key": "score",
+                "valueType": "numeric",
+                "subItemsHeading": {
+                  "key": "cause",
+                  "valueType": "text"
+                },
+                "granularity": 0.001,
+                "label": "Layout shift score"
+              }
+            ],
+            "items": []
+          }
+        },
+        {
+          "id": "cls-culprits-insight",
+          "score": 1,
+          "details": {
+            "type": "list",
+            "items": []
+          }
+        },
+        {
+          "id": "lcp-breakdown-insight",
+          "score": 0,
+          "details": {
+            "type": "list",
+            "items": [
+              {
+                "type": "table",
+                "headings": [
+                  {
+                    "key": "label",
+                    "valueType": "text",
+                    "label": "Subpart"
+                  },
+                  {
+                    "key": "duration",
+                    "valueType": "ms",
+                    "label": "Duration"
+                  }
+                ],
+                "items": [
+                  {
+                    "subpart": "timeToFirstByte",
+                    "label": "Time to first byte",
+                    "duration": 195.706
+                  },
+                  {
+                    "subpart": "elementRenderDelay",
+                    "label": "Element render delay",
+                    "duration": 4257.306
+                  }
+                ]
+              },
+              {
+                "type": "node",
+                "lhId": "page-0-DIV",
+                "path": "1,HTML,1,BODY,3,DIV,4,DIV,1,DIV,1,DIV,3,DIV,1,DIV",
+                "selector": "div#content > div > div > div",
+                "boundingRect": {
+                  "top": 467,
+                  "bottom": 490,
+                  "left": 265,
+                  "right": 1325,
+                  "width": 1060,
+                  "height": 23
+                },
+                "snippet": "<div style=\"font-size: var(--body-size); color: var(--ink); line-height: 1.5;\">",
+                "nodeLabel": "Lead hydration completed, but /api/leads returned zero leads."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "mode": "after",
+      "view": "preview",
+      "width": 1366,
+      "version": "13.5.0",
+      "performance": 94,
+      "accessibility": 98,
+      "runtimeErrorCode": null,
+      "auditErrors": [],
+      "failedAccessibility": [
+        {
+          "id": "label-content-name-mismatch",
+          "nodes": [
+            {
+              "selector": "div#app > div.sidebar > details.desk-user-menu > summary",
+              "explanation": "Fix any of the following:\n  Text inside the element is not included in the accessible name",
+              "related": []
+            }
+          ]
+        },
+        {
+          "id": "landmark-one-main",
+          "nodes": [
+            {
+              "selector": "html",
+              "explanation": "Fix all of the following:\n  Document does not have a main landmark",
+              "related": []
+            }
+          ]
+        }
+      ],
+      "performanceMetrics": {
+        "first-contentful-paint": 101.591,
+        "largest-contentful-paint": 381.858,
+        "speed-index": 395,
+        "total-blocking-time": 0,
+        "cumulative-layout-shift": 0.15214357613469986
+      },
+      "layoutDiagnostics": [
+        {
+          "id": "cumulative-layout-shift",
+          "score": 0.75,
+          "numericValue": 0.15214357613469986,
+          "details": {
+            "type": "debugdata",
+            "items": [
+              {
+                "cumulativeLayoutShiftMainFrame": 0.15214357613469986,
+                "newEngineResult": {
+                  "cumulativeLayoutShift": 0.15214357613469986,
+                  "cumulativeLayoutShiftMainFrame": 0.15214357613469986
+                },
+                "newEngineResultDiffered": false
+              }
+            ]
+          }
+        },
+        {
+          "id": "layout-shifts",
+          "score": 0,
+          "details": {
+            "type": "table",
+            "headings": [
+              {
+                "key": "node",
+                "valueType": "node",
+                "subItemsHeading": {
+                  "key": "extra"
+                },
+                "label": "Element"
+              },
+              {
+                "key": "score",
+                "valueType": "numeric",
+                "subItemsHeading": {
+                  "key": "cause",
+                  "valueType": "text"
+                },
+                "granularity": 0.001,
+                "label": "Layout shift score"
+              }
+            ],
+            "items": [
+              {
+                "node": {
+                  "type": "node",
+                  "lhId": "page-1-SECTION",
+                  "path": "1,HTML,1,BODY,3,DIV,4,DIV,1,DIV,1,SECTION",
+                  "selector": "div#app > div.main > div#content > section#wos-public-deals",
+                  "boundingRect": {
+                    "top": 1527,
+                    "bottom": 2229,
+                    "left": 252,
+                    "right": 1338,
+                    "width": 1086,
+                    "height": 702
+                  },
+                  "snippet": "<section id=\"wos-public-deals\" data-wos-target=\"dashboard\" style=\"margin: 12px; padding: 14px 16px; border-width: 1px; border-style: solid;\">",
+                  "nodeLabel": "Today's Deal Desk free sources - Preview: not saved yet\nMarket\nDallas County, T…"
+                },
+                "score": 0.15214357613469986
+              }
+            ]
+          }
+        },
+        {
+          "id": "cls-culprits-insight",
+          "score": 0,
+          "details": {
+            "type": "list",
+            "items": [
+              {
+                "type": "table",
+                "headings": [
+                  {
+                    "key": "node",
+                    "valueType": "node",
+                    "subItemsHeading": {
+                      "key": "extra"
+                    },
+                    "label": "Element"
+                  },
+                  {
+                    "key": "score",
+                    "valueType": "numeric",
+                    "subItemsHeading": {
+                      "key": "cause",
+                      "valueType": "text"
+                    },
+                    "granularity": 0.001,
+                    "label": "Layout shift score"
+                  }
+                ],
+                "items": [
+                  {
+                    "node": {
+                      "type": "text",
+                      "value": "Total"
+                    },
+                    "score": 0.15214357613469986
+                  },
+                  {
+                    "node": {
+                      "type": "node",
+                      "lhId": "page-1-SECTION",
+                      "path": "1,HTML,1,BODY,3,DIV,4,DIV,1,DIV,1,SECTION",
+                      "selector": "div#app > div.main > div#content > section#wos-public-deals",
+                      "boundingRect": {
+                        "top": 1527,
+                        "bottom": 2229,
+                        "left": 252,
+                        "right": 1338,
+                        "width": 1086,
+                        "height": 702
+                      },
+                      "snippet": "<section id=\"wos-public-deals\" data-wos-target=\"dashboard\" style=\"margin: 12px; padding: 14px 16px; border-width: 1px; border-style: solid;\">",
+                      "nodeLabel": "Today's Deal Desk free sources - Preview: not saved yet\nMarket\nDallas County, T…"
+                    },
+                    "score": 0.15214357613469986
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "lcp-breakdown-insight",
+          "score": 1,
+          "details": {
+            "type": "list",
+            "items": [
+              {
+                "type": "table",
+                "headings": [
+                  {
+                    "key": "label",
+                    "valueType": "text",
+                    "label": "Subpart"
+                  },
+                  {
+                    "key": "duration",
+                    "valueType": "ms",
+                    "label": "Duration"
+                  }
+                ],
+                "items": [
+                  {
+                    "subpart": "timeToFirstByte",
+                    "label": "Time to first byte",
+                    "duration": 16.16
+                  },
+                  {
+                    "subpart": "elementRenderDelay",
+                    "label": "Element render delay",
+                    "duration": 365.698
+                  }
+                ]
+              },
+              {
+                "type": "node",
+                "lhId": "page-0-H2",
+                "path": "1,HTML,1,BODY,3,DIV,4,DIV,1,DIV,1,SECTION,0,DIV,0,H2",
+                "selector": "div#content > section#wos-public-deals > div > h2",
+                "boundingRect": {
+                  "top": 1548,
+                  "bottom": 1580,
+                  "left": 269,
+                  "right": 719,
+                  "width": 450,
+                  "height": 32
+                },
+                "snippet": "<h2 style=\"margin:0;font-size:17px;\">",
+                "nodeLabel": "Today's Deal Desk free sources - Preview: not saved yet"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "notes": "Exact source-switch; synthetic GET-only APIs; content masked before disk; serialized audits, no real credentials/production traffic."
+}
