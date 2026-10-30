@@ -105,6 +105,8 @@ async function prove() {
       await search.fill('');
       await page.getByRole('tab', { name: 'Alerts', exact: true }).press('End');
       assert.equal(await page.getByRole('tab', { name: 'WOS reports', exact: true }).getAttribute('aria-selected'), 'true');
+      const reportTab = await page.getByRole('tab', { name: 'WOS reports', exact: true }).boundingBox();
+      assert(reportTab && reportTab.x >= 0 && reportTab.x + reportTab.width <= width, 'The selected report tab must be fully readable inside the viewport');
       assert.equal(await page.locator('.ws-mail-row').count(), 1);
       assert.equal(await page.locator('.ws-mail-row').getAttribute('title'), 'Role not recorded', 'A provider report label cannot invent a person role');
       assert.deepEqual(reads, ['inbox'], 'Report filtering consumes the existing metadata receipt without a new provider request');

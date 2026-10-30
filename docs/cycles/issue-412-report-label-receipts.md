@@ -32,7 +32,8 @@ WOS Action matches classify reports. Every message in a thread must qualify;
 duplicate copies must agree on the full unordered receipt. No raw-label fallback,
 opaque REST translation, subject/sender guess or role inference.
 
-Native mail-layout-model cache tag3 becomes4; all other asset tags stay current.
+Native mail-layout-model cache tag3 becomes4; Email15 becomes16 for the scoped
+selected-tab visibility repair below. All other asset tags stay current.
 Owned PR397 docs-only proof35ced9a was deliberately fast-forwarded from actual
 origin/main before this bounded branch. No unrelated source was bundled.
 
@@ -50,3 +51,15 @@ receipt rather than raw labels. Existing category/role/source/search/geometry/
 draft/no-write expectations remain; native report checks add role and request
 invariants. Focused UI, exact-source audit, full PR/main gates and automatic live
 release verification remain pending until recorded below.
+
+First exactcba26a3 synthetic audit passed numerical gates: native Reports FCP
+63.8/57.7/64.4ms at1366/400/412, Lighthouse99/96 performance,100 accessibility;
+baseline81.1/56/54.7ms and99/96/98. Required official Accessibility gatherer
+delegated unchanged and recorded actual Reports scope during measurement.
+However visual inspection found the selected Reports tab partly outside the
+phone tab-strip viewport, also present in baseline. This is not a fully accepted
+visual result despite green scores. A new geometry assertion FIRST genuinely
+failed at workspace-mailbox-chrome109. Scoped Email selection now scrolls the
+selected existing tab into view after ordinary focus; no CSS/parent/shared
+component or layout freeze. Exact changed-source audit remains required;
+retain first numerical/visual history, do not reuse it as final proof.
