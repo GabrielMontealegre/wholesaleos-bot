@@ -2,6 +2,19 @@
 
 ## 2026-10-30 Reconciliation In Progress
 
+Current full40996908558/job123872036334 genuinely FAILED286/2/0 all288 on
+c90886c,600s/file,17m37job,sum997.95s NOTwall. ALL288 timing rows retained in
+failed-full-40996908558.json. Exact failure sites: workspace-shell-ui.test.js75
+and workspace-today-action-center.test.js90. Both expected only nativeCSS;
+actual entries intentionally load shared UIkit and localvoice for native Ask.
+FIRST test-only correction changes each exact array from nativeCSS alone to
+nativeCSS+UIkit+localvoice, retaining exact order/no-extra-styles isolation and
+all existing geometry/FCP/auth/navigation/no-writer assertions. This is an
+intentional D-060 asset-scaffolding update under AGENTS4, not a runtime repair
+or weakened safety assertion. Both corrected actual1366/400/412 tests and staged
+privacy gate PASS; fresh full288 required. No unchanged
+workflow rerun/cancel, performance audit rerun, merge or production action.
+
 Final6ccb9f9 exact-source audit PASS: native Today98/96, Email99/96,
 classic93/100 performance; access100 throughout. Actual expanded Ask measured
 in official Accessibility gathering, FCP157.7/63.8/71.4ms Today,

@@ -1,7 +1,15 @@
 # Backlog
 
-2026-10-30 #372 bounded demo / existingPR397 LOCAL reconciliation in progress,
-not pushed/merged/deployed. Deliberate merge of actual394+owned d9974d0 proof;
+2026-10-30 #372 existingDRAFT PR397 pushed c90886c; NOT merged/deployed.
+Fresh full40996908558/job123872036334 completed286/2/0 all288,600s/file,
+17m37job,sum997.95s NOTwall; all288 timing rows retained. Both failures are
+exact stylesheet-list assertions (shellUI75/Today-action-center90) expecting
+only nativeCSS before Ask's two shared stylesheets were intentionally loaded.
+FIRST test-only correction requires EXACT nativeCSS+UIkit+localvoice; no runtime,
+auth/writer/viewport assertion or isolation gate weakened. Both corrected
+actual3size tests and staged privacy gate PASS; fresh full288 still required.
+No unchanged workflow rerun. Deliberate merge
+of actual394+owned d9974d0 proof preserved;
 old2553b07 retained separately. Pure current projection/private GET boundary pass;
 mixed-reference unsigned JV privacy regression failed then scoped withholding
 passed, including public/signed preservation. Initial three-size UI and expanded

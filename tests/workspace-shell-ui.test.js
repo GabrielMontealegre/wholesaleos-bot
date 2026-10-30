@@ -72,7 +72,7 @@ async function prove() {
       }));
       assert.equal(layout.overflow, false);
       assert.equal(layout.scrollParents, 0);
-      assert.deepEqual(layout.sheets, ['/dashboard/workspace/design-system.css']);
+      assert.deepEqual(layout.sheets, ['/dashboard/workspace/design-system.css', '/dashboard/wos-ui-kit.css', '/dashboard/wos-local-voice.css']);
       assert(layout.firstPaint !== null && layout.firstPaint < 2000, 'Fixture first contentful paint <2s');
       // Email intentionally migrates to the shared native shell in #412.
       if (width !== 1366) await page.getByRole('button', { name: 'Open navigation', exact: true }).click();

@@ -5,6 +5,12 @@ Baseline: actual main `edbd25545ee5518d37aa50469a364b0ec78a9a92`.
 This is NOT a release. Fresh full288 PR/main gates and exact automatic deployment
 plus approved read-only verification remain pending.
 
+First current full run40996908558 genuinely failed286/2/0 all288. See
+`failed-full-40996908558.json` for ALL timing rows,600s/file,17m37job and997.95s
+summed test duration (NOT wall time). Two exact stylesheet-list expectations
+still required nativeCSS alone; test-only correction requires the exact three
+intentional shared stylesheets. No runtime/threshold/safety assertion change.
+
 ## Qualified Audit
 
 Pinned Playwright1.44/Chromium1117 and Lighthouse13.5.0. Actual native Today,
