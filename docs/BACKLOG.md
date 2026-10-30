@@ -1,5 +1,20 @@
 # Backlog
 
+2026-10-30 #412/D-063B opened-message label presentation LOCAL CANDIDATE,
+not released. Actual production remains verified482/main19a44085. Fresh owner/
+architect priorities/duplicates checked;471/472/478 remain unanswered. Approved
+phaseB labels now project only matching metadata/body/loaded-copy IMAP names,
+escaped existing badges in collapsed Message labels; opaque IDs/unknown/stale/
+conflicting evidence withheld. No role/thread-wide label/total inference,
+requests/providers/writers/storage/API/CSS/shared-component change. New pure
+and five-size UI tests plus existing focused regressions PASS; first missing
+feature assertion and two new test-scaffolding corrections honestly recorded.
+Final15 synthetic UI images inspected; exact-source audit/full PR+MAIN/review/
+automatic deployment/live proof PENDING. Trace issue-412-opened-message-labels.md.
+Owned482 docs proof41fe6f1 preserved deliberately; no source477/Claude bundle,
+no production private content/values/JSON/AX/captures. Whole412/design/native
+Deals/backlog NOTdone,455 remains6/9(67%).
+
 2026-10-30 #412/D-063B bounded native report-label consumer DONE via PR482,
 RELEASED/VERIFIED. Actual main19a44085d67c494884f10632f01e559b794d2da2,
 complete tree5b2d001e9bcfc459c26336c58541671f0a9d03bd identical testeda426683.
