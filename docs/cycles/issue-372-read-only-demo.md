@@ -2,6 +2,21 @@
 
 ## 2026-10-30 Reconciliation In Progress
 
+Final b3a8a2a after audit FAILED classic-phone performance87 (desktop93), while
+native Today/Email99/96 and all access100 passed. Phone TBT191ms,CLS.209613,
+LCP850ms; the87 cause is UNKNOWN, not called flaky/environment. All15 readable
+images inspected; prior5a scores do not substitute for this changed source.
+One ordinary-page CPU diagnostic (NOT Lighthouse/a gate) sampled classic global
+panel-hygiene visible42.7ms, Ask open19.1ms, glossary functions and unrelated
+startup; it does not establish the87 cause. Source trace also found legacy
+panel hygiene rewrote Ask's already-owned X icon and added its generic tracking.
+New actual-classic icon assertion FIRST failed0!=1. Ask now uses the EXISTING
+owned-close marker convention from assistant-upload Settings; panel-hygiene
+implementation/other panels are unchanged. Askdemo4, UIkit5. X/Escape/focus and
+private lifecycle tests must pass, then ONE changed-source audit; no unchanged
+rerun/parent freeze/threshold waiver. If that fails, escalate the parent boundary
+with current478 evidence instead of a third speculative performance fix.
+
 Stable-frame5a1acfb numeric re-audit passed unchanged gates: Today99/96,
 Email99/96,classic94/90; accessibility100. This is NOT final visual approval:
 inspection of all15 corrected images found classic heading text inherited an
