@@ -1,5 +1,66 @@
 # Ask WholesaleOS -- Bounded Read-Only Demo
 
+## 2026-10-30 Reconciliation In Progress
+
+Existing PR397 remote5678942 is unchanged/unmerged/undeployed. Its local branch
+deliberately merges current edbd255 plus owned394 proof d9974d0; old owned
+2553b07 is retained at checkpoint/2026-10-19-demo-proof, not bundled with its
+unrelated historical Pipeline trace. Five conflicts resolved to current shell,
+server, docs and Calendar; only the new Ask hooks are reapplied. Current Calendar,
+Today and Calendar projections are not edited. Historical218 is not a current gate.
+
+Fresh390 explicitly confirms D-060 Option A. Newer372 per-deal chat belongs to
+the separate412 workspace slice and is not added here. Current main contained
+no Ask snapshot/model/demo implementation; this is not a runtime duplicate.
+No provider/key, new business writer, downstream sign-off or native Deals route.
+Current native Today/Email More navigation has no Ask destination. The reconciled
+classic header alone is NOT the full usable entry surface on current main.
+Native-to-Ask entry/return flow must be traced and implemented within D-060
+before final audit/release, without a native Deals migration, hidden snapshot
+load on ordinary dashboards or freezing parent layouts to obtain a score.
+
+The new private GET boundary applies no-store/admin before generic parsers,
+rejects bodies and non-GET methods without reading the store, and returns only
+generic failure codes. Pure projection and synthetic boundary tests pass.
+
+Source trace found the old candidate could expose unsigned JV address/holder
+through linked conversation text even when its deal name was withheld. New
+mixed buyer/deal reference regression genuinely FAILED before the scoped fix.
+Ask now applies the UNCHANGED canonical signed-evidence gate to ALL JV refs,
+including beyond the loaded subset, and withholds entire linked report fields,
+action names and event fields rather than regex-censoring source text. Unlinked
+event details are withheld. Public buyer-only reports and genuinely signed JV
+reports retain their original content. No existing canonical module/gate changes.
+Signed-path fixture initially used the evaluator-only minimal buyer, which lacks
+assistant ingestion metadata and caused a TypeError; it now uses the actual
+canonical ingestion/update path. No production fallback or assertion waiver.
+The signed/unsigned/public-preservation/purity tests then pass.
+
+Ask styles use existing shared UI kit3, not a new one-off stylesheet. The pinned
+upstream Lucide1.60.0 message-circle SVG is unmodified/local/license retained;
+shared component allowlist7 and entry URLs are consistent. Classic entry adds
+the existing component module before Ask scripts. ProfileJS2/templateJS2 stay
+unchanged; voiceJS3 adds only the query selector. Other current cache tags stay.
+Close/reload/launcher use local library icons with accessible names/tooltips;
+compact answer faces omit standalone refs, while exact queries/context refs stay.
+
+Client30s abort spans fetch+JSON, no retry. Query/Ask lock until a snapshot loads;
+pagehide/session/auth/close remove private context and invalidate late responses.
+Base current UI at1366/400/412 passed all old geometry/44px/navigation/no-write
+assertions. Expanded real30s timeout/explicit reload/pagehide tests passed before
+the later report-envelope fix; final exact-source regressions still required.
+Final current-source nine-file UI/regression sequence PASS: Ask expanded
+lifecycle, shared components, voice, desk shell, Calendar, upload-key Settings,
+remembered-device Settings, Profile and API session registration gate. Pure Ask,
+private GET boundary, component safety and voice unit tests also pass. No full
+suite or performance/accessibility audit yet; current actual inventory287.
+Earlier six masked screenshots precede the last compact-reference/report-envelope
+changes and are not final-source visual proof. Fresh frozen-source captures due.
+Optional screenshots require explicit WOS_ASK_DEMO_PROOF_DIR and mask the entire
+underlying app/toasts BEFORE disk without hiding the dialog. No private/live
+snapshot/queries/audio/Profile/files/send used. No current audit/full suite/PR
+push/merge/deploy yet; whole372/370/412/backlog is NOT complete.
+
 D-060 / architect#390 authorizes this slice before full#366 sign-off. It is
 not the full#372 assistant and does not enable downstream#369/#361/#351.
 #393's broader assistant parity follows this demo. No AI key/provider,

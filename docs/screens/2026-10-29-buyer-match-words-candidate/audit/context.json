@@ -1,0 +1,16 @@
+{
+  "source_sha": "79c184c1d4e5402f2baa4e93b289b5dce3811f19",
+  "baseline": "f6d7f52240df2d1f06b0032bc41a9cb993918edc",
+  "sources": [
+    {
+      "file": "index.html",
+      "normalized_sha256": "9667d4cd8b7d2cd1004dbe345fd89d4d2ad0050e60b03f0c98775d2772418fb0"
+    },
+    {
+      "file": "wos-buyers-found.js",
+      "normalized_sha256": "a75d64150da4113f26dae64a9e6703cd9d8a924d50f1804835afe5acd97ee7aa"
+    }
+  ],
+  "audit_helper_sha256": "7da22e58b1898b1a16e0ddbff785772db0d0c72ce05910143328d0788d6a2d98",
+  "route_authority": "Fixed canonical BUY-0001 record route,actual Matching deals tab selected and populated before capture"
+}

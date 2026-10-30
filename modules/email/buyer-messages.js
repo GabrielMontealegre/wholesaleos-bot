@@ -7,6 +7,7 @@ const eligibility = require('../research/operational-lead-eligibility');
 const templates = require('./template-approvals');
 const workflow = require('../deals/jv-workflow');
 const deals = require('../deals/reviewed-deals');
+const profiles = require('../records/operator-profile');
 const MAX_DEALS = 20;
 function fail(code, status = 400) { const error = new Error('buyer_email_' + code); error.code = error.message; error.status = status; throw error; }
 function hash(value) { return crypto.createHash('sha256').update(JSON.stringify(value)).digest('hex'); }
@@ -15,7 +16,7 @@ function history(store) {
   if (store.buyer_email_drafts != null && !Array.isArray(store.buyer_email_drafts)) fail('store_invalid', 503);
   return store.buyer_email_drafts || [];
 }
-function prepare(store, id, input, { now }) {
+function prepare(store, id, input, { now, operatorId }) {
   if (!input || Array.isArray(input) || Object.keys(input).some(k => !['kind', 'deal_ids'].includes(k)) || !['buyer_buy_box', 'buyer_teaser'].includes(input.kind)) fail('request_invalid');
   const buyers = (store.buyers || []).filter(b => b.id === id);
   if (buyers.length !== 1 || !buyers[0].assistant_find) fail('buyer_missing', 404);
@@ -25,19 +26,25 @@ function prepare(store, id, input, { now }) {
   if (!email(recipient)) fail('published_email_required', 409);
   const ids = input.deal_ids || [];
   if (!Array.isArray(ids) || ids.length > MAX_DEALS || new Set(ids).size !== ids.length || ids.some(v => typeof v !== 'string' || !v || v.length > 128) || (input.kind === 'buyer_teaser' ? !ids.length : ids.length)) fail('selection_invalid');
+  const profit = require('../deals/match-profit').build(store, {now});
   const selected = ids.map(id => {
     const rows = (store.reviewed_deals || []).filter(d => d.id === id);
     if (rows.length !== 1) fail('deal_missing', 404);
     const deal = rows[0], evaluation = deals.evaluate(deal, store.buyers || [], now);
     // Reuse the signed-interest/availability/value gates, not the geographic badge.
-    return { deal, teaser: workflow.teaser(deal, evaluation, buyer.id) };
+    return { deal, teaser: workflow.teaser(deal, evaluation, buyer.id), profit:profit.forMatch(deal,evaluation.matches.find(m=>m.id===buyer.id),evaluation) };
   });
   const subject = input.kind === 'buyer_buy_box' ? 'Your current buying criteria' : ids.length + ' property opportunities for your review';
-  const body = input.kind === 'buyer_buy_box'
+  const baseBody = input.kind === 'buyer_buy_box'
     ? 'Hello,\n\nWhich areas, property types and price ranges are you buying in now? Please share your repair preferences and closing timeline.\n\nThank you.'
     : selected.map(({ teaser }) => teaser.body).join('\n\n--------------------\n\n') + '\n\nThese are research summaries, not an offer or a promise of availability. Please reply if you would like to discuss one.';
+  const profile=profiles.draft(store,operatorId,{now});
+  const body=baseBody+(profile.signature_block?'\n\n'+profile.signature_block:'');
   const message = { kind: input.kind, buyer_id: id, deal_ids: ids, to: recipient, subject, body };
-  return { ...message, version: hash([buyer, selected.map(row => row.deal), message]),
+  const profit_review = selected.map(row=>({deal_ref:records.reference(row.deal),profit:row.profit}));
+  const basis = [buyer, selected.map(row => row.deal), message, profit_review];
+  if (profile.profile) basis.push(profile.version);
+  return { ...message, profit_review, version: hash(basis),
     policy: templates.policy(store, input.kind, now), preview_only: true, automatic_send_allowed: false };
 }
 function createSender({ env = process.env, mailer } = {}) {
@@ -73,7 +80,7 @@ function registerRoutes(app, { db, requireAdmin, now = () => new Date().toISOStr
     } catch (e) { error(res, e); }
   });
   app.post('/api/dashboard/buyers-found/:id/email/preview', requireAdmin, (req, res) => {
-    try { res.set('Cache-Control', 'no-store').json({ ...prepare(db.readDBStrict(), req.params.id, req.body, { now: now() }), configured: !!sender.configured() }); }
+    try { res.set('Cache-Control', 'no-store').json({ ...prepare(db.readDBStrict(), req.params.id, req.body, { now: now(),operatorId:req.currentUser.id }), configured: !!sender.configured() }); }
     catch (e) { error(res, e); }
   });
   app.post('/api/dashboard/buyers-found/:id/email/draft', requireAdmin, (req, res) => {
@@ -81,7 +88,7 @@ function registerRoutes(app, { db, requireAdmin, now = () => new Date().toISOStr
       const input = req.body;
       if (!input || Array.isArray(input) || Object.keys(input).some(k => !['kind', 'deal_ids', 'version'].includes(k))) fail('request_invalid');
       const store = db.readDBStrict(), at = now();
-      const message = prepare(store, req.params.id, { kind: input.kind, deal_ids: input.deal_ids }, { now: at });
+      const message = prepare(store, req.params.id, { kind: input.kind, deal_ids: input.deal_ids }, { now: at,operatorId:req.currentUser.id });
       if (message.version !== input.version) fail('changed', 409);
       const existing = history(store).find(row => row.operator_id === req.currentUser.id && row.version === message.version && row.status === 'draft' && Date.parse(at) - Date.parse(row.created_at) < 300000);
       if (existing) return res.json({ id: existing.id, status: existing.status });
@@ -105,7 +112,7 @@ function registerRoutes(app, { db, requireAdmin, now = () => new Date().toISOStr
       if (draft.status !== 'draft' || active.has(draft.id)) fail('attempt_already_started', 409);
       const age = Date.parse(at) - Date.parse(draft.created_at);
       if (!Number.isFinite(age) || age < 0 || age > 300000) fail('preview_expired', 409);
-      const current = prepare(store, draft.buyer_id, { kind: draft.kind, deal_ids: draft.deal_ids }, { now: at });
+      const current = prepare(store, draft.buyer_id, { kind: draft.kind, deal_ids: draft.deal_ids }, { now: at,operatorId:req.currentUser.id });
       if (current.version !== draft.version || current.body !== draft.body || current.to !== draft.to || current.subject !== draft.subject) fail('changed', 409);
       if (!sender.configured()) fail('not_configured', 503);
       const approval = { id: draft.id, kind: draft.kind, reviewed: true, source_kind: 'operator_input',

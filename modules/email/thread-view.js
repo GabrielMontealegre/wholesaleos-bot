@@ -39,9 +39,15 @@ function annotate(messages, store, { now }) {
       const matches = (store.reviewed_deals || []).filter(deal => records.reference(deal) === ref);
       return matches.length === 1 ? [{ ref, id: matches[0].id }] : [];
     }) : [];
+    const linkedRecords = row ? (Array.isArray(row.refs) ? row.refs : []).flatMap(ref => {
+      try { if (records.ref(ref) !== ref) return []; } catch { return []; }
+      const matches = [['deal', 'reviewed_deals'], ['buyer', 'buyers'], ['lead', 'leads'], ['match', 'record_matches']].flatMap(([kind, collection]) =>
+        (store[collection] || []).filter(item => records.reference(item) === ref).map(item => ({ kind, id: item.id, ref })));
+      return matches.length === 1 && ['deal', 'buyer'].includes(matches[0].kind) && typeof matches[0].id === 'string' ? matches : [];
+    }) : [];
     return { ...message, date: Number.isFinite(receivedTime(message?.date)) ? new Date(receivedTime(message.date)).toISOString() : '',
       thread_key: crypto.createHash('sha256').update(identity).digest('hex'),
-      conversation: row ? { role: row.role, role_source_kind: row.source_kind, role_recorded_at: row.recorded_at || row.captured_at, deals } : null,
+      conversation: row ? { role: row.role, role_source_kind: row.source_kind, role_recorded_at: row.recorded_at || row.captured_at, deals, records: linkedRecords } : null,
       link_status: owners.length > 1 ? 'ambiguous' : row ? 'linked' : 'unlinked' };
   });
 }

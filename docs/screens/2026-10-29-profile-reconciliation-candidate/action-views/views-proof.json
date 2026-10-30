@@ -1,0 +1,63 @@
+{
+  "synthetic_only": true,
+  "capture_only": true,
+  "baseline": "7262b1114f5db3543cfb13a8cd304ad529a6f99a",
+  "source_sha": "ac3b348a01026670cc471d295cff869d886ab5a6",
+  "sizes": [
+    {
+      "mode": "after",
+      "view": "settings",
+      "width": 1366,
+      "overflow": false,
+      "actualPage": "settings",
+      "profileForms": 1,
+      "templateForms": 0,
+      "preview": 0,
+      "securityInputs": 2,
+      "errors": []
+    },
+    {
+      "mode": "after",
+      "view": "settings",
+      "width": 400,
+      "overflow": false,
+      "actualPage": "settings",
+      "profileForms": 1,
+      "templateForms": 0,
+      "preview": 0,
+      "securityInputs": 2,
+      "errors": []
+    },
+    {
+      "mode": "after",
+      "view": "settings",
+      "width": 412,
+      "overflow": false,
+      "actualPage": "settings",
+      "profileForms": 1,
+      "templateForms": 0,
+      "preview": 0,
+      "securityInputs": 2,
+      "errors": []
+    }
+  ],
+  "notes": "Capture-only supplemental actual controls, not a new FCP/Lighthouse gate. Same fixed routes/real Load+summary interaction, natural3500ms toast expiry awaited without hiding/freezing, viewport scroll framing only. Baseline Settings inputs opaque BEFORE screenshot; no private data.",
+  "sources": [
+    {
+      "file": "index.html",
+      "normalized_sha256": "e9b2400f88224de0f053ee8c7b1dd64de94de107b518376aa5a4a3a317b95eab"
+    },
+    {
+      "file": "wos-operator-profile.js",
+      "normalized_sha256": "5756c303abfe0e15b587946798ee52707842dae9373b9f5aff2f7a8c32d27c0c"
+    },
+    {
+      "file": "wos-email-templates.js",
+      "normalized_sha256": "fc4af3f91e78e26f566a1a635ad18757978561c1be157c8ff68ccfe71e86b4a0"
+    },
+    {
+      "file": "wos-ui-kit.css",
+      "normalized_sha256": "a6d4f808e581d5daaad2dbb06ece4e0035431d4e40b65dc6d664580609ff3797"
+    }
+  ]
+}

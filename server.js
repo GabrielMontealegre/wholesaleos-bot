@@ -30,6 +30,8 @@ const marketDemandIndex = require('./modules/research/market-demand-index');
 const providerCapabilityAudit = require('./modules/research/provider-capability-audit');
 const dashboardAuth = require('./modules/security/dashboard-auth');
 const dashboardSession = require('./modules/security/dashboard-session');
+const rememberedDevices = require('./modules/security/remembered-devices');
+const rememberedDeviceRoutes = require('./modules/security/remembered-device-routes');
 const dashboardPairing = require('./modules/security/dashboard-pairing');
 const assistantFindRoutes = require('./modules/buyers/assistant-find-routes');
 const operationalLeads = require('./modules/research/operational-lead-eligibility');
@@ -161,6 +163,17 @@ function getDallasCompIntelligenceAgent() {
 }
 
 const enrichQ = require('./enrichment-queue'); // Phase 3A
+// Authorize private file traffic before generic parsers can inspect or echo it.
+app.use('/api/dashboard/assistant-snapshots', (req, res, next) => { res.set('Cache-Control', 'no-store'); next(); },
+  require('./modules/records/assistant-key-upload').createAssistantKeyUpload({ db, limiter: (req, res, next) => apiLimiter(req, res, next) }),
+  requireAdmin, require('./modules/records/assistant-snapshot-routes').requireSnapshotPayload);
+app.use('/api/dashboard/assistant-upload-keys', require('./modules/records/assistant-upload-key-routes').noStore,
+  requireAdmin, require('./modules/records/assistant-upload-key-routes').requireKeyPayload);
+app.use('/api/auth/devices', rememberedDeviceRoutes.noStore, requireAuth, rememberedDeviceRoutes.requireDevicePayload);
+app.use('/api/dashboard/operator-profile', require('./modules/records/operator-profile').noStore,
+  requireAdmin, require('./modules/records/operator-profile').requireProfilePayload);
+app.use('/api/dashboard/ask-workspace', require('./modules/agents/ask-workspace').noStore,
+  requireAdmin, require('./modules/agents/ask-workspace').requireReadPayload);
 app.use(express.json({ strict: false, limit: '1mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use(express.text({ limit: '100mb', type: 'text/plain' }));
@@ -168,6 +181,7 @@ app.use(express.text({ limit: '100mb', type: 'text/plain' }));
 // Dashboard API requests are same-origin; no cross-origin wildcard is needed.
 // Ã¢ÂÂÃ¢ÂÂ Serve dashboard static files Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
 app.use('/dashboard', express.static(path.join(__dirname, 'dashboard')));
+require('./modules/ui/workspace-preview').registerWorkspacePreview(app);
 // ── API Rate Limiter (express-rate-limit) ──
 // Applied to /api/* only — dashboard and static files are NOT affected
 // Safe limits: 200 requests per 15 minutes per IP
@@ -211,19 +225,24 @@ const pairingExchangeLimiter = rateLimit({
 // ============================================================
 function setDashboardSessionCookie(res, user, options) {
   const issued = dashboardSession.issueSession({ userId: user.id, role: user.role, scope: 'dashboard' }, Object.assign({ env: process.env }, options || {}));
-  res.setHeader('Set-Cookie', dashboardSession.sessionCookie(issued.token, issued.lifetime_ms));
+  res.setHeader('Set-Cookie', dashboardSession.sessionCookie(issued.token, issued.lifetime_ms, { session_only: issued.payload.browserSession === true }));
   return issued;
 }
 
 function dashboardIdentity(req, res) {
   if (!dashboardSession.isConfigured({ env: process.env })) return { ok: false, code: 'SESSION_REQUIRED' };
-  const verified = dashboardSession.verifySession(dashboardSession.tokenFromRequest(req), { env: process.env });
+  const token = dashboardSession.tokenFromRequest(req), options = { env: process.env, now: Date.now() };
+  let verified = dashboardSession.verifySession(token, options), strictStore;
+  if (!verified.ok && verified.code === 'SESSION_DEVICE_REQUIRED') {
+    strictStore = db.readDBStrict();
+    verified = rememberedDevices.verifyDevice(token, strictStore, options);
+  }
   if (!verified.ok || verified.user.scope !== 'dashboard') return { ok: false, code: 'SESSION_REQUIRED' };
-  const users = db.readDB().users || [];
+  const users = (strictStore || db.readDB()).users || [];
   const user = users.find((candidate) => candidate && candidate.id === verified.user.id);
   if (!user) return { ok: false, code: 'SESSION_REQUIRED' };
-  if (verified.should_renew) setDashboardSessionCookie(res, user);
-  return { ok: true, user };
+  if (verified.should_renew) setDashboardSessionCookie(res, user, { browser_session: verified.payload.browserSession === true });
+  return { ok: true, user, device_id: verified.device_id || null };
 }
 
 function bearerToken(req) {
@@ -238,6 +257,7 @@ function requireAdmin(req, res, next) {
     if (!identity.ok) return res.status(401).json({ error: 'Signed session required', code: 'SESSION_REQUIRED' });
     if (identity.user.role !== 'admin') return res.status(403).json({ error: 'Admin access required', code: 'ADMIN_REQUIRED' });
     req.currentUser = identity.user;
+    req.rememberedDeviceId = identity.device_id;
     next();
   } catch(e) {
     res.status(503).json({ error: 'Admin authorization unavailable', code: 'ADMIN_AUTHORIZATION_UNAVAILABLE' });
@@ -249,6 +269,7 @@ function requireAuth(req, res, next) {
     const identity = dashboardIdentity(req, res);
     if (!identity.ok) return res.status(401).json({ error: 'Signed session required', code: 'SESSION_REQUIRED' });
     req.currentUser = identity.user;
+    req.rememberedDeviceId = identity.device_id;
     next();
   } catch(e) {
     res.status(503).json({ error: 'Authorization unavailable', code: 'AUTHORIZATION_UNAVAILABLE' });
@@ -384,7 +405,7 @@ app.get('/api/provider-readiness', (req, res) => {
     search_provider_readiness: searchProviderWorker.getLiveSearchProviderReadiness()
   });
 });
-app.get('/', (_, res) => res.json({
+require('./modules/ui/workspace-preview').registerAppHome(app, () => ({
   status: 'Montsan REI Bot Ã¢ÂÂ Online',
   dashboard: '/dashboard/',
   leads: db.getLeads().length,
@@ -2758,9 +2779,13 @@ app.delete('/api/leads/:id', (req, res) => {
 const ownerTelegram=require('./modules/agents/owner-telegram').createOwnerTelegram({log:entry=>logger.info({result:entry.result,ref:entry.ref},'[telegram] owner alert')});
 assistantFindRoutes.registerAssistantFindRoutes(app, { db, requireAdmin, pairingOptions: { env: process.env },onIncomingInteractions:events=>ownerTelegram.incoming(events) });
 require('./modules/deals/reviewed-deal-routes').registerReviewedDealRoutes(app, { db, requireAdmin });
+require('./modules/records/operator-profile').registerRoutes(app, { db, requireAdmin });
 require('./modules/agents/ask-workspace').register(app, { db, requireAdmin });
 require('./modules/records/record-activity-routes').registerRecordActivityRoutes(app, { db, requireAdmin });
-require('./modules/records/conversation-routes').registerConversationRoutes(app, { db, requireAdmin });
+require('./modules/records/conversation-routes').registerConversationRoutes(app, { db, requireAdmin, assistantSnapshotImport: true });
+require('./modules/records/assistant-snapshot-routes').registerAssistantSnapshotRoutes(app, { db, requireAdmin });
+require('./modules/records/assistant-upload-key-routes').registerAssistantUploadKeyRoutes(app, { db, requireAdmin });
+rememberedDeviceRoutes.registerRememberedDeviceRoutes(app, { db, requireAuth });
 
 app.get('/api/buyers', requireAuth, (req, res) => {
   try {
@@ -2912,18 +2937,7 @@ app.post('/api/assignments', (req, res) => {
 });
 
 // Ã¢ÂÂÃ¢ÂÂ API: Contracts Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
-app.post('/api/contracts/fill', async (req, res) => {
-  try {
-    const { fillContract } = require('./modules/contracts');
-    const { leadId, sellerName, titleCompany, extraNotes } = req.body;
-    const lead = db.getLeads().find(l => l.id === leadId);
-    if (!lead) return res.status(404).json({ error: 'Lead not found' });
-    const result = await fillContract(lead, sellerName, titleCompany, extraNotes);
-    res.json(result);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
+require('./modules/contracts/legacy-fill-routes').registerLegacyContractFill(app, { db, requireAdmin });
 
 // Ã¢ÂÂÃ¢ÂÂ API: Settings Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
 app.get('/api/settings', (req, res) => {
@@ -3341,14 +3355,11 @@ app.get('/api/auth/session', (req, res) => {
   const configured = dashboardSession.isConfigured({ env: process.env });
   let authenticated = false;
   let role = null;
-  if (configured) {
-    const verified = dashboardSession.verifySession(dashboardSession.tokenFromRequest(req), { env: process.env });
-    if (verified.ok && verified.user.scope === 'dashboard') {
-      const user = (db.readDB().users || []).find((candidate) => candidate && candidate.id === verified.user.id);
-      if (user) { authenticated = true; role = user.role || 'user'; }
-    }
-  }
   res.set('Cache-Control', 'no-store');
+  if (configured) {
+    try { const identity = dashboardIdentity(req, res); if (identity.ok) { authenticated = true; role = identity.user.role || 'user'; } }
+    catch { return res.status(503).json({ authenticated: false, code: 'SESSION_STATUS_UNAVAILABLE' }); }
+  }
   res.json({
     login_configured: pin.status === 'configured',
     login_status: pin.status,
@@ -3358,23 +3369,49 @@ app.get('/api/auth/session', (req, res) => {
   });
 });
 
-app.post('/api/auth/login', loginLimiter, (req, res) => {
+app.post('/api/auth/login', rememberedDeviceRoutes.noStore, loginLimiter, (req, res) => {
   if (!dashboardSession.isConfigured({ env: process.env })) {
     return res.status(503).json({ ok: false, error: 'Dashboard session signing is not configured.', code: 'SESSION_NOT_CONFIGURED' });
   }
+  const hasRemember = Object.hasOwn(req.body || {}, 'remember_device');
+  if (hasRemember && typeof req.body.remember_device !== 'boolean') return res.status(400).json({ ok: false, code: 'LOGIN_OPTION_INVALID' });
+  const remember = hasRemember && req.body.remember_device === true;
+  if (remember && !rememberedDeviceRoutes.actionAllowed(req)) return res.status(403).json({ ok: false, code: 'LOGIN_ORIGIN_REQUIRED' });
   const result = dashboardAuth.authenticatePin({
     pin: req.body && req.body.pin,
     users: db.getUsers(),
     env: process.env
   });
   if (!result.ok) return res.status(result.status).json({ ok: false, error: result.error, code: result.code });
-  setDashboardSessionCookie(res, result.user);
-  res.json({ ok: true, user: result.user });
+  try {
+    if (remember) {
+      const before = db.readDBStrict(), nonce = rememberedDevices.nonceForLogin(result.user.id, req.get('X-WOS-Remember-Request'));
+      const issued = rememberedDevices.issueDevice(before, result.user, { env: process.env, now: Date.now(), nonce });
+      if (issued.store !== before) db.writeDB(issued.store);
+      res.setHeader('Set-Cookie', dashboardSession.sessionCookie(issued.token, issued.max_age_ms));
+    } else setDashboardSessionCookie(res, result.user, { browser_session: hasRemember });
+    res.json({ ok: true, user: result.user });
+  } catch (failure) {
+    const known = /^remembered_device_(?:request_invalid|request_conflict|actor_invalid|clock_invalid|store_invalid|signing_unavailable)$/.test(failure?.code || '');
+    res.status(known ? failure.status || 400 : 503).json({ ok: false, code: 'REMEMBER_DEVICE_UNAVAILABLE' });
+  }
 });
 
-app.post('/api/auth/logout', (req, res) => {
+app.post('/api/auth/logout', rememberedDeviceRoutes.noStore, (req, res) => {
   res.setHeader('Set-Cookie', dashboardSession.clearCookie());
-  res.json({ ok: true });
+  try {
+    const options = { env: process.env, now: Date.now() }, token = dashboardSession.tokenFromRequest(req);
+    const version = dashboardSession.verifySession(token, options);
+    if (version.code === 'SESSION_DEVICE_REQUIRED') {
+      if (!rememberedDeviceRoutes.actionAllowed(req)) return res.status(403).json({ ok: false, code: 'SIGNOUT_ORIGIN_REQUIRED' });
+      const before = db.readDBStrict(), verified = rememberedDevices.verifyDevice(token, before, options);
+      if (verified.ok) {
+        const after = rememberedDevices.revokeDevice(before, { userId: verified.user.id, id: verified.device_id, now: options.now });
+        if (after !== before) db.writeDB(after);
+      }
+    }
+    res.json({ ok: true });
+  } catch { res.status(503).json({ ok: false, code: 'SIGNOUT_REVOCATION_UNAVAILABLE' }); }
 });
 
 app.post('/api/auth/pairing-token', requireAdmin, (req, res) => {
@@ -3540,6 +3577,7 @@ function getGmailTransport() {
 }
 
 require('./modules/email/mailbox-reader').registerMailboxReads(app, { requireAdmin, db });
+require('./modules/email/reviewed-thread-replies').registerRoutes(app, { requireAdmin, db });
 
 app.post('/api/gmail/send', serverSendDisabled);
 

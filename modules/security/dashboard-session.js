@@ -4,6 +4,7 @@ const crypto = require('crypto');
 
 const COOKIE_NAME = 'wos_session';
 const DASHBOARD_LIFETIME_MS = 14 * 24 * 60 * 60 * 1000;
+const REMEMBERED_LIFETIME_MS = 30 * 24 * 60 * 60 * 1000;
 const AGENT_LIFETIME_MS = 30 * 24 * 60 * 60 * 1000;
 const PAIRING_LIFETIME_MS = 10 * 60 * 1000;
 
@@ -20,9 +21,11 @@ function issueSession(identity = {}, options = {}) {
   const secret = configuredSecret(options);
   if (Buffer.byteLength(secret) < 32) throw Object.assign(new Error('Session signing is not configured.'), { code: 'SESSION_NOT_CONFIGURED' });
   const now = Number(options.now == null ? Date.now() : options.now);
-  const lifetime = Number(options.lifetime_ms || DASHBOARD_LIFETIME_MS);
+  const remembered = options.remember_device === true;
+  if (remembered && clean(identity.scope || 'dashboard') !== 'dashboard') throw new Error('remembered_dashboard_scope_required');
+  const lifetime = remembered ? REMEMBERED_LIFETIME_MS : Number(options.lifetime_ms || DASHBOARD_LIFETIME_MS);
   const payload = {
-    v: 1,
+    v: remembered ? 2 : 1,
     userId: clean(identity.userId || identity.id),
     role: clean(identity.role),
     scope: clean(identity.scope || 'dashboard'),
@@ -31,6 +34,7 @@ function issueSession(identity = {}, options = {}) {
     expiresAt: now + lifetime,
     nonce: clean(identity.nonce) || crypto.randomUUID()
   };
+  if (!remembered && options.browser_session === true) payload.browserSession = true;
   if (!payload.userId || !payload.role) throw new Error('session_identity_required');
   const unsigned = encode(JSON.stringify(payload));
   return { token: `${unsigned}.${sign(unsigned, secret)}`, payload, lifetime_ms: lifetime };
@@ -49,18 +53,22 @@ function verifySession(token, options = {}) {
   let payload;
   try { payload = JSON.parse(Buffer.from(parts[0], 'base64url').toString('utf8')); }
   catch (_) { return { ok: false, code: 'SESSION_MALFORMED' }; }
-  if (!payload || payload.v !== 1 || !clean(payload.userId) || !clean(payload.role) ||
+  if (!payload || ![1, 2].includes(payload.v) || !clean(payload.userId) || !clean(payload.role) ||
       !Number.isFinite(payload.issuedAt) || !Number.isFinite(payload.expiresAt) || !clean(payload.nonce)) {
     return { ok: false, code: 'SESSION_MALFORMED' };
   }
   const now = Number(options.now == null ? Date.now() : options.now);
   if (payload.expiresAt <= now) return { ok: false, code: 'SESSION_EXPIRED' };
   const lifetime = payload.expiresAt - payload.issuedAt;
+  if (payload.v === 2) {
+    if (options.allow_remembered !== true) return { ok: false, code: 'SESSION_DEVICE_REQUIRED' };
+    if (payload.scope !== 'dashboard' || lifetime !== REMEMBERED_LIFETIME_MS || payload.issuedAt > now) return { ok: false, code: 'SESSION_MALFORMED' };
+  }
   return {
     ok: true,
     user: { id: payload.userId, role: payload.role, scope: clean(payload.scope || 'dashboard'), permissions: payload.permissions || [] },
     payload,
-    should_renew: now - payload.issuedAt > lifetime / 2
+    should_renew: payload.v === 1 && now - payload.issuedAt > lifetime / 2
   };
 }
 
@@ -76,14 +84,16 @@ function parseCookies(header) {
 }
 
 function tokenFromRequest(req) { return parseCookies(req && req.headers && req.headers.cookie)[COOKIE_NAME] || ''; }
-function sessionCookie(token, maxAgeMs) {
-  return `${COOKIE_NAME}=${encodeURIComponent(token)}; Max-Age=${Math.max(0, Math.floor(Number(maxAgeMs) / 1000))}; Path=/; HttpOnly; Secure; SameSite=Strict`;
+function sessionCookie(token, maxAgeMs, options = {}) {
+  const age = options.session_only === true ? '' : `; Max-Age=${Math.max(0, Math.floor(Number(maxAgeMs) / 1000))}`;
+  return `${COOKIE_NAME}=${encodeURIComponent(token)}${age}; Path=/; HttpOnly; Secure; SameSite=Strict`;
 }
 function clearCookie() { return `${COOKIE_NAME}=; Max-Age=0; Path=/; HttpOnly; Secure; SameSite=Strict`; }
 
 module.exports = {
   COOKIE_NAME,
   DASHBOARD_LIFETIME_MS,
+  REMEMBERED_LIFETIME_MS,
   AGENT_LIFETIME_MS,
   PAIRING_LIFETIME_MS,
   configuredSecret,

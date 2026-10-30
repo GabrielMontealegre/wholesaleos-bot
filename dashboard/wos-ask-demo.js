@@ -3,6 +3,7 @@
   let data=null,response=null,question='',busy=false,message='',sequence=0,controller=null;
   const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const actor=()=>root.APP?.unlocked&&root.APP?.currentUser?.role==='admin'&&root.APP.currentUser.id;
+  const icon=name=>root.WOSComponents.icon(name);
   const money=v=>typeof v==='number'&&Number.isFinite(v)?new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',maximumFractionDigits:0}).format(v):'Not recorded';
   const range=v=>v?money(v.low)+' to '+money(v.high):'Not established';
   const time=v=>v&&Number.isFinite(Date.parse(v))?new Intl.DateTimeFormat('en-US',{timeZone:'America/Mazatlan',weekday:'short',hour:'numeric',minute:'2-digit'}).format(new Date(v)):'Not recorded';
@@ -21,21 +22,21 @@
       '<h4>Recent recorded activity</h4>'+(activity.length?'<ul>'+activity.map(e=>'<li>'+esc(e.title)+' / '+esc(time(e.at))+'<br>'+esc(e.summary||'')+'</li>').join('')+'</ul>':'<p>No linked recorded activity loaded.</p>')+
       '<button type="button" data-ask-record="'+esc(row.id)+'" data-ask-kind="'+row.kind+'">Open '+row.kind+' workspace</button></aside>';
   }
-  function markup(){return '<header><div><h2>Ask WholesaleOS</h2><p>Read-only demo / Feed incomplete</p></div><button type="button" data-ask-close aria-label="Close Ask WholesaleOS" title="Close">X</button></header><div class="ask-body'+(response?.record?' ask-has-context':'')+'"><section class="ask-chat"><p role="status" data-ask-status>'+esc(busy?'Loading recorded snapshot...':message)+'</p>'+
+  function markup(){return '<header><div><h2>Ask WholesaleOS</h2><p>Read-only demo / Feed incomplete</p></div><button type="button" data-ask-close aria-label="Close Ask WholesaleOS" title="Close">'+icon('x')+'</button></header><div class="ask-body'+(response?.record?' ask-has-context':'')+'"><section class="ask-chat"><p role="status" data-ask-status>'+esc(busy?'Loading recorded snapshot...':message)+'</p>'+
     (data?'<small>Snapshot '+esc(time(data.now))+' / '+data.coverage.deals_returned+' of '+data.coverage.deal_total+' deals; '+data.coverage.buyers_returned+' of '+data.coverage.buyer_total+' buyers. Mailbox is not fetched.</small>':'')+
     '<nav aria-label="Recorded questions">'+['What is waiting on me','New deals today','What did we do yesterday'].map(q=>'<button type="button" data-ask-question="'+esc(q)+'"'+(!data?' disabled':'')+'>'+q+'</button>').join('')+'</nav>'+
-    (response?'<div class="ask-answer" aria-live="polite"><p>'+esc(response.text)+'</p>'+response.items.slice(0,20).map((item,i)=>'<button type="button" data-ask-item="'+i+'"><strong>'+esc(item.name)+'</strong><br>'+esc(item.ref||'')+' '+esc(item.label||'Open recorded context')+'</button>').join('')+(response.calendar?'<button type="button" data-ask-calendar>Open Calendar</button>':'')+'</div>':'')+
-    '<form data-ask-form><label>Question or exact reference<textarea data-ask-query maxlength="300" rows="2">'+esc(question)+'</textarea></label><div><button type="submit"'+(!data?' disabled':'')+'>Ask</button><button type="button" data-ask-refresh'+(busy?' disabled':'')+'>Reload snapshot</button></div></form><p>No sends, approvals, imports or AI provider in this demo. Open a workspace to review its existing actions.</p></section>'+context(response?.record)+'</div>';}
+    (response?'<div class="ask-answer" aria-live="polite"><p>'+esc(response.text)+'</p>'+response.items.slice(0,20).map((item,i)=>'<button type="button" data-ask-item="'+i+'"><strong>'+esc(item.name)+'</strong><br>'+esc(item.label||'Open recorded context')+'</button>').join('')+(response.calendar?'<button type="button" data-ask-calendar>Open Calendar</button>':'')+'</div>':'')+
+    '<form data-ask-form><label>Question or exact reference<textarea data-ask-query maxlength="300" rows="2"'+(!data?' disabled':'')+'>'+esc(question)+'</textarea></label><div><button type="submit"'+(!data?' disabled':'')+'>Ask</button><button type="button" data-ask-refresh aria-label="Reload snapshot" title="Reload snapshot"'+(busy?' disabled':'')+'>'+icon('refresh-cw')+'</button></div></form></section>'+context(response?.record)+'</div>';}
   function paint(){const panel=document.getElementById('wos-ask-panel');if(panel)panel.innerHTML=markup();}
   async function load(){
-    const identity=actor();if(!identity){clear();return;}const ticket=++sequence;controller?.abort();controller=new AbortController();busy=true;data=null;response=null;message='';paint();
-    try{const r=await fetch('/api/dashboard/ask-workspace',{cache:'no-store',signal:controller.signal}),v=await r.json();if(ticket!==sequence||actor()!==identity)return;if(!r.ok||v.source_kind!=='derived_workflow'||v.read_only!==true||v.feed_incomplete!==true||!Array.isArray(v.records)||!Array.isArray(v.people)||!Array.isArray(v.actions)||!Array.isArray(v.events)||!Array.isArray(v.conversations)||!v.coverage)throw Error();data=v;message='Recorded snapshot loaded. Nothing changed.';}
-    catch{if(ticket!==sequence||actor()!==identity)return;message='Snapshot unavailable. Check your dashboard login, then reload.';}finally{if(ticket===sequence){busy=false;paint();}}
+    const identity=actor();if(!identity){clear();return;}const ticket=++sequence;controller?.abort();const pending=new AbortController();controller=pending;const timer=setTimeout(()=>pending.abort(),30000);busy=true;data=null;response=null;message='';paint();
+    try{const r=await fetch('/api/dashboard/ask-workspace',{credentials:'include',cache:'no-store',signal:pending.signal}),v=await r.json();if(ticket!==sequence||actor()!==identity)return;if(!r.ok||v.source_kind!=='derived_workflow'||v.read_only!==true||v.feed_incomplete!==true||!Array.isArray(v.records)||!Array.isArray(v.people)||!Array.isArray(v.actions)||!Array.isArray(v.events)||!Array.isArray(v.conversations)||!v.coverage)throw Error();data=v;message='Recorded snapshot loaded. Nothing changed.';}
+    catch{if(ticket!==sequence||actor()!==identity)return;message='Snapshot unavailable. Check your dashboard login, then reload.';}finally{clearTimeout(timer);if(controller===pending)controller=null;if(ticket===sequence){busy=false;paint();}}
   }
-  function open(){if(!actor())return;const existing=document.getElementById('wos-ask-panel');if(existing){existing.focus();return;}const dialog=document.createElement('dialog');dialog.id='wos-ask-panel';dialog.className='wos-ask-panel';document.body.appendChild(dialog);paint();dialog.addEventListener('close',()=>clear());dialog.showModal();load();}
+  function open(){if(!actor())return;const existing=document.getElementById('wos-ask-panel');if(existing){existing.focus();return;}const dialog=document.createElement('dialog');dialog.id='wos-ask-panel';dialog.className='wos-kit wos-ask-panel';document.body.appendChild(dialog);paint();dialog.addEventListener('close',()=>clear());dialog.showModal();load();}
   function ask(q){question=q;response=root.wosAskModel.answer(q,data);paint();}
   function openRecord(kind,id){if(!actor()||!data)return;const rows=data.records.concat(data.people).filter(r=>r.kind===kind&&r.id===id);if(rows.length!==1)return;clear();if(kind==='deal')root.openReviewedDeal(id);else root.openBuyerFind(id);}
-  const bubble=document.createElement('button');bubble.id='wos-ask-open';bubble.type='button';bubble.title='Ask about recorded deals, buyers and work';bubble.setAttribute('aria-label','Open Ask WholesaleOS');bubble.textContent='Ask';bubble.hidden=!actor();document.querySelector('.topbar')?.appendChild(bubble);
+  const bubble=document.createElement('button');bubble.id='wos-ask-open';bubble.type='button';bubble.title='Ask about recorded deals, buyers and work';bubble.setAttribute('aria-label','Open Ask WholesaleOS');bubble.innerHTML=icon('message-circle');bubble.hidden=!actor();document.querySelector('.topbar')?.appendChild(bubble);
   document.addEventListener('click',e=>{
     if(e.target.closest('#wos-ask-open'))open();
     if(e.target.closest('[data-ask-close]'))document.getElementById('wos-ask-panel')?.close();
@@ -48,5 +49,7 @@
   document.addEventListener('submit',e=>{if(!e.target.matches('[data-ask-form]'))return;e.preventDefault();if(data&&actor())ask(e.target.querySelector('[data-ask-query]').value);});
   const signout=root.signOutDashboard;if(signout)root.signOutDashboard=function(){clear();bubble.hidden=true;return signout.apply(this,arguments);};
   const login=root.showDashboardLogin;if(login)root.showDashboardLogin=function(){clear();bubble.hidden=true;return login.apply(this,arguments);};
+  root.addEventListener('wos:session-ended',()=>{clear();bubble.hidden=true;});
+  root.addEventListener('pagehide',clear);
   new MutationObserver(()=>{const allowed=!!actor();if(bubble.hidden===allowed)bubble.hidden=!allowed;if(!allowed&&document.getElementById('wos-ask-panel'))clear();}).observe(document.body,{attributes:true,attributeFilter:['style'],childList:true,subtree:true});
 })(window);

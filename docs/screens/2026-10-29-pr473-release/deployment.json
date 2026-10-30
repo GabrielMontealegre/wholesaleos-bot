@@ -1,0 +1,13 @@
+{
+  "source_sha": "ccc48ef1b068e580cbccaa23e6f14e552992cdd8",
+  "tested_head": "40a64cbd1abd9c8bd9d28eed7a5f80114fcf242e",
+  "complete_tree_identical": true,
+  "deployment_id": "e684a300-078f-416c-9fb7-078e2ecd2d84",
+  "automatic": true,
+  "details_selected": true,
+  "active": true,
+  "successful": true,
+  "authoritative_source_link_exact": true,
+  "manual_build_retry_or_settings_actions": false,
+  "note": "Recovery banner is not deployment failure. Old selected470 Details was Removed after replacement; new473 Details is Active."
+}

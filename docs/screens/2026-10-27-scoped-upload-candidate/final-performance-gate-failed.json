@@ -1,0 +1,96 @@
+{
+  "synthetic_only": true,
+  "baseline": "a2dc46e2e125a4e9c340f0934693346a34134024",
+  "sizes": [
+    {
+      "mode": "before",
+      "width": 1366,
+      "fcp": 832.5999999940395,
+      "overflow": false
+    },
+    {
+      "mode": "before",
+      "width": 400,
+      "fcp": 398.59999999403954,
+      "overflow": false
+    },
+    {
+      "mode": "before",
+      "width": 412,
+      "fcp": 275.40000000596046,
+      "overflow": false
+    },
+    {
+      "mode": "after",
+      "width": 1366,
+      "fcp": 687.8000000119209,
+      "overflow": false
+    },
+    {
+      "mode": "after",
+      "width": 400,
+      "fcp": 882.3000000119209,
+      "overflow": false
+    },
+    {
+      "mode": "after",
+      "width": 412,
+      "fcp": 692.2999999821186,
+      "overflow": false
+    }
+  ],
+  "lighthouse": [
+    {
+      "mode": "before",
+      "width": 1366,
+      "version": "13.5.0",
+      "performance": 0,
+      "accessibility": 88,
+      "metrics": {
+        "first-contentful-paint": 1417.585,
+        "largest-contentful-paint": 2663.049,
+        "cumulative-layout-shift": 0.0034533236582213085
+      }
+    },
+    {
+      "mode": "before",
+      "width": 412,
+      "version": "13.5.0",
+      "performance": 58,
+      "accessibility": 88,
+      "metrics": {
+        "first-contentful-paint": 1151.068,
+        "largest-contentful-paint": 5102.987,
+        "total-blocking-time": 858.233,
+        "cumulative-layout-shift": 0.02248690846755361
+      }
+    },
+    {
+      "mode": "after",
+      "width": 1366,
+      "version": "13.5.0",
+      "performance": 76,
+      "accessibility": 94,
+      "metrics": {
+        "first-contentful-paint": 759.913,
+        "largest-contentful-paint": 2289.978,
+        "total-blocking-time": 239.93799999999965,
+        "cumulative-layout-shift": 0.001954427114036987
+      }
+    },
+    {
+      "mode": "after",
+      "width": 412,
+      "version": "13.5.0",
+      "performance": 97,
+      "accessibility": 94,
+      "metrics": {
+        "first-contentful-paint": 727.505,
+        "largest-contentful-paint": 1922.431,
+        "total-blocking-time": 161.20600000000104,
+        "cumulative-layout-shift": 0.014112154490954426
+      }
+    }
+  ],
+  "notes": "Actual classic Settings source;synthetic read-only APIs,font stub/CSP self-only;raw Lighthouse reports/screenshots never persisted. Legacy private-looking template fields opaque before screenshot disk."
+}

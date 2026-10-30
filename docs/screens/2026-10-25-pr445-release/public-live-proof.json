@@ -1,0 +1,204 @@
+{
+  "source_sha": "74dfd395649c86b7bff416f63b0d88cd5efa2e81",
+  "source_evidence": "Pair with authoritative active deployment Details; SHA is not inferred from health.",
+  "playwright_version": "1.44.0",
+  "browser_version": "125.0.6422.26",
+  "authenticated": false,
+  "cookie_transfer": false,
+  "checked_at": "2026-10-25T13:33:57.686Z",
+  "cases": [
+    {
+      "name": "root",
+      "requested": {
+        "width": 1366,
+        "height": 768
+      },
+      "actual": {
+        "width": 1366,
+        "height": 768
+      },
+      "status": 200,
+      "path": "/dashboard/",
+      "screenshot": "root-1366x768.png",
+      "health_status": 200,
+      "session_authenticated": false
+    },
+    {
+      "name": "classic",
+      "requested": {
+        "width": 1366,
+        "height": 768
+      },
+      "actual": {
+        "width": 1366,
+        "height": 768
+      },
+      "status": 200,
+      "path": "/dashboard/",
+      "screenshot": "classic-1366x768.png",
+      "health_status": 200,
+      "session_authenticated": false
+    },
+    {
+      "name": "native-email",
+      "requested": {
+        "width": 1366,
+        "height": 768
+      },
+      "actual": {
+        "width": 1366,
+        "height": 768
+      },
+      "status": 200,
+      "path": "/app",
+      "screenshot": "native-email-1366x768.png",
+      "health_status": 200,
+      "session_authenticated": false
+    },
+    {
+      "name": "native-today",
+      "requested": {
+        "width": 1366,
+        "height": 768
+      },
+      "actual": {
+        "width": 1366,
+        "height": 768
+      },
+      "status": 200,
+      "path": "/app",
+      "screenshot": "native-today-1366x768.png",
+      "health_status": 200,
+      "session_authenticated": false
+    },
+    {
+      "name": "root",
+      "requested": {
+        "width": 400,
+        "height": 915
+      },
+      "actual": {
+        "width": 400,
+        "height": 915
+      },
+      "status": 200,
+      "path": "/dashboard/",
+      "screenshot": "root-400x915.png",
+      "health_status": 200,
+      "session_authenticated": false
+    },
+    {
+      "name": "classic",
+      "requested": {
+        "width": 400,
+        "height": 915
+      },
+      "actual": {
+        "width": 400,
+        "height": 915
+      },
+      "status": 200,
+      "path": "/dashboard/",
+      "screenshot": "classic-400x915.png",
+      "health_status": 200,
+      "session_authenticated": false
+    },
+    {
+      "name": "native-email",
+      "requested": {
+        "width": 400,
+        "height": 915
+      },
+      "actual": {
+        "width": 400,
+        "height": 915
+      },
+      "status": 200,
+      "path": "/app",
+      "screenshot": "native-email-400x915.png",
+      "health_status": 200,
+      "session_authenticated": false
+    },
+    {
+      "name": "native-today",
+      "requested": {
+        "width": 400,
+        "height": 915
+      },
+      "actual": {
+        "width": 400,
+        "height": 915
+      },
+      "status": 200,
+      "path": "/app",
+      "screenshot": "native-today-400x915.png",
+      "health_status": 200,
+      "session_authenticated": false
+    },
+    {
+      "name": "root",
+      "requested": {
+        "width": 412,
+        "height": 915
+      },
+      "actual": {
+        "width": 412,
+        "height": 915
+      },
+      "status": 200,
+      "path": "/dashboard/",
+      "screenshot": "root-412x915.png",
+      "health_status": 200,
+      "session_authenticated": false
+    },
+    {
+      "name": "classic",
+      "requested": {
+        "width": 412,
+        "height": 915
+      },
+      "actual": {
+        "width": 412,
+        "height": 915
+      },
+      "status": 200,
+      "path": "/dashboard/",
+      "screenshot": "classic-412x915.png",
+      "health_status": 200,
+      "session_authenticated": false
+    },
+    {
+      "name": "native-email",
+      "requested": {
+        "width": 412,
+        "height": 915
+      },
+      "actual": {
+        "width": 412,
+        "height": 915
+      },
+      "status": 200,
+      "path": "/app",
+      "screenshot": "native-email-412x915.png",
+      "health_status": 200,
+      "session_authenticated": false
+    },
+    {
+      "name": "native-today",
+      "requested": {
+        "width": 412,
+        "height": 915
+      },
+      "actual": {
+        "width": 412,
+        "height": 915
+      },
+      "status": 200,
+      "path": "/app",
+      "screenshot": "native-today-412x915.png",
+      "health_status": 200,
+      "session_authenticated": false
+    }
+  ],
+  "unsigned_identity_header_status": 401
+}

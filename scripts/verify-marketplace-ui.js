@@ -10,7 +10,7 @@ const records = require('../modules/records/record-activity');
 const { fixture, now } = require('../tests/reviewed-deals.test');
 const root = path.resolve(__dirname, '..');
 const pages = ['dashboard','todays_deals','jv','findme_scout','buyers_found','leads','pipeline','gmail','settings','record_activity'];
-function createFixtureApp({wider=false,seedLead=false,todayProof=false}={}) {
+function createFixtureApp({wider=false,seedLead=false,todayProof=false,actualDealRoutes=false}={}) {
   const context = { now, operatorId: 'fixture-admin' };
   let store = { users: [{ id: 'fixture-admin', name: 'SYNTHETIC ADMIN' }], leads: [], buyers: [], activities: [] };
   const buyer = finds.validateItems({ items: [{ name: 'Fixture buyer', platform: 'manual', source_url: 'https://records.example.test/buyer', profile_url: 'https://records.example.test/buyer', what_they_buy: 'Fixture houses', deal_type: 'house', states: ['FL'], areas: ['Tampa'], classification: 'end_buyer', captured_at: now, buy_box: { types: ['house'], pct_arv: '75%', price_max: 200000 } }] }, now)[0];
@@ -31,8 +31,11 @@ function createFixtureApp({wider=false,seedLead=false,todayProof=false}={}) {
   app.get('/api/leads', (_, res) => res.json({ leads: store.leads, totalAll: store.leads.length, totalFiltered: store.leads.length }));
   app.get('/api/buyers', (_, res) => res.json({ buyers: store.buyers }));
   app.get('/api/dashboard/buyers-found', (_, res) => res.json(finds.listFinds(store, { now })));
-  app.get('/api/dashboard/todays-deals', (req, res) => res.json(deals.list(store, { now, ...req.query, locationExact:req.query.location_exact==='true' })));
-  require('../modules/records/county-filter-catalog').registerCountyFilterCatalog(app,{requireAdmin:(_,__,next)=>next()});
+  if(actualDealRoutes)require('../modules/deals/reviewed-deal-routes').registerReviewedDealRoutes(app,{db:{readDBStrict:()=>store,writeDB:()=>{throw Error('fixture_write_forbidden');}},requireAdmin:(_,__,next)=>next(),now:()=>now});
+  else {
+    app.get('/api/dashboard/todays-deals', (req, res) => res.json(deals.list(store, { now, ...req.query, locationExact:req.query.location_exact==='true' })));
+    require('../modules/records/county-filter-catalog').registerCountyFilterCatalog(app,{requireAdmin:(_,__,next)=>next()});
+  }
   app.get('/api/dashboard/record-activity', (_, res) => res.json({ ...records.listActivity(store), types: records.TYPES }));
   app.get('/api/dashboard/record-search',(req,res)=>res.json({items:records.search(store,String(req.query.q||''))}));
   app.get('/api/dashboard/record-refs', (_, res) => res.json({ missing: { leads: 0, buyers: 0, deals: 0, matches: 0 }, deal_reserve: records.sequenceFloorStatus(store) }));
@@ -48,6 +51,8 @@ function createFixtureApp({wider=false,seedLead=false,todayProof=false}={}) {
   app.get('/api/dashboard/conversations/email-preview',(_,res)=>res.json({total:1,waiting_count:1,email_preview:{preview_only:true,scanned_messages:3,matched_messages:1,unlinked_messages:1,ambiguous_messages:1,invalid_messages:0},items:[{person:'SYNTHETIC CONTACT',refs:['BUY-0001'],status:'hot',channels:['email'],what_they_said:'Reported fixture text',email_subject:'SYNTHETIC EMAIL <script>not executable</script>',email_evidence:{captured_at:now},next_step:'Review fixture',due_date:'2026-10-10',last_in:now,last_out:'',ready_message:'',thread_url:'https://mail.google.com/mail/u/0/#inbox/123456789abcdef0'}]}));
   app.get('/api/gmail/messages',(_,res)=>res.json({ok:true,mode:'app_password',status:'Connected (App Password)',messages:[{id:'fixture-message',subject:'Fixture reply <img src=x onerror=alert(1)>',from:'fixture@example.test',date:now,unread:true}]}));
   app.get('/api/gmail/message/:id',(_,res)=>res.json({id:'fixture-message',subject:'Fixture reply',body:'Fixture text <script>alert(1)</script>',date:now,from:'fixture@example.test'}));
+  app.get('/api/dashboard/pipeline-workspace',(req,res)=>res.json(require('../modules/records/pipeline-workspace').build(store,{now,...require('../modules/records/pipeline-workspace').readOptions(req)})));
+  app.get('/api/dashboard/calendar-workspace',(_,res)=>res.json(require('../modules/records/calendar-workspace').buildCalendarWorkspace(store,{now})));
   app.get('/api/*', (_, res) => res.json([]));
   app.get('/favicon.ico', (_, res) => res.status(204).end());
   app.get('/dashboard/', (_, res) => res.type('html').send(fs.readFileSync(path.join(root, 'dashboard/index.html'), 'utf8').replace('<title>Montsan REI', '<title>SYNTHETIC LOCAL FIXTURE - Montsan REI').replace('<body data-wos-design="marketplace">','<body data-wos-design="marketplace"><div style="position:fixed;bottom:0;right:0;padding:4px 8px;background:var(--primary);color:var(--primary-ink);font:12px Arial;z-index:10001;pointer-events:none;">LOCAL TEST DATA</div>')));
@@ -131,7 +136,9 @@ async function prove({ screenshots = false,wider=false } = {}) {
           await page.locator('[data-deal-open]').click();
           assert.ok(await page.locator('.td-open-view .td-detail').isVisible());
           assert.strictEqual(await page.locator('.td-card tbody tr').count(),3);
+          await page.locator('.td-comps > summary').click();
           if(wider){assert.strictEqual(await page.locator('[data-wider-comp]').count(),2);assert.ok((await page.locator('[data-wider-area-label]').innerText()).includes('up to 2.5 miles'));assert.ok((await page.locator('.td-math').innerText()).includes('Preliminary'));}
+          await page.locator('[data-comp-exclusion-open]').first().click();
           await page.locator('[data-deal-action="exclude_comp"]').first().click();
           assert.ok((await page.locator('[data-deal-error]').innerText()).includes('written reason'),'an empty exclusion must not send a request');
           await page.locator('[data-deal-action="approve"]').click();
