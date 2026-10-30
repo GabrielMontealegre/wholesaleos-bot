@@ -9,9 +9,12 @@ passed, including public/signed preservation. Initial three-size UI and expanded
 from a44px header icon, keeps More7/native Deals unchanged, and returns focus
 without replacing native content. Native3sizes+shortdesktop/auth/401/nonadmin,
 classic Ask/More/voice/components focused checks pass; expanded Email draft/source/
-search preservation and pagehide pass. Final exact-source images/audit/full288/
-PR/main/deployment gates are
-pending. No production private reads/writes/AI/provider/audio. Trace
+search preservation and pagehide pass. Exact6ccb9f9 auditPASS Today98/96,
+Email99/96,classic93/100 performance/access100; all true3sizeFCP<2s, measured
+actual context, no overflow/runtime/auditerrors. Prior85/82/77 and87 failures,
+frame/contrast/owned-close fixes and invalid black images are honestly retained.
+Final15 images+baseline9 inspected; footer supplement and full288PR/main/
+deployment gates pending. No production private reads/writes/AI/provider/audio. Trace
 issue-372-read-only-demo.md. No whole372/370/412/backlog completion claim.
 
 2026-10-29 #383/D-059 Profile DONE via PR394 RELEASED/VERIFIED. Actualmain

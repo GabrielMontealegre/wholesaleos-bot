@@ -1,0 +1,208 @@
+{
+  "synthetic_only": true,
+  "baseline": "edbd25545ee5518d37aa50469a364b0ec78a9a92",
+  "source_sha": "b3a8a2a2e2919c861efed1f3d320335c9195fb61",
+  "sizes": [
+    {
+      "mode": "after",
+      "surface": "classic",
+      "width": 412,
+      "fcp": 115.19999999552965,
+      "actual": {
+        "native": false,
+        "screen": "classic",
+        "classicPage": "dashboard",
+        "ready": true,
+        "dialog": true,
+        "context": 1,
+        "overflow": false
+      },
+      "errors": [],
+      "cpu": [
+        {
+          "function": "(idle)",
+          "file": "",
+          "line": 0,
+          "selfMs": 587.352
+        },
+        {
+          "function": "(program)",
+          "file": "",
+          "line": 0,
+          "selfMs": 363.975
+        },
+        {
+          "function": "visible",
+          "file": "/dashboard/wos-panel-hygiene.js?v=1",
+          "line": 6,
+          "selfMs": 42.683
+        },
+        {
+          "function": "open",
+          "file": "/dashboard/wos-ask-demo.js?v=3",
+          "line": 36,
+          "selfMs": 19.125
+        },
+        {
+          "function": "updateLeadsBadge",
+          "file": "/dashboard/?workspace=today&auditAsk=1",
+          "line": 20947,
+          "selfMs": 18.95
+        },
+        {
+          "function": "termFor",
+          "file": "/dashboard/wos-help.js?v=4",
+          "line": 10,
+          "selfMs": 9.912
+        },
+        {
+          "function": "decorate",
+          "file": "/dashboard/wos-help.js?v=4",
+          "line": 21,
+          "selfMs": 8.011
+        },
+        {
+          "function": "(anonymous)",
+          "file": "/dashboard/wos-marketplace.js?v=1",
+          "line": 49,
+          "selfMs": 7.816
+        },
+        {
+          "function": "bind",
+          "file": "/dashboard/wos-help.js?v=4",
+          "line": 13,
+          "selfMs": 6.469
+        },
+        {
+          "function": "querySelectorAll",
+          "file": "",
+          "line": 0,
+          "selfMs": 5.923
+        },
+        {
+          "function": "(anonymous)",
+          "file": "/dashboard/wos-help.js?v=4",
+          "line": 24,
+          "selfMs": 4.923
+        },
+        {
+          "function": "(anonymous)",
+          "file": "/dashboard/wos-marketplace.js?v=1",
+          "line": 51,
+          "selfMs": 4.834
+        },
+        {
+          "function": "ready",
+          "file": "/ask-audit-driver.js",
+          "line": 1,
+          "selfMs": 4.808
+        },
+        {
+          "function": "querySelectorAll",
+          "file": "",
+          "line": 0,
+          "selfMs": 4.776
+        },
+        {
+          "function": "checkDailyUpdate",
+          "file": "/dashboard/?workspace=today&auditAsk=1",
+          "line": 16841,
+          "selfMs": 3.698
+        },
+        {
+          "function": "render",
+          "file": "/dashboard/wos-public-deals.js?v=57",
+          "line": 1934,
+          "selfMs": 3.15
+        },
+        {
+          "function": "paint",
+          "file": "/dashboard/wos-ask-demo.js?v=3",
+          "line": 30,
+          "selfMs": 1.881
+        },
+        {
+          "function": "fetch",
+          "file": "",
+          "line": 0,
+          "selfMs": 1.775
+        },
+        {
+          "function": "fetch",
+          "file": "",
+          "line": 0,
+          "selfMs": 1.707
+        },
+        {
+          "function": "paint",
+          "file": "/dashboard/wos-ask-demo.js?v=3",
+          "line": 30,
+          "selfMs": 1.679
+        },
+        {
+          "function": "(anonymous)",
+          "file": "",
+          "line": 1,
+          "selfMs": 1.659
+        },
+        {
+          "function": "enhance",
+          "file": "/dashboard/wos-panel-hygiene.js?v=1",
+          "line": 15,
+          "selfMs": 1.649
+        },
+        {
+          "function": "panelsForPage",
+          "file": "/dashboard/wos-public-deals.js?v=57",
+          "line": 1955,
+          "selfMs": 1.647
+        },
+        {
+          "function": "navigate",
+          "file": "/dashboard/?workspace=today&auditAsk=1",
+          "line": 659,
+          "selfMs": 1.64
+        },
+        {
+          "function": "bind",
+          "file": "/dashboard/wos-help.js?v=4",
+          "line": 13,
+          "selfMs": 1.639
+        },
+        {
+          "function": "fetch",
+          "file": "",
+          "line": 0,
+          "selfMs": 1.639
+        },
+        {
+          "function": "instant",
+          "file": "/dashboard/wos-card-clock.js?v=1",
+          "line": 13,
+          "selfMs": 1.638
+        },
+        {
+          "function": "ensureSection",
+          "file": "/dashboard/wos-public-deals.js?v=57",
+          "line": 2597,
+          "selfMs": 1.635
+        },
+        {
+          "function": "guarded",
+          "file": "/dashboard/wos-dashboard-auth.js?v=3",
+          "line": 135,
+          "selfMs": 1.635
+        },
+        {
+          "function": "(anonymous)",
+          "file": "/dashboard/?workspace=today&auditAsk=1",
+          "line": 27812,
+          "selfMs": 1.634
+        }
+      ]
+    }
+  ],
+  "lighthouse": [],
+  "notes": "Unmodified parent screens; baseline has no Ask implementation. Candidate driver clicks actual header then asks a synthetic reference using the existing form. Required official Accessibility gatherer delegates unchanged and captures measurement-phase actual scope. No storage/app-state freeze or category suppression. Screenshots mask underlying application before disk; numeric-only Lighthouse outputs.",
+  "diagnostic_only": true
+}

@@ -2,6 +2,19 @@
 
 ## 2026-10-30 Reconciliation In Progress
 
+Final6ccb9f9 exact-source audit PASS: native Today98/96, Email99/96,
+classic93/100 performance; access100 throughout. Actual expanded Ask measured
+in official Accessibility gathering, FCP157.7/63.8/71.4ms Today,
+112.6/72/71ms Email,121.6/78.7/83.5ms classic at1366/400/412; no overflow,
+null runtime/empty audit errors. All15 final images inspected plus nine retained
+baseline headers. Prior failures/diagnostics and one failed dark-heading image
+are retained under docs/screens/2026-10-30-ask-reconciliation-candidate.
+No causality claim that owned-close repair explains every earlier87 timing.
+Native entry/return/draft/source/search/auth/pagehide/frame, classic readable
+headings/owned LucideX/30s timeout, More/voice/components and nine surrounding
+focused files pass. Fresh full288 PR/main and release gates remain PENDING.
+The action-footer visual supplement is pending; no unchanged audit rerun.
+
 Final b3a8a2a after audit FAILED classic-phone performance87 (desktop93), while
 native Today/Email99/96 and all access100 passed. Phone TBT191ms,CLS.209613,
 LCP850ms; the87 cause is UNKNOWN, not called flaky/environment. All15 readable

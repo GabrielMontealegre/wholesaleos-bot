@@ -1,0 +1,338 @@
+{
+  "synthetic_only": true,
+  "baseline": "edbd25545ee5518d37aa50469a364b0ec78a9a92",
+  "source_sha": "4a0192a392644a41b20178e57168bb3b346a084d",
+  "sizes": [
+    {
+      "mode": "after",
+      "surface": "today",
+      "width": 1366,
+      "fcp": 183.30000000447035,
+      "actual": {
+        "native": true,
+        "screen": "today",
+        "classicPage": null,
+        "ready": true,
+        "dialog": true,
+        "context": 1,
+        "overflow": false
+      },
+      "errors": [],
+      "shifts": [
+        {
+          "value": 0.06746431185944363,
+          "recentInput": false,
+          "at": 282.70000000298023,
+          "sources": [
+            {
+              "selector": "BODY.",
+              "previous": {
+                "x": 0,
+                "y": 91,
+                "width": 1366,
+                "height": 69,
+                "top": 91,
+                "right": 1366,
+                "bottom": 160,
+                "left": 0
+              },
+              "current": {
+                "x": 0,
+                "y": 0,
+                "width": 1366,
+                "height": 768,
+                "top": 0,
+                "right": 1366,
+                "bottom": 768,
+                "left": 0
+              }
+            }
+          ]
+        },
+        {
+          "value": 0.2348271252555437,
+          "recentInput": false,
+          "at": 505.40000000596046,
+          "sources": [
+            {
+              "selector": "#wos-ask-panel",
+              "previous": {
+                "x": 910,
+                "y": 161,
+                "width": 440,
+                "height": 590,
+                "top": 161,
+                "right": 1350,
+                "bottom": 751,
+                "left": 910
+              },
+              "current": {
+                "x": 410,
+                "y": 36,
+                "width": 940,
+                "height": 716,
+                "top": 36,
+                "right": 1350,
+                "bottom": 752,
+                "left": 410
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "mode": "after",
+      "surface": "today",
+      "width": 412,
+      "fcp": 56.29999999701977,
+      "actual": {
+        "native": true,
+        "screen": "today",
+        "classicPage": null,
+        "ready": true,
+        "dialog": true,
+        "context": 1,
+        "overflow": false
+      },
+      "errors": [],
+      "shifts": [
+        {
+          "value": 0.11999658469945355,
+          "recentInput": false,
+          "at": 114.09999999403954,
+          "sources": [
+            {
+              "selector": "BODY.",
+              "previous": {
+                "x": 0,
+                "y": 109,
+                "width": 412,
+                "height": 69,
+                "top": 109,
+                "right": 412,
+                "bottom": 178,
+                "left": 0
+              },
+              "current": {
+                "x": 0,
+                "y": 0,
+                "width": 412,
+                "height": 915,
+                "top": 0,
+                "right": 412,
+                "bottom": 915,
+                "left": 0
+              }
+            }
+          ]
+        },
+        {
+          "value": 0.26948554908770217,
+          "recentInput": false,
+          "at": 267,
+          "sources": [
+            {
+              "selector": "#wos-ask-panel",
+              "previous": {
+                "x": 8,
+                "y": 316,
+                "width": 396,
+                "height": 590,
+                "top": 316,
+                "right": 404,
+                "bottom": 906,
+                "left": 8
+              },
+              "current": {
+                "x": 8,
+                "y": 44,
+                "width": 396,
+                "height": 863,
+                "top": 44,
+                "right": 404,
+                "bottom": 907,
+                "left": 8
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "mode": "after",
+      "surface": "classic",
+      "width": 1366,
+      "fcp": 120.29999999701977,
+      "actual": {
+        "native": false,
+        "screen": "classic",
+        "classicPage": "dashboard",
+        "ready": true,
+        "dialog": true,
+        "context": 1,
+        "overflow": false
+      },
+      "errors": [],
+      "shifts": [
+        {
+          "value": 0.29279562326228487,
+          "recentInput": false,
+          "at": 658.3999999985099,
+          "sources": [
+            {
+              "selector": "DETAILS.today-tools",
+              "previous": {
+                "x": 240,
+                "y": 314,
+                "width": 1110,
+                "height": 44,
+                "top": 314,
+                "right": 1350,
+                "bottom": 358,
+                "left": 240
+              },
+              "current": {
+                "x": 0,
+                "y": 0,
+                "width": 0,
+                "height": 0,
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              }
+            },
+            {
+              "selector": "#wos-ask-panel",
+              "previous": {
+                "x": 910,
+                "y": 16,
+                "width": 440,
+                "height": 736,
+                "top": 16,
+                "right": 1350,
+                "bottom": 752,
+                "left": 910
+              },
+              "current": {
+                "x": 410,
+                "y": 16,
+                "width": 940,
+                "height": 736,
+                "top": 16,
+                "right": 1350,
+                "bottom": 752,
+                "left": 410
+              }
+            }
+          ]
+        },
+        {
+          "value": 0.48317214808387765,
+          "recentInput": false,
+          "at": 707.8999999985099,
+          "sources": [
+            {
+              "selector": "#wos-public-deals",
+              "previous": {
+                "x": 252,
+                "y": 200,
+                "width": 1086,
+                "height": 568,
+                "top": 200,
+                "right": 1338,
+                "bottom": 768,
+                "left": 252
+              },
+              "current": {
+                "x": 0,
+                "y": 0,
+                "width": 0,
+                "height": 0,
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "mode": "after",
+      "surface": "classic",
+      "width": 412,
+      "fcp": 99.29999999701977,
+      "actual": {
+        "native": false,
+        "screen": "classic",
+        "classicPage": "dashboard",
+        "ready": true,
+        "dialog": true,
+        "context": 1,
+        "overflow": false
+      },
+      "errors": [],
+      "shifts": [
+        {
+          "value": 0.20961324208180807,
+          "recentInput": false,
+          "at": 602.0999999940395,
+          "sources": [
+            {
+              "selector": "#wos-public-deals",
+              "previous": {
+                "x": 28,
+                "y": 189,
+                "width": 356,
+                "height": 175,
+                "top": 189,
+                "right": 384,
+                "bottom": 364,
+                "left": 28
+              },
+              "current": {
+                "x": 0,
+                "y": 0,
+                "width": 0,
+                "height": 0,
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              }
+            },
+            {
+              "selector": "DETAILS.today-tools",
+              "previous": {
+                "x": 16,
+                "y": 376,
+                "width": 380,
+                "height": 44,
+                "top": 376,
+                "right": 396,
+                "bottom": 420,
+                "left": 16
+              },
+              "current": {
+                "x": 0,
+                "y": 0,
+                "width": 0,
+                "height": 0,
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "lighthouse": [],
+  "notes": "Unmodified parent screens; baseline has no Ask implementation. Candidate driver clicks actual header then asks a synthetic reference using the existing form. Required official Accessibility gatherer delegates unchanged and captures measurement-phase actual scope. No storage/app-state freeze or category suppression. Screenshots mask underlying application before disk; numeric-only Lighthouse outputs.",
+  "diagnostic_only": true
+}
