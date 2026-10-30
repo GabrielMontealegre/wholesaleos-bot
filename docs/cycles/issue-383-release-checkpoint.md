@@ -1,4 +1,11 @@
-# Profile Release Checkpoint -- Not Released
+# Profile Release Checkpoint -- Released PR394
+
+2026-10-29 RELEASED/VERIFIED at actualmain edbd25545ee5518d37aa50469a364b0ec78a9a92.
+Current full PR284/0/0 and MAIN284/0/0, exact automatic Railway00549c1d Active/
+successful/source anchor and all approved read-only checks pass. Evidence in
+docs/screens/2026-10-29-pr394-release. Earlier pending/history paragraphs below
+are retained as history, not current release status. No production Profile save
+or private value/file/signature/body read, generation or send used.
 
 2026-10-29 reconciliation supersedes the old technical block below. Current
 runtimeac3b348 on actualmain7262b11 passes current Profile lifecycle/template

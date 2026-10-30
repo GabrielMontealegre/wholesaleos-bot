@@ -176,6 +176,15 @@ suite rerun required; never substitute the local pass for that gate.
 
 ## Release Gate
 
+2026-10-29 completed via PR394: actualmain edbd255, full tree identical tested
+ae372d1. Fresh PR284/0/0 plus MAIN284/0/0, all568 timing rows retained. Exact
+automatic Railway00549c1d source/selected Details/Active/successful verified.
+Public15 original security/44px/source gates and actual signed GLOBAL Settings/
+deal navigation structure pass, with no private content/value read or business
+write. See docs/screens/2026-10-29-pr394-release for exact evidence/limits.
+Closeout proof branch starts at actual merge; tested branch preserved untouched.
+This supersedes the pending gate notes below, not their honest failure history.
+
 Historical2026-10-19 gate below is superseded by current435 mixed-proof approval
 and working Chrome4. Reconciliation still needs fresh UI FCP<2s/performance AND
 accessibility90+, full candidate/main suites, exact automatic deployment and
