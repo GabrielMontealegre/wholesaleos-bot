@@ -1,5 +1,12 @@
 # Decisions
 
+ASSUMED: D-063B next bounded native consumer is existing WOS reports filtering
+from453 per-message IMAP name receipts, not raw labels or guessed REST custom
+names. Require complete valid receipts on every thread member and consistent
+duplicates; preserve role/listing precedence and loaded-only scope. No new
+provider request, role/identity/count authority, label writer, native Deals or
+owner design sign-off. -- AGENTS2/3/5,D-063/#439/#412 --2026-10-30.
+
 ASSUMED: D-060 Ask uses the same read-only dialog above native Today/Email via
 an icon header command and a narrow host adapter. Closing restores the existing
 native screen, search and draft rather than redirecting through an artificial
