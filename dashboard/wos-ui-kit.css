@@ -32,6 +32,7 @@ html[data-wos-scheme=light] .wos-settings-form .wos-control-icon{filter:none}
 .wos-ask-panel::backdrop{background:rgb(0 0 0 / 45%)}
 .wos-ask-panel header{display:flex;flex-shrink:0;align-items:start;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--line,#394449)}
 .wos-ask-panel h2{font-size:18px;margin:0 0 6px}.wos-ask-panel h3{font-size:17px;margin-top:0}.wos-ask-panel h4{font-size:14px;margin-bottom:6px}
+.wos-ask-panel :is(h2,h3,h4){color:inherit}
 .wos-ask-panel p{line-height:1.45;margin:8px 0;overflow-wrap:anywhere}.wos-ask-panel small{display:block;color:var(--muted,#aab7c2);line-height:1.4;overflow-wrap:anywhere}
 .ask-body{display:grid;grid-template-columns:minmax(0,1fr);flex:1;min-height:0;overflow:auto;min-width:0;align-content:start}.ask-has-context{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
 .ask-chat,.ask-context{padding:12px 16px;min-width:0}.ask-chat{box-sizing:border-box;width:100%;max-width:469px}.ask-context{border-left:1px solid var(--line,#394449)}

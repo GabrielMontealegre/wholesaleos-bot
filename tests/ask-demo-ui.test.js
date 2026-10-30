@@ -28,6 +28,7 @@ if(process.argv.includes('--screenshots'))assert.ok(proofDir&&path.isAbsolute(pr
    const entryBox=headerBoxes.find(r=>r.id==='wos-ask-open');assert.ok(entryBox&&entryBox.width>=44&&entryBox.height>=44&&entryBox.x>=0&&entryBox.right<=width);
    for(const box of headerBoxes.filter(r=>r.id!=='wos-ask-open'))assert.ok(entryBox.right<=box.x||entryBox.x>=box.right||entryBox.bottom<=box.y||entryBox.y>=box.bottom,'Ask does not overlap another header control');
    await page.getByRole('button',{name:'Open Ask WholesaleOS',exact:true}).click();await page.locator('[data-ask-status]').filter({hasText:'Recorded snapshot loaded'}).waitFor();assert.equal(reads,before+1);
+   assert.equal(await page.locator('#wos-ask-panel').evaluate(panel=>[...panel.querySelectorAll('h2,h3,h4')].every(h=>getComputedStyle(h).color===getComputedStyle(panel).color)),true,'Ask headings inherit the readable dialog foreground in the actual classic theme');
    assert.ok((await page.locator('#wos-ask-panel').innerText()).includes('Feed incomplete'));
    if(process.argv.includes('--screenshots')){fs.mkdirSync(proofDir,{recursive:true});assert.equal(await page.locator('#app #wos-ask-panel').count(),0);await page.mouse.move(0,0);await page.screenshot({path:path.join(proofDir,'synthetic-ask-home-'+width+'.png'),mask:[page.locator('#app'),page.locator('.toast')],maskColor:'#000000'});}
    await page.locator('[data-ask-question="What is waiting on me"]').click();assert.ok((await page.locator('.ask-answer').innerText()).includes('existing Today queue'));

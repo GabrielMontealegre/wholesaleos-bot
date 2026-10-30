@@ -2,6 +2,14 @@
 
 ## 2026-10-30 Reconciliation In Progress
 
+Stable-frame5a1acfb numeric re-audit passed unchanged gates: Today99/96,
+Email99/96,classic94/90; accessibility100. This is NOT final visual approval:
+inspection of all15 corrected images found classic heading text inherited an
+unreadable dark foreground, despite that numeric accessibility result. A new
+actual-classic theme assertion genuinely failed, then scoped heading color
+inheritance (sharedUIkit5) passed classic/native UI. This changes no parent
+layout/theme rules. Final exact-source re-audit/images still required.
+
 Frozen4a0192a audit genuinely FAILED the90 performance gate: native Today85/82,
 native Email85/82, classic77/90 (desktop/mobile), accessibility100 throughout.
 Baseline99/96,99/96,94/100; all measured FCP under2s, actual expanded Ask context
