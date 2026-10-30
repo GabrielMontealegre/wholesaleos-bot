@@ -1,0 +1,107 @@
+{
+  "synthetic_only": true,
+  "baseline": "c972d44025dc24911fb472d8448bfe9388df973e",
+  "source_sha": "a4a175b9f7894a0f96c9ff148de320e9e2097d8f",
+  "sizes": [
+    {
+      "mode": "after",
+      "width": 1366,
+      "fcp": 160.6000000089407,
+      "actual": {
+        "email": true,
+        "ready": true,
+        "reports": true,
+        "selectedTabFits": true,
+        "rows": 1,
+        "overflow": false
+      },
+      "errors": [],
+      "forbidden": []
+    },
+    {
+      "mode": "after",
+      "width": 400,
+      "fcp": 116.80000001192093,
+      "actual": {
+        "email": true,
+        "ready": true,
+        "reports": true,
+        "selectedTabFits": true,
+        "rows": 1,
+        "overflow": false
+      },
+      "errors": [],
+      "forbidden": []
+    },
+    {
+      "mode": "after",
+      "width": 412,
+      "fcp": 131.79999999701977,
+      "actual": {
+        "email": true,
+        "ready": true,
+        "reports": true,
+        "selectedTabFits": true,
+        "rows": 1,
+        "overflow": false
+      },
+      "errors": [],
+      "forbidden": []
+    }
+  ],
+  "lighthouse": [
+    {
+      "mode": "after",
+      "width": 1366,
+      "observed": {
+        "email": true,
+        "ready": true,
+        "reports": true,
+        "selectedTabFits": true,
+        "rows": 1,
+        "overflow": false
+      },
+      "version": "13.5.0",
+      "performance": 99,
+      "accessibility": 100,
+      "runtimeErrorCode": null,
+      "auditErrors": []
+    },
+    {
+      "mode": "after",
+      "width": 412,
+      "observed": {
+        "email": true,
+        "ready": true,
+        "reports": true,
+        "selectedTabFits": true,
+        "rows": 1,
+        "overflow": false
+      },
+      "version": "13.5.0",
+      "performance": 96,
+      "accessibility": 100,
+      "runtimeErrorCode": null,
+      "auditErrors": []
+    }
+  ],
+  "notes": "Real provider-label helper supplies per-message fixture receipt; actual WOS reports tab selected. Official required Accessibility gatherer delegates unchanged and records measurement-phase scope. No app/storage/layout/category/threshold suppression. All fixtures synthetic; no production or provider requests.",
+  "sources": [
+    {
+      "file": "workspace/index.html",
+      "normalized_sha256": "2446f782a4145b780322ad5264d88a5ebcf1c0e6a552231f6f48c36912c8afa9"
+    },
+    {
+      "file": "workspace/mail-layout-model.js",
+      "normalized_sha256": "b92aef65e82f6269c2bceaa9b59ab90266582f6127a4ed42ff5fa0a2f2b754bf"
+    },
+    {
+      "file": "workspace/email-screen.js",
+      "normalized_sha256": "3d05ff4730151779a9478f65c00aac485d342ee7f9d86be7f69d3ce121c97494"
+    },
+    {
+      "file": "workspace/design-system.css",
+      "normalized_sha256": "8aa3dc09363148d037f0d2086106b518a87b1ac429fbcacf86d4f2c3f0f5ff9e"
+    }
+  ]
+}

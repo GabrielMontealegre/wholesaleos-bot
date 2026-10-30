@@ -1,0 +1,176 @@
+{
+  "synthetic_only": true,
+  "baseline": "c972d44025dc24911fb472d8448bfe9388df973e",
+  "source_sha": "cba26a3670290628371e984454da9cc8d4884b87",
+  "sizes": [
+    {
+      "mode": "before",
+      "width": 1366,
+      "fcp": 81.1000000089407,
+      "actual": {
+        "email": true,
+        "ready": true,
+        "reports": true,
+        "rows": 0,
+        "overflow": false
+      },
+      "errors": [],
+      "forbidden": []
+    },
+    {
+      "mode": "before",
+      "width": 400,
+      "fcp": 56,
+      "actual": {
+        "email": true,
+        "ready": true,
+        "reports": true,
+        "rows": 0,
+        "overflow": false
+      },
+      "errors": [],
+      "forbidden": []
+    },
+    {
+      "mode": "before",
+      "width": 412,
+      "fcp": 54.69999998807907,
+      "actual": {
+        "email": true,
+        "ready": true,
+        "reports": true,
+        "rows": 0,
+        "overflow": false
+      },
+      "errors": [],
+      "forbidden": []
+    },
+    {
+      "mode": "after",
+      "width": 1366,
+      "fcp": 63.79999999701977,
+      "actual": {
+        "email": true,
+        "ready": true,
+        "reports": true,
+        "rows": 1,
+        "overflow": false
+      },
+      "errors": [],
+      "forbidden": []
+    },
+    {
+      "mode": "after",
+      "width": 400,
+      "fcp": 57.70000000298023,
+      "actual": {
+        "email": true,
+        "ready": true,
+        "reports": true,
+        "rows": 1,
+        "overflow": false
+      },
+      "errors": [],
+      "forbidden": []
+    },
+    {
+      "mode": "after",
+      "width": 412,
+      "fcp": 64.40000000596046,
+      "actual": {
+        "email": true,
+        "ready": true,
+        "reports": true,
+        "rows": 1,
+        "overflow": false
+      },
+      "errors": [],
+      "forbidden": []
+    }
+  ],
+  "lighthouse": [
+    {
+      "mode": "before",
+      "width": 1366,
+      "observed": {
+        "email": true,
+        "ready": true,
+        "reports": true,
+        "rows": 0,
+        "overflow": false
+      },
+      "version": "13.5.0",
+      "performance": 99,
+      "accessibility": 98,
+      "runtimeErrorCode": null,
+      "auditErrors": []
+    },
+    {
+      "mode": "before",
+      "width": 412,
+      "observed": {
+        "email": true,
+        "ready": true,
+        "reports": true,
+        "rows": 0,
+        "overflow": false
+      },
+      "version": "13.5.0",
+      "performance": 96,
+      "accessibility": 98,
+      "runtimeErrorCode": null,
+      "auditErrors": []
+    },
+    {
+      "mode": "after",
+      "width": 1366,
+      "observed": {
+        "email": true,
+        "ready": true,
+        "reports": true,
+        "rows": 1,
+        "overflow": false
+      },
+      "version": "13.5.0",
+      "performance": 99,
+      "accessibility": 100,
+      "runtimeErrorCode": null,
+      "auditErrors": []
+    },
+    {
+      "mode": "after",
+      "width": 412,
+      "observed": {
+        "email": true,
+        "ready": true,
+        "reports": true,
+        "rows": 1,
+        "overflow": false
+      },
+      "version": "13.5.0",
+      "performance": 96,
+      "accessibility": 100,
+      "runtimeErrorCode": null,
+      "auditErrors": []
+    }
+  ],
+  "notes": "Real provider-label helper supplies per-message fixture receipt; actual WOS reports tab selected. Official required Accessibility gatherer delegates unchanged and records measurement-phase scope. No app/storage/layout/category/threshold suppression. All fixtures synthetic; no production or provider requests.",
+  "sources": [
+    {
+      "file": "workspace/index.html",
+      "normalized_sha256": "3386eb5353d254b7651cc62ba6d218aea9c213018d1d78ff9bb00003b7944401"
+    },
+    {
+      "file": "workspace/mail-layout-model.js",
+      "normalized_sha256": "b92aef65e82f6269c2bceaa9b59ab90266582f6127a4ed42ff5fa0a2f2b754bf"
+    },
+    {
+      "file": "workspace/email-screen.js",
+      "normalized_sha256": "a2efd37fd829e4a5196dae057241016afaadaa2faf739a88a002d9ad8148d646"
+    },
+    {
+      "file": "workspace/design-system.css",
+      "normalized_sha256": "8aa3dc09363148d037f0d2086106b518a87b1ac429fbcacf86d4f2c3f0f5ff9e"
+    }
+  ]
+}

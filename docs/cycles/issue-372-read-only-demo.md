@@ -1,5 +1,30 @@
 # Ask WholesaleOS -- Bounded Read-Only Demo
 
+## 2026-10-30 Released And Verified
+
+Existing PR397 merged actualmain c972d44025dc24911fb472d8448bfe9388df973e,
+complete treef2e3ad9dbe86ed14d9cbeab1dd9c2766e3db6ea0 identical testedcca28bd.
+PR40998812532/job123878139582288/0/0,18m35job,sum1055.08s;
+MAIN41015949210/job123932184095288/0/0,18m37job,sum1051.14s.
+All576 success rows retained/600s perfile/sums NOTwall; first286/2 failure and
+all288 prior rows remain candidateproof. Exact two test-only stylesheet assertion
+updates were disclosed, focused-tested and fully green on changed head.
+
+AutomaticRailway9a3b2d61-2253-4abd-8eec-374cd99b9317 exactc972 source,
+authoritative Detailsaria-selected/Active/successful verified. No manual/retry/
+settings/variables/log exploration. Public15 original unchecked44px/security
+and strict Ask/current entry sources passed, all15 unsigned images inspected.
+Actual signed nativeToday1280x529 GLOBALstructural Ask1/open1/loadedcontrols/
+close0/focusreturn/contentready/nooverflow; no private content/value/AX/capture/
+query/preset/voice/provider/business action. Exact content synthetic only, no
+live console logs collected. Chrome4 unavailable/absent from inventory, current
+Chrome5 selected; no stale4 rebind. Zero initial headers were prehydration.
+
+Self-review6516724665. Release proof docs/screens/2026-10-30-pr397-release.
+Docs-only proof branch starts directly at actual merge; runtime/tests/deps/locks
+unchanged, tested source branch preserved. No newmain/CI/deployment for proof.
+D-060 bounded demo complete, NOT whole372/370/412; no downstream sign-off.
+
 ## 2026-10-30 Reconciliation In Progress
 
 Current full40996908558/job123872036334 genuinely FAILED286/2/0 all288 on

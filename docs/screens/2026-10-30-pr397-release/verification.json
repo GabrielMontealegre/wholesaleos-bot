@@ -1,0 +1,47 @@
+{
+  "release_verified": true,
+  "pending": [],
+  "pr_run": {"id":"40998812532","job_id":123878139582,"passed":288,"failed":0,"skipped":0,"timeout_seconds_per_file":600,"job_wall_seconds":1115,"sum_test_seconds":1055.08},
+  "main_run": {"id":"41015949210","job_id":123932184095,"passed":288,"failed":0,"skipped":0,"timeout_seconds_per_file":600,"job_wall_seconds":1117,"sum_test_seconds":1051.14},
+  "all_576_current_success_timing_rows_retained": true,
+  "duration_sums_are_not_wall_time": true,
+  "main_sha": "c972d44025dc24911fb472d8448bfe9388df973e",
+  "tested_pr_sha": "cca28bd912c54567dbc3d9fc63c88f22db465bdc",
+  "complete_tree": "f2e3ad9dbe86ed14d9cbeab1dd9c2766e3db6ea0",
+  "complete_tree_identical_to_tested_head": true,
+  "self_review_comment": "6516724665",
+  "automatic_deployment": {
+    "id": "9a3b2d61-2253-4abd-8eec-374cd99b9317",
+    "details_aria_selected": "true",
+    "exact_main_source_anchor_count": 1,
+    "active": true,
+    "successful": true,
+    "manual_deploy_retry_settings_variables_or_logs": false
+  },
+  "public": {
+    "unsigned_cases": 15,
+    "true_viewports": [[1366,768],[400,915],[412,915]],
+    "health_status": 200,
+    "strict_ask_source_and_both_entry_guard": true,
+    "original_unchecked_44px_in_viewport_guard_unchanged": true,
+    "all_images_inspected": true,
+    "authenticated": false,
+    "credential_transfer": false,
+    "writes": 0
+  },
+  "actual_signed_structural_only": {
+    "browser": "Chrome5",
+    "previous_Chrome4_unavailable_and_absent_from_inventory": true,
+    "fresh_safe_health_entry": true,
+    "viewport": [1280,529],
+    "initial_reload_zero_header_counts_were_prehydration_not_readiness": true,
+    "ready": {"native_headers":1,"ask_commands":1,"login_forms":0,"content_ready":true,"ask_enabled":true,"ask_44px_in_viewport":true,"open_dialogs":0,"overflow":false},
+    "open_early": {"open_dialogs":1,"close_commands":1,"query_controls":1,"query_enabled":false,"overflow":false},
+    "open_loaded": {"open_dialogs":1,"close_commands":1,"query_controls":1,"query_enabled":true,"reload_enabled":true,"dialogs_fit":true,"overflow":false},
+    "close": {"open_dialogs":0,"ask_close_commands":0,"focus_returned":true,"content_ready":true,"native_headers":1,"overflow":false},
+    "no_queries_or_preset_content_requested": true,
+    "no_private_AX_capture_text_input_values_JSON_credentials_or_business_writes": true,
+    "content_identity_proof": "synthetic_only",
+    "live_console_logs_collected": false
+  }
+}

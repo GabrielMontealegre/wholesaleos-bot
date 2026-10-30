@@ -17,7 +17,7 @@ async function prove() {
   assert.equal(buyer.conversation.refs, undefined, 'Actual mailbox view intentionally exposes records, not stored conversation refs');
   assert.deepEqual(annotate([buyer], { ...linkedStore, buyers: [...linkedStore.buyers, ...linkedStore.buyers] }, { now: at })[0].conversation.records, [], 'Ambiguous stored record identity does not create a context link');
   const rows = [row('a', { link_status: 'unlinked', conversation: { refs: ['BUY-9999'], records: [{ kind: 'buyer', id: 'forged', ref: 'BUY-9999' }], role: 'buyer' } }), buyer, row('c', linked('seller')), row('d', linked('agent')),
-    row('e', { from: 'alerts@redfin.com' }), row('f', { labels: ['WOS/Reports'] }), row('1', linked('holder'))];
+    row('e', { from: 'alerts@redfin.com' }), row('f', { provider_labels: { origin: 'imap_gmail_labels', scope: 'message', names: ['WOS/Reports'] } }), row('1', linked('holder'))];
   try {
     const sizes = process.argv.includes('--compact-only') ? [{ width: 1038, height: 503 }] : [{ width: 1366, height: 768 }, { width: 400, height: 915 }, { width: 412, height: 915 }, { width: 1038, height: 503 }, { width: 1366, height: 600 }];
     for (const { width, height } of sizes) {
@@ -105,7 +105,12 @@ async function prove() {
       await search.fill('');
       await page.getByRole('tab', { name: 'Alerts', exact: true }).press('End');
       assert.equal(await page.getByRole('tab', { name: 'WOS reports', exact: true }).getAttribute('aria-selected'), 'true');
+      const reportTab = await page.getByRole('tab', { name: 'WOS reports', exact: true }).boundingBox();
+      assert(reportTab && reportTab.x >= 0 && reportTab.x + reportTab.width <= width, 'The selected report tab must be fully readable inside the viewport');
       assert.equal(await page.locator('.ws-mail-row').count(), 1);
+      assert.equal(await page.locator('.ws-mail-row').getAttribute('title'), 'Role not recorded', 'A provider report label cannot invent a person role');
+      assert.deepEqual(reads, ['inbox'], 'Report filtering consumes the existing metadata receipt without a new provider request');
+      if (process.env.WOS_MAILBOX_PROOF_DIR) await page.screenshot({ path: path.join(process.env.WOS_MAILBOX_PROOF_DIR, 'synthetic-reports-' + width + 'x' + height + '.png') });
       await page.getByRole('tab', { name: 'WOS reports', exact: true }).press('Home');
       assert.equal(await page.getByRole('tab', { name: 'Primary', exact: true }).getAttribute('aria-selected'), 'true');
       if (width !== 1366) {

@@ -7,7 +7,7 @@ const row = (id, extra = {}) => ({ id, thread_key: id.repeat(64), date: '2026-10
   sender_name: 'Synthetic person', from: 'Synthetic person <person@example.test>', subject: 'Recorded property discussion', snippet: 'Source snippet', snippet_origin: 'gmail_provider_snippet', ...extra });
 const messages = [row('a'), row('b', { conversation: role('buyer'), link_status: 'linked' }),
   row('c', { conversation: role('seller'), link_status: 'linked' }), row('d', { conversation: role('agent'), link_status: 'linked' }),
-  row('e', { from: 'alerts@redfin.com' }), row('f', { labels: ['WOS/Reports'] }),
+  row('e', { from: 'alerts@redfin.com' }), row('f', { provider_labels: { origin: 'imap_gmail_labels', scope: 'message', names: ['WOS/Reports'] } }),
   row('g', { subject: 'WOS report from a human', from: 'human@redfin.com' })];
 const before = JSON.stringify(messages);
 const view = project(messages, { now });
@@ -35,9 +35,9 @@ assert.throws(() => project(many.concat(row('z')), { now }), /email_view_list_in
 const unknownRoles = ['missing', 'future', 'wrong-origin'].map((id, i) => row(id, { thread_key: '', link_status: 'linked',
   conversation: i === 0 ? undefined : { ...role('buyer'), ...(i === 1 ? { role_recorded_at: '2027-01-01T00:00:00Z' } : { role_source_kind: 'derived_workflow' }) } }));
 assert.equal(project(unknownRoles, { now }).categories.buyers, 0);
-const mixed = [row('h', { thread_key: 'c'.repeat(64), labels: ['WOS Action'] }), row('i', { thread_key: 'c'.repeat(64) })];
+const mixed = [row('h', { thread_key: 'c'.repeat(64), provider_labels: { origin: 'imap_gmail_labels', scope: 'message', names: ['WOS Action'] } }), row('i', { thread_key: 'c'.repeat(64) })];
 assert.equal(project(mixed, { now }).categories.reports, 0, 'A human reply without the report label remains Primary');
-const labelConflict = [row('j', { labels: ['WOS/Reports'] }), row('j')];
+const labelConflict = [row('j', { provider_labels: { origin: 'imap_gmail_labels', scope: 'message', names: ['WOS/Reports'] } }), row('j')];
 assert.equal(project(labelConflict, { now }).categories.reports, 0);
 const snippetConflict = [row('k', { snippet: 'first' }), row('k', { snippet: 'other' })];
 assert.equal(project(snippetConflict, { now }).rows[0].snippet, '', 'Conflicting source snippet is withheld');

@@ -46,15 +46,37 @@
     return saved && saved.origin === 'parsed_mime_text' && saved.identity === identity(message) &&
       copies.every(function (row) { return identity(row) === saved.identity; }) && safeText(saved.snippet, 500) ? saved.snippet : '';
   }
+  function labelReceipt(message) {
+    var field = Object.getOwnPropertyDescriptor(message, 'provider_labels');
+    var value = field && Object.hasOwn(field, 'value') && field.value;
+    if (!value || ![Object.prototype, null].includes(Object.getPrototypeOf(value)) ||
+        Object.keys(value).length !== 3) return null;
+    var fields = ['origin', 'scope', 'names'].map(function (key) { return Object.getOwnPropertyDescriptor(value, key); });
+    if (fields.some(function (entry) { return !entry || !Object.hasOwn(entry, 'value'); }) ||
+        fields[0].value !== 'imap_gmail_labels' || fields[1].value !== 'message') return null;
+    var names = fields[2].value;
+    if (!Array.isArray(names) || names.length > 100) return null;
+    var copied = [];
+    for (var index = 0; index < names.length; index++) {
+      var entry = Object.getOwnPropertyDescriptor(names, String(index));
+      if (!entry || !Object.hasOwn(entry, 'value') || typeof entry.value !== 'string' ||
+          !entry.value.trim() || entry.value.length > 200 || /[\x00-\x1f\x7f\u202a-\u202e\u2066-\u2069]/.test(entry.value)) return null;
+      copied.push(entry.value);
+    }
+    if (new Set(copied).size !== copied.length) return null;
+    return { key: JSON.stringify(copied.sort()), report: copied.includes('WOS/Reports') || copied.includes('WOS Action') };
+  }
   function category(thread, messages) {
     if (thread.category === 'alerts') return 'alerts';
     if (thread.role === 'buyer') return 'buyers';
     if (thread.role === 'seller' || thread.role === 'agent') return 'sellers_agents';
     var allReports = thread.messages.every(function (message) {
       var copies = messages.filter(function (row) { return row && row.id === message.id; });
-      return copies.length && copies.every(function (row) {
-        return row.source_kind === 'connected_mailbox' && Array.isArray(row.labels) &&
-          row.labels.some(function (label) { return label === 'WOS/Reports' || label === 'WOS Action'; });
+      var receipt = labelReceipt(message);
+      // Per-message provider receipts are not folder labels, REST names or person roles.
+      return receipt && receipt.report && copies.length && copies.every(function (row) {
+        var copy = row.source_kind === 'connected_mailbox' && labelReceipt(row);
+        return copy && copy.key === receipt.key;
       });
     });
     return allReports ? 'reports' : 'primary';

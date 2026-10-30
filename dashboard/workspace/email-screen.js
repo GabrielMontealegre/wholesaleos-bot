@@ -100,7 +100,7 @@
         contextMarkup(thread) + categories.filter(function (item) { return item.key !== state.category; }).map(function (item) { return '<section id="mail-panel-' + item.key + '" role="tabpanel" aria-labelledby="mail-' + item.key + '" hidden></section>'; }).join('') + '</div></div>' + c.drawer('mail-folder-dialog', 'Mail folders') + '</section>';
       // The tab controller switches the list projection, not a second nested pane.
       host.querySelectorAll('[data-tab]').forEach(function (button) {
-        function select(key) { remember(); sequence++; openedSnippets.clear(); state.category = key; state.role = ''; state.selected = ''; state.body = []; state.composing = false; state.contextOpen = false; state.busy = metadataBusy; selectedRows.clear(); paint(); host.querySelector('[data-tab="' + key + '"]').focus(); }
+        function select(key) { remember(); sequence++; openedSnippets.clear(); state.category = key; state.role = ''; state.selected = ''; state.body = []; state.composing = false; state.contextOpen = false; state.busy = metadataBusy; selectedRows.clear(); paint(); var tab = host.querySelector('[data-tab="' + key + '"]'); tab.focus(); tab.scrollIntoView({ block: 'nearest', inline: 'nearest' }); }
         button.addEventListener('click', function () { select(button.dataset.tab); });
         button.addEventListener('keydown', function (event) { if (['ArrowRight', 'ArrowLeft', 'Home', 'End'].includes(event.key)) { event.preventDefault(); var index = categories.findIndex(function (item) { return item.key === button.dataset.tab; }); select(categories[event.key === 'Home' ? 0 : event.key === 'End' ? categories.length - 1 : (index + (event.key === 'ArrowRight' ? 1 : categories.length - 1)) % categories.length].key); } });
       });

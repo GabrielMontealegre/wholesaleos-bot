@@ -1,5 +1,40 @@
 # Backlog
 
+2026-10-30 #412/D-063B native report-label consumer LOCAL CANDIDATE, not released.
+Fresh origin/mainc972 and architect priority/answers checked;471/472/478 still
+unanswered. Current producer453 emits per-message receipts, but native Reports
+read an unproduced raw labels array. Scoped correction accepts exact IMAP name
+receipts only, rejects raw/opaque REST/forged/conflicting/mixed evidence, never
+infers person roles/counts or adds requests/writers. New pure regression FIRST
+failed0!=1 then passed. Initial numerically green audit found selected phone tab
+clipping; new geometry assertion FIRST failed then Email-only tab selection
+scroll repair passed. Final auditeda4a175b FCP160.6/116.8/131.8ms;LH13.5 perf99/96,
+access100/100/actualReports1/tabfits/nooverflow. Three final audit images+15native
+UI views inspected; baseline and first visual failure retained, no score reuse.
+Trace issue-412-report-label-receipts.md; proof2026-10-30-report-label-candidate.
+Full289PR/main/current-head review/exactauto/live gates PENDING. No production
+private reads/captures/values/writes. Owned397proof35ced preserved deliberately.
+No nativeDeals/design sign-off or whole412/455/backlog completion;455 stays6/9.
+
+2026-10-30 #372/D-060 BOUNDED read-only demo DONE via PR397 RELEASED/VERIFIED.
+Actualmain c972d44025dc24911fb472d8448bfe9388df973e complete tree
+f2e3ad9dbe86ed14d9cbeab1dd9c2766e3db6ea0 identical testedcca28bd.
+PR40998812532/job123878139582288/0/0,18m35job,sum1055.08s;
+MAIN41015949210/job123932184095288/0/0,18m37job,sum1051.14s.
+All576 rows retained,600s/file/sums NOTwall. Prior286/2 timings retained; FIRST
+exact stylesheet test-only correction disclosed, no unchanged rerun/cancel/skip.
+AutomaticRailway9a3b2d61 exactc972/Detailsselected/Active/successful verified.
+Public15 original44px/security+strictAsk source/currententry guards PASS; all15
+unsigned images inspected. ActualsignedChrome5 GLOBALstructural nativeToday
+Ask1/open1/querydisabled->enabled/close0/focusreturn/contentready/nooverflow.
+No private values/AX/captures/JSON/query/voice/provider/business writes/authtransfer.
+Chrome4 unavailable/absent; current5 selected from inventory, safehealth entries.
+Proof docs/screens/2026-10-30-pr397-release. Docs-only proof starts at actualmerge;
+testedbranchcca left untouched, no newmain/CI/deploy for proof. Whole372/370/412
+NOT complete;455 remains6/9(67%). Continue fresh independent backlog/architect
+answers; no unchanged release redo, nativeDeals/477/Claude-owned work bundle.
+
+Historical pre-release397 status (superseded above):
 2026-10-30 #372 existingDRAFT PR397 pushed c90886c; NOT merged/deployed.
 Fresh full40996908558/job123872036334 completed286/2/0 all288,600s/file,
 17m37job,sum997.95s NOTwall; all288 timing rows retained. Both failures are
