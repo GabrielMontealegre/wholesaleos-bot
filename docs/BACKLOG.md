@@ -1,6 +1,47 @@
 # Backlog
 
-2026-10-29 #383/PR394 reconciliation remains LOCAL, not released. Main7262b11/
+2026-10-30 #372 existingDRAFT PR397 pushed c90886c; NOT merged/deployed.
+Fresh full40996908558/job123872036334 completed286/2/0 all288,600s/file,
+17m37job,sum997.95s NOTwall; all288 timing rows retained. Both failures are
+exact stylesheet-list assertions (shellUI75/Today-action-center90) expecting
+only nativeCSS before Ask's two shared stylesheets were intentionally loaded.
+FIRST test-only correction requires EXACT nativeCSS+UIkit+localvoice; no runtime,
+auth/writer/viewport assertion or isolation gate weakened. Both corrected
+actual3size tests and staged privacy gate PASS; fresh full288 still required.
+No unchanged workflow rerun. Deliberate merge
+of actual394+owned d9974d0 proof preserved;
+old2553b07 retained separately. Pure current projection/private GET boundary pass;
+mixed-reference unsigned JV privacy regression failed then scoped withholding
+passed, including public/signed preservation. Initial three-size UI and expanded
+30s/pagehide lifecycle tests pass. Native Today/Email now opens the SAME dialog
+from a44px header icon, keeps More7/native Deals unchanged, and returns focus
+without replacing native content. Native3sizes+shortdesktop/auth/401/nonadmin,
+classic Ask/More/voice/components focused checks pass; expanded Email draft/source/
+search preservation and pagehide pass. Exact6ccb9f9 auditPASS Today98/96,
+Email99/96,classic93/100 performance/access100; all true3sizeFCP<2s, measured
+actual context, no overflow/runtime/auditerrors. Prior85/82/77 and87 failures,
+frame/contrast/owned-close fixes and invalid black images are honestly retained.
+Final15 images+baseline9+footer9 inspected; full288PR/main/
+deployment gates pending. No production private reads/writes/AI/provider/audio. Trace
+issue-372-read-only-demo.md. No whole372/370/412/backlog completion claim.
+
+2026-10-29 #383/D-059 Profile DONE via PR394 RELEASED/VERIFIED. Actualmain
+edbd25545ee5518d37aa50469a364b0ec78a9a92 complete treed0ea751d58c898847ed14b503602754db33f91a0
+identical tested ae372d1. PR40962026192/job123757006952284/0/0,17m43job,
+sum996.55s; MAIN40964786814/job123766387055284/0/0,16m18job,sum915.98s.
+All568rows retained,600s/file/sums NOTwall. AutomaticRailway00549c1d exact
+source/Detailsaria-selected/Active/successful verified. Public15 original44px/
+security/currentasset guards PASS; all15 unsigned images inspected. Actual
+signed Settings GLOBALstructural1form/7fields/uncheckedreview/Saveenabled/
+2PINinputs/2privateSettingssections/nooverflow; Deals19->1->Back->19 with0
+visibleBack. No private values/body/AX/captures/Profile save/generation/send/
+businesswrites/authtransfer. Positive content SYNTHETIC ONLY. Legacy392excluded.
+Proof docs/screens/2026-10-29-pr394-release; earlier failed audit/startup and
+privacy incidents remain disclosed in383 trace. No newmain/CI/deploy for proof.
+Whole455 still6/9(67%),wholebacklogactive. Next: fresh-priority/duplicate review
+before existing bounded read-only397/D-060 work; no native Deals/456/477 bundle.
+
+Historical earlier2026-10-29 #383/PR394 reconciliation was LOCAL, not released. Main7262b11/
 PR481 unchanged. Measurement-phase Lighthouse scope corrected after post-return
 page changes made the earlier observer invalid; old mobile88 failed audit kept.
 Qualified e9b956c audit passed, then self-review reproduced a template pagehide

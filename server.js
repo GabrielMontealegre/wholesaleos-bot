@@ -172,6 +172,8 @@ app.use('/api/dashboard/assistant-upload-keys', require('./modules/records/assis
 app.use('/api/auth/devices', rememberedDeviceRoutes.noStore, requireAuth, rememberedDeviceRoutes.requireDevicePayload);
 app.use('/api/dashboard/operator-profile', require('./modules/records/operator-profile').noStore,
   requireAdmin, require('./modules/records/operator-profile').requireProfilePayload);
+app.use('/api/dashboard/ask-workspace', require('./modules/agents/ask-workspace').noStore,
+  requireAdmin, require('./modules/agents/ask-workspace').requireReadPayload);
 app.use(express.json({ strict: false, limit: '1mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use(express.text({ limit: '100mb', type: 'text/plain' }));
@@ -2778,6 +2780,7 @@ const ownerTelegram=require('./modules/agents/owner-telegram').createOwnerTelegr
 assistantFindRoutes.registerAssistantFindRoutes(app, { db, requireAdmin, pairingOptions: { env: process.env },onIncomingInteractions:events=>ownerTelegram.incoming(events) });
 require('./modules/deals/reviewed-deal-routes').registerReviewedDealRoutes(app, { db, requireAdmin });
 require('./modules/records/operator-profile').registerRoutes(app, { db, requireAdmin });
+require('./modules/agents/ask-workspace').register(app, { db, requireAdmin });
 require('./modules/records/record-activity-routes').registerRecordActivityRoutes(app, { db, requireAdmin });
 require('./modules/records/conversation-routes').registerConversationRoutes(app, { db, requireAdmin, assistantSnapshotImport: true });
 require('./modules/records/assistant-snapshot-routes').registerAssistantSnapshotRoutes(app, { db, requireAdmin });

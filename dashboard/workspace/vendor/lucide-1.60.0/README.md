@@ -11,3 +11,4 @@ test rejects scripts, event handlers, foreign objects and external references.
 Only the included icons may be referenced through the explicit allowlist.
 Gmail chrome adds unmodified inbox,star,folder,chevron-left,chevron-right from
 the same pinned1.60.0 upstream tag. No building-2 asset is shipped.
+The bounded Ask launcher adds the unmodified message-circle icon from that tag.

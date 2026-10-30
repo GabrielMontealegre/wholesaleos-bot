@@ -1,5 +1,21 @@
 # Decisions
 
+ASSUMED: D-060 Ask uses the same read-only dialog above native Today/Email via
+an icon header command and a narrow host adapter. Closing restores the existing
+native screen, search and draft rather than redirecting through an artificial
+classic entry route. Record/Calendar exits use existing canonical links; More
+stays seven destinations, native Deals and per-deal chat stay excluded. Native
+voice hooks only the Ask question. -- AGENTS2/3/5,D-060/#390 --2026-10-30.
+
+ASSUMED: Reconcile existing397/D-060 demo onto verified394 using current
+canonical projections, shared UI kit/icons and private read/lifecycle boundaries.
+Mixed references touching any unsigned JV withhold entire linked report/event
+details through the existing signed-evidence gate, never regex-censor source
+text or relax the gate. Preserve public/signed originals and all caps/totals.
+No per-deal chat/AI/provider/key/writers/native Deals/downstream sign-off implied.
+Current Calendar and owned394 proof win over stale branch conflicts; preserve
+old2553b07 separately. -- AGENTS2/3/5,D-060/#390,#372/#412 --2026-10-30.
+
 ASSUMED: Reconcile existing394/D-059 Profile onto current481, preserving both
 owned checkpoints and current profit-review/version/auth/source/value gates.
 Only reviewed canonical JV/template/buyer-email drafts may consume Profile;
