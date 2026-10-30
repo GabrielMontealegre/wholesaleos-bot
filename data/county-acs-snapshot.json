@@ -1,0 +1,4006 @@
+{
+ "note": "Static, PII-free snapshot of ACS 2024 5-year county population and median owner-occupied home value, read through Census Reporter (official ACS tables, no key) on 2026-10-12 for the counties the assistant ranked. Counties not listed are unranked; never estimate them. See issue #358.",
+ "count": 400,
+ "counties": [
+  {
+   "county": "Guilford",
+   "state": "NC",
+   "population": 547940,
+   "median_value_owner_occupied": 259900,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Forsyth",
+   "state": "NC",
+   "population": 389977,
+   "median_value_owner_occupied": 250400,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Cumberland",
+   "state": "NC",
+   "population": 338545,
+   "median_value_owner_occupied": 199200,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Gaston",
+   "state": "NC",
+   "population": 234881,
+   "median_value_owner_occupied": 266000,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Iredell",
+   "state": "NC",
+   "population": 196544,
+   "median_value_owner_occupied": 321400,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Catawba",
+   "state": "NC",
+   "population": 163573,
+   "median_value_owner_occupied": 241600,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Durham",
+   "state": "NC",
+   "population": 332353,
+   "median_value_owner_occupied": 389400,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Harris",
+   "state": "TX",
+   "population": 4838303,
+   "median_value_owner_occupied": 276600,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Dallas",
+   "state": "TX",
+   "population": 2621179,
+   "median_value_owner_occupied": 303000,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Tarrant",
+   "state": "TX",
+   "population": 2167390,
+   "median_value_owner_occupied": 323900,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Bexar",
+   "state": "TX",
+   "population": 2067341,
+   "median_value_owner_occupied": 262200,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Mecklenburg",
+   "state": "NC",
+   "population": 1154681,
+   "median_value_owner_occupied": 406800,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Duval",
+   "state": "FL",
+   "population": 1023153,
+   "median_value_owner_occupied": 303500,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Buncombe",
+   "state": "NC",
+   "population": 274360,
+   "median_value_owner_occupied": 391800,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Cabarrus",
+   "state": "NC",
+   "population": 236133,
+   "median_value_owner_occupied": 354800,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Rowan",
+   "state": "NC",
+   "population": 149875,
+   "median_value_owner_occupied": 238400,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Polk",
+   "state": "FL",
+   "population": 790694,
+   "median_value_owner_occupied": 266500,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Davidson",
+   "state": "TN",
+   "population": 715388,
+   "median_value_owner_occupied": 417400,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Brevard",
+   "state": "FL",
+   "population": 632780,
+   "median_value_owner_occupied": 339600,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Pasco",
+   "state": "FL",
+   "population": 611444,
+   "median_value_owner_occupied": 300900,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Volusia",
+   "state": "FL",
+   "population": 579622,
+   "median_value_owner_occupied": 313000,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Greenville",
+   "state": "SC",
+   "population": 548166,
+   "median_value_owner_occupied": 299000,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Wayne",
+   "state": "MI",
+   "population": 1772259,
+   "median_value_owner_occupied": 178500,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Oakland",
+   "state": "MI",
+   "population": 1279825,
+   "median_value_owner_occupied": 343600,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Pima",
+   "state": "AZ",
+   "population": 1060490,
+   "median_value_owner_occupied": 319700,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Lake",
+   "state": "FL",
+   "population": 412924,
+   "median_value_owner_occupied": 318400,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Marion",
+   "state": "FL",
+   "population": 400078,
+   "median_value_owner_occupied": 243100,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "St. Lucie",
+   "state": "FL",
+   "population": 360500,
+   "median_value_owner_occupied": 347300,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Spartanburg",
+   "state": "SC",
+   "population": 347852,
+   "median_value_owner_occupied": 233300,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Hillsborough",
+   "state": "FL",
+   "population": 1522748,
+   "median_value_owner_occupied": 371500,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Orange",
+   "state": "FL",
+   "population": 1471937,
+   "median_value_owner_occupied": 390100,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Wake",
+   "state": "NC",
+   "population": 1178653,
+   "median_value_owner_occupied": 461300,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Shelby",
+   "state": "TN",
+   "population": 919173,
+   "median_value_owner_occupied": 249100,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Kern",
+   "state": "CA",
+   "population": 915075,
+   "median_value_owner_occupied": 338300,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Macomb",
+   "state": "MI",
+   "population": 879853,
+   "median_value_owner_occupied": 243900,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Jefferson",
+   "state": "AL",
+   "population": 667755,
+   "median_value_owner_occupied": 240000,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Kent",
+   "state": "MI",
+   "population": 663150,
+   "median_value_owner_occupied": 289900,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Douglas",
+   "state": "NE",
+   "population": 590736,
+   "median_value_owner_occupied": 266100,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Ramsey",
+   "state": "MN",
+   "population": 542945,
+   "median_value_owner_occupied": 326600,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Pinellas",
+   "state": "FL",
+   "population": 963481,
+   "median_value_owner_occupied": 355100,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Union",
+   "state": "NC",
+   "population": 250958,
+   "median_value_owner_occupied": 417300,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Clay",
+   "state": "FL",
+   "population": 227584,
+   "median_value_owner_occupied": 312500,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Ellis",
+   "state": "TX",
+   "population": 213160,
+   "median_value_owner_occupied": 348600,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Anderson",
+   "state": "SC",
+   "population": 210478,
+   "median_value_owner_occupied": 231900,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Hernando",
+   "state": "FL",
+   "population": 207018,
+   "median_value_owner_occupied": 276000,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Citrus",
+   "state": "FL",
+   "population": 162472,
+   "median_value_owner_occupied": 245500,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Knox",
+   "state": "TN",
+   "population": 494148,
+   "median_value_owner_occupied": 320900,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Tulare",
+   "state": "CA",
+   "population": 478693,
+   "median_value_owner_occupied": 330100,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Pinal",
+   "state": "AZ",
+   "population": 469006,
+   "median_value_owner_occupied": 349000,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Hampden",
+   "state": "MA",
+   "population": 462815,
+   "median_value_owner_occupied": 298800,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Mobile",
+   "state": "AL",
+   "population": 412590,
+   "median_value_owner_occupied": 190700,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Madison",
+   "state": "AL",
+   "population": 405718,
+   "median_value_owner_occupied": 299200,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Genesee",
+   "state": "MI",
+   "population": 403305,
+   "median_value_owner_occupied": 182400,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Pulaski",
+   "state": "AR",
+   "population": 399818,
+   "median_value_owner_occupied": 214700,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Hamilton",
+   "state": "TN",
+   "population": 376192,
+   "median_value_owner_occupied": 312800,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Anoka",
+   "state": "MN",
+   "population": 370349,
+   "median_value_owner_occupied": 346500,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Lancaster",
+   "state": "NE",
+   "population": 326696,
+   "median_value_owner_occupied": 275200,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Benton",
+   "state": "AR",
+   "population": 303632,
+   "median_value_owner_occupied": 323500,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Ottawa",
+   "state": "MI",
+   "population": 301203,
+   "median_value_owner_occupied": 323400,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Chatham",
+   "state": "GA",
+   "population": 300879,
+   "median_value_owner_occupied": 302700,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Hennepin",
+   "state": "MN",
+   "population": 1269496,
+   "median_value_owner_occupied": 392900,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Fresno",
+   "state": "CA",
+   "population": 1016725,
+   "median_value_owner_occupied": 388800,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Seminole",
+   "state": "FL",
+   "population": 481470,
+   "median_value_owner_occupied": 386900,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Osceola",
+   "state": "FL",
+   "population": 427415,
+   "median_value_owner_occupied": 353300,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Broward",
+   "state": "FL",
+   "population": 1977129,
+   "median_value_owner_occupied": 414600,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Palm Beach",
+   "state": "FL",
+   "population": 1533806,
+   "median_value_owner_occupied": 447300,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Gwinnett",
+   "state": "GA",
+   "population": 979864,
+   "median_value_owner_occupied": 380900,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Baltimore County",
+   "state": "MD",
+   "population": 850796,
+   "median_value_owner_occupied": 349300,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "DeKalb",
+   "state": "GA",
+   "population": 765351,
+   "median_value_owner_occupied": 357800,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Providence",
+   "state": "RI",
+   "population": 664854,
+   "median_value_owner_occupied": 373600,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Baltimore city",
+   "state": "MD",
+   "population": 573243,
+   "median_value_owner_occupied": 229600,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Clayton",
+   "state": "GA",
+   "population": 298924,
+   "median_value_owner_occupied": 222300,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Ingham",
+   "state": "MI",
+   "population": 283913,
+   "median_value_owner_occupied": 198800,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Kalamazoo",
+   "state": "MI",
+   "population": 262375,
+   "median_value_owner_occupied": 241800,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Yakima",
+   "state": "WA",
+   "population": 257152,
+   "median_value_owner_occupied": 310100,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Washington",
+   "state": "AR",
+   "population": 256765,
+   "median_value_owner_occupied": 298400,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Henry",
+   "state": "GA",
+   "population": 249960,
+   "median_value_owner_occupied": 313900,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Baldwin",
+   "state": "AL",
+   "population": 246989,
+   "median_value_owner_occupied": 316900,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Tuscaloosa",
+   "state": "AL",
+   "population": 237552,
+   "median_value_owner_occupied": 248700,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Johnston",
+   "state": "NC",
+   "population": 234263,
+   "median_value_owner_occupied": 305600,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Montgomery",
+   "state": "TN",
+   "population": 234153,
+   "median_value_owner_occupied": 280200,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Norfolk city",
+   "state": "VA",
+   "population": 233596,
+   "median_value_owner_occupied": 289900,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Shelby",
+   "state": "AL",
+   "population": 230211,
+   "median_value_owner_occupied": 326100,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Montgomery",
+   "state": "AL",
+   "population": 226718,
+   "median_value_owner_occupied": 171900,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Mohave",
+   "state": "AZ",
+   "population": 220517,
+   "median_value_owner_occupied": 281000,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Yuma",
+   "state": "AZ",
+   "population": 211741,
+   "median_value_owner_occupied": 217800,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Onslow",
+   "state": "NC",
+   "population": 207906,
+   "median_value_owner_occupied": 236400,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Richmond",
+   "state": "GA",
+   "population": 206069,
+   "median_value_owner_occupied": 178500,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Muscogee",
+   "state": "GA",
+   "population": 203711,
+   "median_value_owner_occupied": 193900,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "St. Louis",
+   "state": "MN",
+   "population": 200123,
+   "median_value_owner_occupied": 221400,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Sarpy",
+   "state": "NE",
+   "population": 197389,
+   "median_value_owner_occupied": 314100,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Saginaw",
+   "state": "MI",
+   "population": 188665,
+   "median_value_owner_occupied": 152800,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Newport News city",
+   "state": "VA",
+   "population": 184216,
+   "median_value_owner_occupied": 260600,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Lee",
+   "state": "AL",
+   "population": 181134,
+   "median_value_owner_occupied": 262200,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Imperial",
+   "state": "CA",
+   "population": 180202,
+   "median_value_owner_occupied": 309600,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Paulding",
+   "state": "GA",
+   "population": 178909,
+   "median_value_owner_occupied": 326300,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Pitt",
+   "state": "NC",
+   "population": 177193,
+   "median_value_owner_occupied": 208900,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Alamance",
+   "state": "NC",
+   "population": 176893,
+   "median_value_owner_occupied": 241500,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Muskegon",
+   "state": "MI",
+   "population": 175961,
+   "median_value_owner_occupied": 198300,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Davidson",
+   "state": "NC",
+   "population": 172954,
+   "median_value_owner_occupied": 219100,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Houston",
+   "state": "GA",
+   "population": 169649,
+   "median_value_owner_occupied": 219800,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Pueblo",
+   "state": "CO",
+   "population": 169356,
+   "median_value_owner_occupied": 291300,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Olmsted",
+   "state": "MN",
+   "population": 164498,
+   "median_value_owner_occupied": 331700,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Columbia",
+   "state": "GA",
+   "population": 162434,
+   "median_value_owner_occupied": 305300,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Stearns",
+   "state": "MN",
+   "population": 160865,
+   "median_value_owner_occupied": 273400,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Sullivan",
+   "state": "TN",
+   "population": 160624,
+   "median_value_owner_occupied": 213300,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "St. Clair",
+   "state": "MI",
+   "population": 160221,
+   "median_value_owner_occupied": 224600,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Jackson",
+   "state": "MI",
+   "population": 160060,
+   "median_value_owner_occupied": 193700,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Bibb",
+   "state": "GA",
+   "population": 156578,
+   "median_value_owner_occupied": 174500,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Monroe",
+   "state": "MI",
+   "population": 155505,
+   "median_value_owner_occupied": 228900,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Kings",
+   "state": "CA",
+   "population": 153298,
+   "median_value_owner_occupied": 324300,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Berrien",
+   "state": "MI",
+   "population": 153288,
+   "median_value_owner_occupied": 224300,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Brunswick",
+   "state": "NC",
+   "population": 152568,
+   "median_value_owner_occupied": 349800,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "York",
+   "state": "SC",
+   "population": 293673,
+   "median_value_owner_occupied": 361300,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Denton",
+   "state": "TX",
+   "population": 979561,
+   "median_value_owner_occupied": 437200,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Virginia Beach city",
+   "state": "VA",
+   "population": 456349,
+   "median_value_owner_occupied": 382500,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Dakota",
+   "state": "MN",
+   "population": 445771,
+   "median_value_owner_occupied": 381000,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Chesterfield",
+   "state": "VA",
+   "population": 377869,
+   "median_value_owner_occupied": 366000,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Washtenaw",
+   "state": "MI",
+   "population": 369822,
+   "median_value_owner_occupied": 374100,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Rutherford",
+   "state": "TN",
+   "population": 360646,
+   "median_value_owner_occupied": 382600,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Henrico",
+   "state": "VA",
+   "population": 335744,
+   "median_value_owner_occupied": 359200,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Cook",
+   "state": "IL",
+   "population": 5182090,
+   "median_value_owner_occupied": 324500,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Clark",
+   "state": "NV",
+   "population": 2329548,
+   "median_value_owner_occupied": 431000,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Philadelphia",
+   "state": "PA",
+   "population": 1579706,
+   "median_value_owner_occupied": 243100,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Franklin",
+   "state": "OH",
+   "population": 1333048,
+   "median_value_owner_occupied": 288400,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Cuyahoga",
+   "state": "OH",
+   "population": 1245873,
+   "median_value_owner_occupied": 195400,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Allegheny",
+   "state": "PA",
+   "population": 1238177,
+   "median_value_owner_occupied": 227600,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Miami-Dade",
+   "state": "FL",
+   "population": 2738356,
+   "median_value_owner_occupied": 463000,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Merced",
+   "state": "CA",
+   "population": 290201,
+   "median_value_owner_occupied": 391800,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Chesapeake city",
+   "state": "VA",
+   "population": 252583,
+   "median_value_owner_occupied": 378400,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "New Hanover",
+   "state": "NC",
+   "population": 235229,
+   "median_value_owner_occupied": 387800,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Richmond city",
+   "state": "VA",
+   "population": 229359,
+   "median_value_owner_occupied": 353000,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Hall",
+   "state": "GA",
+   "population": 212705,
+   "median_value_owner_occupied": 350400,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Sumner",
+   "state": "TN",
+   "population": 204424,
+   "median_value_owner_occupied": 393100,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Minnehaha",
+   "state": "SD",
+   "population": 203289,
+   "median_value_owner_occupied": 287600,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Livingston",
+   "state": "MI",
+   "population": 195833,
+   "median_value_owner_occupied": 356800,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Shasta",
+   "state": "CA",
+   "population": 181436,
+   "median_value_owner_occupied": 366400,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Kanawha",
+   "state": "WV",
+   "population": 176537,
+   "median_value_owner_occupied": 147300,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Kent",
+   "state": "RI",
+   "population": 171456,
+   "median_value_owner_occupied": 366100,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Hampshire",
+   "state": "MA",
+   "population": 162028,
+   "median_value_owner_occupied": 390300,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Madera",
+   "state": "CA",
+   "population": 160940,
+   "median_value_owner_occupied": 393200,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Mesa",
+   "state": "CO",
+   "population": 158601,
+   "median_value_owner_occupied": 378600,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Merrimack",
+   "state": "NH",
+   "population": 155967,
+   "median_value_owner_occupied": 367600,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Washington",
+   "state": "MD",
+   "population": 155709,
+   "median_value_owner_occupied": 296100,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Coweta",
+   "state": "GA",
+   "population": 152852,
+   "median_value_owner_occupied": 357500,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Douglas",
+   "state": "GA",
+   "population": 147888,
+   "median_value_owner_occupied": 296900,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Randolph",
+   "state": "NC",
+   "population": 146348,
+   "median_value_owner_occupied": 197100,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Blount",
+   "state": "TN",
+   "population": 139333,
+   "median_value_owner_occupied": 320500,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Harnett",
+   "state": "NC",
+   "population": 139150,
+   "median_value_owner_occupied": 246200,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Hampton city",
+   "state": "VA",
+   "population": 137557,
+   "median_value_owner_occupied": 245700,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Washington",
+   "state": "TN",
+   "population": 136261,
+   "median_value_owner_occupied": 249000,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Calhoun",
+   "state": "MI",
+   "population": 133778,
+   "median_value_owner_occupied": 162800,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Clarke",
+   "state": "GA",
+   "population": 129609,
+   "median_value_owner_occupied": 298900,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Berkeley",
+   "state": "WV",
+   "population": 129514,
+   "median_value_owner_occupied": 266300,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Berkshire",
+   "state": "MA",
+   "population": 129430,
+   "median_value_owner_occupied": 305400,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Sebastian",
+   "state": "AR",
+   "population": 128900,
+   "median_value_owner_occupied": 176200,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Faulkner",
+   "state": "AR",
+   "population": 127717,
+   "median_value_owner_occupied": 232700,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Saline",
+   "state": "AR",
+   "population": 127479,
+   "median_value_owner_occupied": 221200,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Cochise",
+   "state": "AZ",
+   "population": 125566,
+   "median_value_owner_occupied": 218300,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Carroll",
+   "state": "GA",
+   "population": 124569,
+   "median_value_owner_occupied": 255100,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Morgan",
+   "state": "AL",
+   "population": 124471,
+   "median_value_owner_occupied": 212000,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Allegan",
+   "state": "MI",
+   "population": 121456,
+   "median_value_owner_occupied": 267100,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Lowndes",
+   "state": "GA",
+   "population": 119965,
+   "median_value_owner_occupied": 215600,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Wayne",
+   "state": "NC",
+   "population": 118652,
+   "median_value_owner_occupied": 178700,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Newton",
+   "state": "GA",
+   "population": 118152,
+   "median_value_owner_occupied": 265000,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Calhoun",
+   "state": "AL",
+   "population": 116090,
+   "median_value_owner_occupied": 156600,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Craighead",
+   "state": "AR",
+   "population": 113249,
+   "median_value_owner_occupied": 210400,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Bartow",
+   "state": "GA",
+   "population": 113113,
+   "median_value_owner_occupied": 289000,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Douglas",
+   "state": "OR",
+   "population": 112072,
+   "median_value_owner_occupied": 310300,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Limestone",
+   "state": "AL",
+   "population": 111233,
+   "median_value_owner_occupied": 281000,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Bradley",
+   "state": "TN",
+   "population": 111065,
+   "median_value_owner_occupied": 261900,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Eaton",
+   "state": "MI",
+   "population": 109130,
+   "median_value_owner_occupied": 216900,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Navajo",
+   "state": "AZ",
+   "population": 108415,
+   "median_value_owner_occupied": 201500,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Houston",
+   "state": "AL",
+   "population": 108140,
+   "median_value_owner_occupied": 183300,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Monongalia",
+   "state": "WV",
+   "population": 107163,
+   "median_value_owner_occupied": 267700,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Whitfield",
+   "state": "GA",
+   "population": 103598,
+   "median_value_owner_occupied": 218000,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Walton",
+   "state": "GA",
+   "population": 103313,
+   "median_value_owner_occupied": 339500,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Etowah",
+   "state": "AL",
+   "population": 103105,
+   "median_value_owner_occupied": 167100,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Bay",
+   "state": "MI",
+   "population": 103008,
+   "median_value_owner_occupied": 152200,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Craven",
+   "state": "NC",
+   "population": 102612,
+   "median_value_owner_occupied": 231600,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Grant",
+   "state": "WA",
+   "population": 101799,
+   "median_value_owner_occupied": 299500,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Cleveland",
+   "state": "NC",
+   "population": 100991,
+   "median_value_owner_occupied": 200000,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Garland",
+   "state": "AR",
+   "population": 100035,
+   "median_value_owner_occupied": 194300,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "St. Louis County",
+   "state": "MO",
+   "population": 995569,
+   "median_value_owner_occupied": 276800,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Capitol Planning Region",
+   "state": "CT",
+   "population": 977290,
+   "median_value_owner_occupied": 323700,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Marion",
+   "state": "IN",
+   "population": 975809,
+   "median_value_owner_occupied": 224000,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Erie",
+   "state": "NY",
+   "population": 950622,
+   "median_value_owner_occupied": 233800,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Milwaukee",
+   "state": "WI",
+   "population": 926331,
+   "median_value_owner_occupied": 230700,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "El Paso",
+   "state": "TX",
+   "population": 870779,
+   "median_value_owner_occupied": 180400,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Worcester",
+   "state": "MA",
+   "population": 867788,
+   "median_value_owner_occupied": 423700,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Hamilton",
+   "state": "OH",
+   "population": 830774,
+   "median_value_owner_occupied": 241900,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Oklahoma",
+   "state": "OK",
+   "population": 806199,
+   "median_value_owner_occupied": 222900,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Jefferson",
+   "state": "KY",
+   "population": 783022,
+   "median_value_owner_occupied": 248400,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Cobb",
+   "state": "GA",
+   "population": 775208,
+   "median_value_owner_occupied": 407200,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Monroe",
+   "state": "NY",
+   "population": 753753,
+   "median_value_owner_occupied": 213700,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Jackson",
+   "state": "MO",
+   "population": 719976,
+   "median_value_owner_occupied": 230500,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Lake",
+   "state": "IL",
+   "population": 714223,
+   "median_value_owner_occupied": 345700,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Will",
+   "state": "IL",
+   "population": 701462,
+   "median_value_owner_occupied": 319600,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Montgomery",
+   "state": "TX",
+   "population": 684432,
+   "median_value_owner_occupied": 346200,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Tulsa",
+   "state": "OK",
+   "population": 680794,
+   "median_value_owner_occupied": 230400,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Delaware",
+   "state": "PA",
+   "population": 579222,
+   "median_value_owner_occupied": 332200,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Lancaster",
+   "state": "PA",
+   "population": 557931,
+   "median_value_owner_occupied": 301100,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Spokane",
+   "state": "WA",
+   "population": 549056,
+   "median_value_owner_occupied": 410700,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Summit",
+   "state": "OH",
+   "population": 537864,
+   "median_value_owner_occupied": 208700,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Montgomery",
+   "state": "OH",
+   "population": 536096,
+   "median_value_owner_occupied": 180900,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Camden",
+   "state": "NJ",
+   "population": 527257,
+   "median_value_owner_occupied": 287100,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Kane",
+   "state": "IL",
+   "population": 517255,
+   "median_value_owner_occupied": 327000,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Polk",
+   "state": "IA",
+   "population": 503175,
+   "median_value_owner_occupied": 262100,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Lake",
+   "state": "IN",
+   "population": 500379,
+   "median_value_owner_occupied": 230600,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Martin",
+   "state": "FL",
+   "population": 162176,
+   "median_value_owner_occupied": 432200,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Onondaga",
+   "state": "NY",
+   "population": 471129,
+   "median_value_owner_occupied": 200200,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "York",
+   "state": "PA",
+   "population": 462924,
+   "median_value_owner_occupied": 248600,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Naugatuck Valley Planning Region",
+   "state": "CT",
+   "population": 454969,
+   "median_value_owner_occupied": 317700,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Berks",
+   "state": "PA",
+   "population": 433015,
+   "median_value_owner_occupied": 257300,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Lucas",
+   "state": "OH",
+   "population": 428018,
+   "median_value_owner_occupied": 163900,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Hillsborough",
+   "state": "NH",
+   "population": 426378,
+   "median_value_owner_occupied": 421100,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Richland",
+   "state": "SC",
+   "population": 422117,
+   "median_value_owner_occupied": 242800,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "St. Charles",
+   "state": "MO",
+   "population": 414535,
+   "median_value_owner_occupied": 320800,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Butler",
+   "state": "OH",
+   "population": 392876,
+   "median_value_owner_occupied": 258500,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Allen",
+   "state": "IN",
+   "population": 392378,
+   "median_value_owner_occupied": 214900,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Brazoria",
+   "state": "TX",
+   "population": 391255,
+   "median_value_owner_occupied": 301600,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Bell",
+   "state": "TX",
+   "population": 386897,
+   "median_value_owner_occupied": 241000,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Lane",
+   "state": "OR",
+   "population": 384207,
+   "median_value_owner_occupied": 430600,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Horry",
+   "state": "SC",
+   "population": 383016,
+   "median_value_owner_occupied": 287700,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Lehigh",
+   "state": "PA",
+   "population": 378792,
+   "median_value_owner_occupied": 300400,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Stark",
+   "state": "OH",
+   "population": 373713,
+   "median_value_owner_occupied": 186400,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Galveston",
+   "state": "TX",
+   "population": 358990,
+   "median_value_owner_occupied": 314600,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Nueces",
+   "state": "TX",
+   "population": 352955,
+   "median_value_owner_occupied": 208800,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Westmoreland",
+   "state": "PA",
+   "population": 352500,
+   "median_value_owner_occupied": 203500,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Marion",
+   "state": "OR",
+   "population": 349244,
+   "median_value_owner_occupied": 416400,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Luzerne",
+   "state": "PA",
+   "population": 327675,
+   "median_value_owner_occupied": 174100,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Escambia",
+   "state": "FL",
+   "population": 325923,
+   "median_value_owner_occupied": 257200,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Fayette",
+   "state": "KY",
+   "population": 323725,
+   "median_value_owner_occupied": 293500,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Lubbock",
+   "state": "TX",
+   "population": 318884,
+   "median_value_owner_occupied": 214100,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Northampton",
+   "state": "PA",
+   "population": 318580,
+   "median_value_owner_occupied": 308600,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Lorain",
+   "state": "OH",
+   "population": 317129,
+   "median_value_owner_occupied": 223200,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Albany",
+   "state": "NY",
+   "population": 317018,
+   "median_value_owner_occupied": 294600,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "McHenry",
+   "state": "IL",
+   "population": 312591,
+   "median_value_owner_occupied": 308100,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Gloucester",
+   "state": "NJ",
+   "population": 306954,
+   "median_value_owner_occupied": 310400,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Lexington",
+   "state": "SC",
+   "population": 304887,
+   "median_value_owner_occupied": 234500,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Greene",
+   "state": "MO",
+   "population": 303375,
+   "median_value_owner_occupied": 221300,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Cleveland",
+   "state": "OK",
+   "population": 300047,
+   "median_value_owner_occupied": 235700,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Maricopa",
+   "state": "AZ",
+   "population": 4559748,
+   "median_value_owner_occupied": 452800,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Fulton",
+   "state": "GA",
+   "population": 1076561,
+   "median_value_owner_occupied": 458800,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Harford",
+   "state": "MD",
+   "population": 263757,
+   "median_value_owner_occupied": 386400,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Wright",
+   "state": "MN",
+   "population": 148269,
+   "median_value_owner_occupied": 358900,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Strafford",
+   "state": "NH",
+   "population": 132575,
+   "median_value_owner_occupied": 362800,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Linn",
+   "state": "OR",
+   "population": 130706,
+   "median_value_owner_occupied": 376400,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Henderson",
+   "state": "NC",
+   "population": 118484,
+   "median_value_owner_occupied": 351400,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Pennington",
+   "state": "SD",
+   "population": 113512,
+   "median_value_owner_occupied": 302200,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Cowlitz",
+   "state": "WA",
+   "population": 112360,
+   "median_value_owner_occupied": 397500,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Maury",
+   "state": "TN",
+   "population": 107791,
+   "median_value_owner_occupied": 355700,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Cecil",
+   "state": "MD",
+   "population": 104960,
+   "median_value_owner_occupied": 343400,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Wicomico",
+   "state": "MD",
+   "population": 104914,
+   "median_value_owner_occupied": 254700,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Moore",
+   "state": "NC",
+   "population": 104876,
+   "median_value_owner_occupied": 351400,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Sherburne",
+   "state": "MN",
+   "population": 100560,
+   "median_value_owner_occupied": 361400,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Prince George's",
+   "state": "MD",
+   "population": 959754,
+   "median_value_owner_occupied": 426000,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Fort Bend",
+   "state": "TX",
+   "population": 893767,
+   "median_value_owner_occupied": 374500,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Hidalgo",
+   "state": "TX",
+   "population": 891977,
+   "median_value_owner_occupied": 140900,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Lee",
+   "state": "FL",
+   "population": 817666,
+   "median_value_owner_occupied": 362200,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "El Paso",
+   "state": "CO",
+   "population": 742999,
+   "median_value_owner_occupied": 461000,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Ocean",
+   "state": "NJ",
+   "population": 654362,
+   "median_value_owner_occupied": 398400,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Bristol",
+   "state": "MA",
+   "population": 582270,
+   "median_value_owner_occupied": 451200,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "New Castle",
+   "state": "DE",
+   "population": 577961,
+   "median_value_owner_occupied": 352200,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Dane",
+   "state": "WI",
+   "population": 572674,
+   "median_value_owner_occupied": 394800,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "South Central Connecticut Planning Region",
+   "state": "CT",
+   "population": 570598,
+   "median_value_owner_occupied": 353100,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Stanislaus",
+   "state": "CA",
+   "population": 553990,
+   "median_value_owner_occupied": 450100,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Leon",
+   "state": "FL",
+   "population": 297542,
+   "median_value_owner_occupied": 301800,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Dauphin",
+   "state": "PA",
+   "population": 289593,
+   "median_value_owner_occupied": 236400,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "St. Louis city",
+   "state": "MO",
+   "population": 288512,
+   "median_value_owner_occupied": 197500,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Alachua",
+   "state": "FL",
+   "population": 285492,
+   "median_value_owner_occupied": 288800,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Winnebago",
+   "state": "IL",
+   "population": 283292,
+   "median_value_owner_occupied": 164500,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Cherokee",
+   "state": "GA",
+   "population": 281032,
+   "median_value_owner_occupied": 435100,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Southeastern Connecticut Planning Region",
+   "state": "CT",
+   "population": 279971,
+   "median_value_owner_occupied": 323400,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Atlantic",
+   "state": "NJ",
+   "population": 276270,
+   "median_value_owner_occupied": 295000,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Washington",
+   "state": "MN",
+   "population": 276238,
+   "median_value_owner_occupied": 422000,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "St. Joseph",
+   "state": "IN",
+   "population": 273040,
+   "median_value_owner_occupied": 192800,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Brown",
+   "state": "WI",
+   "population": 270892,
+   "median_value_owner_occupied": 266000,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Webb",
+   "state": "TX",
+   "population": 269294,
+   "median_value_owner_occupied": 189900,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Erie",
+   "state": "PA",
+   "population": 269052,
+   "median_value_owner_occupied": 177000,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Cumberland",
+   "state": "PA",
+   "population": 268323,
+   "median_value_owner_occupied": 277600,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "McLennan",
+   "state": "TX",
+   "population": 266067,
+   "median_value_owner_occupied": 243600,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Madison",
+   "state": "IL",
+   "population": 264238,
+   "median_value_owner_occupied": 173000,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Clay",
+   "state": "MO",
+   "population": 258122,
+   "median_value_owner_occupied": 275600,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Jefferson",
+   "state": "TX",
+   "population": 253878,
+   "median_value_owner_occupied": 169500,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "St. Clair",
+   "state": "IL",
+   "population": 253694,
+   "median_value_owner_occupied": 180300,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Warren",
+   "state": "OH",
+   "population": 250008,
+   "median_value_owner_occupied": 349400,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Berkeley",
+   "state": "SC",
+   "population": 246802,
+   "median_value_owner_occupied": 310300,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Yavapai",
+   "state": "AZ",
+   "population": 245480,
+   "median_value_owner_occupied": 425200,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Brazos",
+   "state": "TX",
+   "population": 242311,
+   "median_value_owner_occupied": 296000,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Smith",
+   "state": "TX",
+   "population": 241740,
+   "median_value_owner_occupied": 240700,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Saratoga",
+   "state": "NY",
+   "population": 238284,
+   "median_value_owner_occupied": 348600,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Lake",
+   "state": "OH",
+   "population": 232216,
+   "median_value_owner_occupied": 214100,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Linn",
+   "state": "IA",
+   "population": 230004,
+   "median_value_owner_occupied": 214300,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Jefferson",
+   "state": "MO",
+   "population": 229458,
+   "median_value_owner_occupied": 237200,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Oneida",
+   "state": "NY",
+   "population": 229124,
+   "median_value_owner_occupied": 182600,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Mahoning",
+   "state": "OH",
+   "population": 226491,
+   "median_value_owner_occupied": 154700,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Jackson",
+   "state": "OR",
+   "population": 222645,
+   "median_value_owner_occupied": 430200,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Hinds",
+   "state": "MS",
+   "population": 218533,
+   "median_value_owner_occupied": 159900,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Lackawanna",
+   "state": "PA",
+   "population": 216146,
+   "median_value_owner_occupied": 201800,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Benton",
+   "state": "WA",
+   "population": 212905,
+   "median_value_owner_occupied": 407800,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Clermont",
+   "state": "OH",
+   "population": 211181,
+   "median_value_owner_occupied": 266200,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Harrison",
+   "state": "MS",
+   "population": 210891,
+   "median_value_owner_occupied": 212200,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Niagara",
+   "state": "NY",
+   "population": 210721,
+   "median_value_owner_occupied": 189800,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Washington",
+   "state": "PA",
+   "population": 210042,
+   "median_value_owner_occupied": 228500,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Champaign",
+   "state": "IL",
+   "population": 208741,
+   "median_value_owner_occupied": 211500,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Butte",
+   "state": "CA",
+   "population": 207929,
+   "median_value_owner_occupied": 424700,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Elkhart",
+   "state": "IN",
+   "population": 207132,
+   "median_value_owner_occupied": 210400,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Charlotte",
+   "state": "FL",
+   "population": 201064,
+   "median_value_owner_occupied": 328900,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Santa Rosa",
+   "state": "FL",
+   "population": 198472,
+   "median_value_owner_occupied": 329800,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Racine",
+   "state": "WI",
+   "population": 197532,
+   "median_value_owner_occupied": 251400,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Broome",
+   "state": "NY",
+   "population": 197378,
+   "median_value_owner_occupied": 154900,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Butler",
+   "state": "PA",
+   "population": 197254,
+   "median_value_owner_occupied": 294200,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Johnson",
+   "state": "TX",
+   "population": 195597,
+   "median_value_owner_occupied": 285900,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Sangamon",
+   "state": "IL",
+   "population": 194947,
+   "median_value_owner_occupied": 176300,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Outagamie",
+   "state": "WI",
+   "population": 192826,
+   "median_value_owner_occupied": 267300,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "DeSoto",
+   "state": "MS",
+   "population": 191301,
+   "median_value_owner_occupied": 269600,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Tippecanoe",
+   "state": "IN",
+   "population": 189071,
+   "median_value_owner_occupied": 239300,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Boone",
+   "state": "MO",
+   "population": 188043,
+   "median_value_owner_occupied": 272800,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Kent",
+   "state": "DE",
+   "population": 187604,
+   "median_value_owner_occupied": 316600,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Bay",
+   "state": "FL",
+   "population": 186393,
+   "median_value_owner_occupied": 310500,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Medina",
+   "state": "OH",
+   "population": 183660,
+   "median_value_owner_occupied": 287000,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Guadalupe",
+   "state": "TX",
+   "population": 183642,
+   "median_value_owner_occupied": 304400,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Hendricks",
+   "state": "IN",
+   "population": 183344,
+   "median_value_owner_occupied": 307600,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Licking",
+   "state": "OH",
+   "population": 181837,
+   "median_value_owner_occupied": 275200,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Vanderburgh",
+   "state": "IN",
+   "population": 180117,
+   "median_value_owner_occupied": 184000,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Peoria",
+   "state": "IL",
+   "population": 179645,
+   "median_value_owner_occupied": 158500,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Porter",
+   "state": "IN",
+   "population": 174818,
+   "median_value_owner_occupied": 281500,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Midland",
+   "state": "TX",
+   "population": 174801,
+   "median_value_owner_occupied": 312700,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Scott",
+   "state": "IA",
+   "population": 174608,
+   "median_value_owner_occupied": 222000,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Aiken",
+   "state": "SC",
+   "population": 174160,
+   "median_value_owner_occupied": 218000,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Kaufman",
+   "state": "TX",
+   "population": 172604,
+   "median_value_owner_occupied": 320900,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Winnebago",
+   "state": "WI",
+   "population": 171769,
+   "median_value_owner_occupied": 225800,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "McLean",
+   "state": "IL",
+   "population": 171556,
+   "median_value_owner_occupied": 208400,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Kenton",
+   "state": "KY",
+   "population": 171288,
+   "median_value_owner_occupied": 244400,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Greene",
+   "state": "OH",
+   "population": 169688,
+   "median_value_owner_occupied": 252200,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Canadian",
+   "state": "OK",
+   "population": 168985,
+   "median_value_owner_occupied": 246200,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Yellowstone",
+   "state": "MT",
+   "population": 168957,
+   "median_value_owner_occupied": 349500,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Kenosha",
+   "state": "WI",
+   "population": 168438,
+   "median_value_owner_occupied": 265500,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Monroe",
+   "state": "PA",
+   "population": 167515,
+   "median_value_owner_occupied": 267600,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Dorchester",
+   "state": "SC",
+   "population": 167201,
+   "median_value_owner_occupied": 329300,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Beaver",
+   "state": "PA",
+   "population": 166324,
+   "median_value_owner_occupied": 190900,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Johnson",
+   "state": "IN",
+   "population": 166315,
+   "median_value_owner_occupied": 284600,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Ector",
+   "state": "TX",
+   "population": 164654,
+   "median_value_owner_occupied": 200200,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Rock",
+   "state": "WI",
+   "population": 164350,
+   "median_value_owner_occupied": 231600,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Fairfield",
+   "state": "OH",
+   "population": 163453,
+   "median_value_owner_occupied": 298800,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Portage",
+   "state": "OH",
+   "population": 161956,
+   "median_value_owner_occupied": 227000,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Schenectady",
+   "state": "NY",
+   "population": 160369,
+   "median_value_owner_occupied": 235700,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Rensselaer",
+   "state": "NY",
+   "population": 160332,
+   "median_value_owner_occupied": 258400,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Rankin",
+   "state": "MS",
+   "population": 158854,
+   "median_value_owner_occupied": 237400,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Wilson",
+   "state": "TN",
+   "population": 158805,
+   "median_value_owner_occupied": 428000,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Centre",
+   "state": "PA",
+   "population": 158576,
+   "median_value_owner_occupied": 323500,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Franklin",
+   "state": "PA",
+   "population": 157379,
+   "median_value_owner_occupied": 249800,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Johnson",
+   "state": "IA",
+   "population": 156639,
+   "median_value_owner_occupied": 308600,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Penobscot",
+   "state": "ME",
+   "population": 154710,
+   "median_value_owner_occupied": 214100,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Scott",
+   "state": "MN",
+   "population": 154557,
+   "median_value_owner_occupied": 419400,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Cumberland",
+   "state": "NJ",
+   "population": 153305,
+   "median_value_owner_occupied": 221400,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Burlington",
+   "state": "NJ",
+   "population": 467805,
+   "median_value_owner_occupied": 354000,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Manatee",
+   "state": "FL",
+   "population": 429792,
+   "median_value_owner_occupied": 391400,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Cameron",
+   "state": "TX",
+   "population": 426120,
+   "median_value_owner_occupied": 136500,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Waukesha",
+   "state": "WI",
+   "population": 411762,
+   "median_value_owner_occupied": 398200,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Orange",
+   "state": "NY",
+   "population": 406616,
+   "median_value_owner_occupied": 387900,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Mercer",
+   "state": "NJ",
+   "population": 385864,
+   "median_value_owner_occupied": 377700,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Weld",
+   "state": "CO",
+   "population": 350396,
+   "median_value_owner_occupied": 471700,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Anne Arundel",
+   "state": "MD",
+   "population": 598166,
+   "median_value_owner_occupied": 467900,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Anchorage",
+   "state": "AK",
+   "population": 288976,
+   "median_value_owner_occupied": 395900,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Hays",
+   "state": "TX",
+   "population": 268638,
+   "median_value_owner_occupied": 399800,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Sussex",
+   "state": "DE",
+   "population": 255626,
+   "median_value_owner_occupied": 382600,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Canyon",
+   "state": "ID",
+   "population": 250790,
+   "median_value_owner_occupied": 390000,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "York",
+   "state": "ME",
+   "population": 216731,
+   "median_value_owner_occupied": 395700,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Okaloosa",
+   "state": "FL",
+   "population": 216599,
+   "median_value_owner_occupied": 351200,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Trumbull",
+   "state": "OH",
+   "population": 200929,
+   "median_value_owner_occupied": 141800,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Ulster",
+   "state": "NY",
+   "population": 182601,
+   "median_value_owner_occupied": 352500,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Lower Connecticut River Valley Planning Region",
+   "state": "CT",
+   "population": 175822,
+   "median_value_owner_occupied": 379700,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Carroll",
+   "state": "MD",
+   "population": 175321,
+   "median_value_owner_occupied": 434000,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Charles",
+   "state": "MD",
+   "population": 170527,
+   "median_value_owner_occupied": 428500,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Indian River",
+   "state": "FL",
+   "population": 166936,
+   "median_value_owner_occupied": 351500,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Parker",
+   "state": "TX",
+   "population": 165168,
+   "median_value_owner_occupied": 375900,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Spotsylvania",
+   "state": "VA",
+   "population": 146603,
+   "median_value_owner_occupied": 404900,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Randall",
+   "state": "TX",
+   "population": 146070,
+   "median_value_owner_occupied": 238800,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Taylor",
+   "state": "TX",
+   "population": 145863,
+   "median_value_owner_occupied": 198600,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Jackson",
+   "state": "MS",
+   "population": 145249,
+   "median_value_owner_occupied": 193100,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Coconino",
+   "state": "AZ",
+   "population": 144508,
+   "median_value_owner_occupied": 448000,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Lebanon",
+   "state": "PA",
+   "population": 144186,
+   "median_value_owner_occupied": 242000,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Schuylkill",
+   "state": "PA",
+   "population": 143558,
+   "median_value_owner_occupied": 153000,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Grayson",
+   "state": "TX",
+   "population": 143337,
+   "median_value_owner_occupied": 248400,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Rock Island",
+   "state": "IL",
+   "population": 142757,
+   "median_value_owner_occupied": 150400,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Monroe",
+   "state": "IN",
+   "population": 140965,
+   "median_value_owner_occupied": 285200,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Warren",
+   "state": "KY",
+   "population": 140918,
+   "median_value_owner_occupied": 258000,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Boone",
+   "state": "KY",
+   "population": 139841,
+   "median_value_owner_occupied": 277300,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Marathon",
+   "state": "WI",
+   "population": 138403,
+   "median_value_owner_occupied": 219600,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Washington",
+   "state": "WI",
+   "population": 137879,
+   "median_value_owner_occupied": 344800,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Kendall",
+   "state": "IL",
+   "population": 137675,
+   "median_value_owner_occupied": 322400,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Florence",
+   "state": "SC",
+   "population": 137117,
+   "median_value_owner_occupied": 177900,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Clark",
+   "state": "OH",
+   "population": 135158,
+   "median_value_owner_occupied": 169900,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Pickens",
+   "state": "SC",
+   "population": 134629,
+   "median_value_owner_occupied": 231900,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Humboldt",
+   "state": "CA",
+   "population": 134541,
+   "median_value_owner_occupied": 446900,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Wood",
+   "state": "OH",
+   "population": 132064,
+   "median_value_owner_occupied": 227600,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Madison",
+   "state": "IN",
+   "population": 131900,
+   "median_value_owner_occupied": 161300,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  },
+  {
+   "county": "Black Hawk",
+   "state": "IA",
+   "population": 131049,
+   "median_value_owner_occupied": 188900,
+   "source": "US Census Bureau ACS 2024 5-year, tables B01003 and B25077",
+   "source_url": "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B01003,B25077&geo_ids=050|04000US<state FIPS>",
+   "retrieved_at": "2026-10-12",
+   "retrieved_by": "assistant, operator browser"
+  }
+ ]
+}
