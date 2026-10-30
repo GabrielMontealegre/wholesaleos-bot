@@ -1,5 +1,31 @@
 # Backlog
 
+2026-10-30 ROLLBACK484 DONE/VERIFIED after PR483 signed Email readiness FAILED.
+Actualmain78897742b9aabe161b2f61e44c2241f44c6f4a4e complete tree
+5b2d001e9bcfc459c26336c58541671f0a9d03bd EXACT previous verified19a/tested1d82.
+PR41060838267/job124079861751289/0/0,18m30job,sum1044.63s;
+restored MAIN41064377191/job124091836432289/0/0,18m30job,sum1049.99s.
+All578 timing rows retained,600s/file,sums NOTwall,no rerun/cancel/skip.
+Self-review6524094678; exact AUTOMATIC b0728caf selectedDetails/source/Active/
+successful. Public15 original44px/security/exactmodel4/Email16/currentassets
+PASS; all15 unsigned images inspected. SignedChrome5 GLOBALstatic1280x585
+Email shell/header/Primary/Reports/contentready,Reports44px/tabfits/panel,
+Primaryfocusreturn/nooverflow PASS. No private text/length/values/JSON/AX/
+captures/messageopen/providerbusinessactions/authtransfer;live logs notcollected.
+
+PR483 remains BLOCKED needs-architect485, cause UNKNOWN. Its PR291/0/0,
+17m49job,sum1011.73s and MAIN291/0/0,14m10job,sum799.63s plus public15 PASS
+do NOT erase the signed readiness failure:contentReadyfalse after global
+selector deadline,login0;no private probe/no unchanged failed-head retry.
+All582 failed-release timing rows/public15 images/record retained separately;
+all15 unsigned images inspected. Do not attribute cause or remerge unchanged.
+Trace docs/cycles/issue-412-opened-label-rollback.md;proof
+docs/screens/2026-10-30-pr484-rollback and2026-10-30-pr483-failure.
+Owned482proof41fe6f1 deliberately restored DOCS ONLY as6e115e3 on this proof
+branch, directly above actual rollback merge;originalsource/proof branches
+untouched. No newmain/CI/deploy or extraPR for proof. Whole412/design/native
+Deals/mailboxwriters/backlog NOTdone;455 remains6/9(67%).
+
 2026-10-30 #412/D-063B bounded native report-label consumer DONE via PR482,
 RELEASED/VERIFIED. Actual main19a44085d67c494884f10632f01e559b794d2da2,
 complete tree5b2d001e9bcfc459c26336c58541671f0a9d03bd identical testeda426683.
