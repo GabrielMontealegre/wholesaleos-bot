@@ -56,7 +56,7 @@
   if(typeof module!=='undefined'&&module.exports){module.exports={createController,SELECTOR};return;}
   const controller=createController(root),targets=new WeakMap();let scanning=false;
   function attach(){
-    document.querySelectorAll(SELECTOR).forEach(target=>{
+    document.querySelectorAll(document.documentElement.dataset.wosWorkspace==='preview'?'textarea[data-ask-query]':SELECTOR).forEach(target=>{
       if(targets.has(target))return;
       const bar=document.createElement('div');bar.className='wos-voice-tools';
       bar.innerHTML='<div><label>Voice language<select data-voice-lang aria-label="Voice language"><option value="en-US">English</option><option value="es-MX">Espa\u00f1ol</option></select></label>'+(target.readOnly?'':'<button type="button" data-voice-dictate title="Dictate on this device only; review before sending" aria-label="Dictate on this device">\uD83C\uDF99</button>')+'<button type="button" data-voice-read title="Read this draft using an on-device voice only">Read aloud</button><button type="button" data-voice-stop title="Stop dictation and read aloud">Stop</button></div><p role="status" data-voice-status></p>';

@@ -5,10 +5,13 @@ not pushed/merged/deployed. Deliberate merge of actual394+owned d9974d0 proof;
 old2553b07 retained separately. Pure current projection/private GET boundary pass;
 mixed-reference unsigned JV privacy regression failed then scoped withholding
 passed, including public/signed preservation. Initial three-size UI and expanded
-30s/pagehide lifecycle tests pass; final focused/audit/full287/PR/main/deployment
-gates still pending. Native Today/Email More lacks an Ask entry: reconcile actual
-entry/return before claiming the demo usable across the current app, not only
-classic header tests. No production private reads/writes/AI/provider/audio. Trace
+30s/pagehide lifecycle tests pass. Native Today/Email now opens the SAME dialog
+from a44px header icon, keeps More7/native Deals unchanged, and returns focus
+without replacing native content. Native3sizes+shortdesktop/auth/401/nonadmin,
+classic Ask/More/voice/components focused checks pass; expanded Email draft/source/
+search preservation and pagehide pass. Final exact-source images/audit/full288/
+PR/main/deployment gates are
+pending. No production private reads/writes/AI/provider/audio. Trace
 issue-372-read-only-demo.md. No whole372/370/412/backlog completion claim.
 
 2026-10-29 #383/D-059 Profile DONE via PR394 RELEASED/VERIFIED. Actualmain

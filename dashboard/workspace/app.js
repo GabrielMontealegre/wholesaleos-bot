@@ -5,6 +5,11 @@
   var host = document.getElementById('workspace-root');
   var screen = new URLSearchParams(root.location.search).get('view') === 'email' ? 'email' : 'today', emailScreen = null;
   var assistantSheet = null, assistantHost = null, disposeLogin = null;
+  root.WOSAskHost = {
+    actor: function () { return app.unlocked && app.currentUser && app.currentUser.role === 'admin' && app.currentUser.id; },
+    openRecord: function (ref) { var href = nav.recordHref(ref); if (this.actor() && href) root.location.assign(href); },
+    openCalendar: function () { if (this.actor()) root.location.assign(nav.navHref('calendar')); }
+  };
   document.title = 'WholesaleOS | ' + (screen === 'email' ? 'Email' : 'Today');
   var groups = [
     ['Today', [['today', 'Today', 'layout-dashboard', 'Your recorded actions and activity'], ['email', 'Email', 'mail', 'Read messages in your current Email workspace']]],
@@ -34,6 +39,7 @@
   }
 
   function clearPrivate() {
+    if (root.wosAskDemo) root.wosAskDemo.clear();
     if (disposeLogin) { disposeLogin(); disposeLogin = null; }
     generation++;
     if (assistantSheet) assistantSheet.destroy();
@@ -63,6 +69,7 @@
       c.button({ label: 'Open navigation', icon: 'menu', iconOnly: true, id: 'menu-open' }).replace('ws-button--icon', 'ws-button--icon ws-mobile-menu') +
       '<h1' + (screen === 'email' ? ' class="ws-sr-only"' : '') + '>' + (screen === 'email' ? 'Email' : 'Today') + '</h1>' +
       (screen === 'email' ? '<form class="ws-mail-search" role="search"><label class="ws-sr-only" for="mail-search">Search loaded mail</label>' + c.icon('search') + '<input id="mail-search" type="search" maxlength="300" placeholder="Search loaded mail" autocomplete="off" title="Searches the messages currently loaded; global mail, lead and buyer search is not connected"></form>' : '') + '<div class="ws-topbar-actions">' + c.button({ label: screen === 'email' ? 'Refresh email' : 'Refresh recorded work', icon: 'refresh-cw', iconOnly: true, id: 'refresh', help: 'Reload recorded work without running a batch' }) +
+      c.button({ label: 'Open Ask WholesaleOS', icon: 'message-circle', iconOnly: true, id: 'ask-open' }) +
       c.button({ label: 'Account', icon: 'users', iconOnly: true, id: 'account-open' }) +
       '</div></header><div class="ws-help" id="help"' + (screen === 'email' ? ' hidden' : '') + '></div><main class="ws-content" id="today-content" aria-busy="true">' +
       c.skeleton('Loading recorded work') + '</main></div></div>' +
@@ -109,6 +116,7 @@
     detailWidget = c.bindDialog(document.getElementById('detail'));
     document.getElementById('menu-open').addEventListener('click', menu.open);
     document.getElementById('account-open').addEventListener('click', user.open);
+    document.getElementById('ask-open').addEventListener('click', function () { root.wosAskDemo.open(); });
     document.getElementById('signout').addEventListener('click', async function () {
       clearPrivate();
       var result = await auth.logout(app);

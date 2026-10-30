@@ -13,11 +13,36 @@ Fresh390 explicitly confirms D-060 Option A. Newer372 per-deal chat belongs to
 the separate412 workspace slice and is not added here. Current main contained
 no Ask snapshot/model/demo implementation; this is not a runtime duplicate.
 No provider/key, new business writer, downstream sign-off or native Deals route.
-Current native Today/Email More navigation has no Ask destination. The reconciled
-classic header alone is NOT the full usable entry surface on current main.
-Native-to-Ask entry/return flow must be traced and implemented within D-060
-before final audit/release, without a native Deals migration, hidden snapshot
-load on ordinary dashboards or freezing parent layouts to obtain a score.
+Current native Today/Email previously had no Ask destination. Reconciliation now
+adds a 44px message-circle header command using the SAME Ask dialog/controller,
+not a forced classic route or a second data projection. A bounded native host
+exposes only admin identity and existing canonical record/Calendar navigation;
+native data, session credentials and writers are not transferred to the dialog.
+Close/Escape removes private Ask context and returns focus to the native opener
+without remounting Today/Email. Native clearPrivate also clears Ask. More keeps
+its existing seven destinations; native Deals remains unmigrated. Native voice
+attaches ONLY to the Ask question, not existing Email composers. No dashboard
+snapshot fetch occurs before explicit opening; no parent layout is frozen.
+
+Native Today/Email entry/close/focus/geometry/no-load-fetch/401-late-response/
+unsigned/nonadmin and canonical Calendar/buyer route regression passes at
+1366/400/412 and short1038x503. Classic Ask (including its actual30s timeout),
+existing More navigation, local voice UI and component UI also pass sequentially.
+Additional native Email unsent-draft/source/search and pagehide checks now pass.
+The initial expanded fixture searched AFTER opening a reply; existing Email
+search intentionally closes that pane, so its post-Ask draft locator timed out.
+The corrected fixture searches BEFORE opening/replying and asserts the draft
+exists before Ask as well as after. No Email implementation/assertion was changed.
+Final exact-source images and
+qualified before/after FCP/Lighthouse gates remain PENDING, not inherited.
+The first restricted Chromium launch stopped before browser creation; escalated
+hermetic launch passed. This is not a product failure or an audit result.
+One manual patch initially failed matching an earlier entry-tag line after a
+later hunk; it applied no edits, was reordered, and then applied successfully.
+Current candidate tags are nativeApp15, Askdemo3, voice4, sharedUIkit3 and
+components7. Profile2/template2 and nativeCSS15/Email15/navigation3 are unchanged.
+Native actor locks through the actual shared fetch guard on401; the regression
+also verifies a late Ask response cannot reopen context or read as a locked actor.
 
 The new private GET boundary applies no-store/admin before generic parsers,
 rejects bodies and non-GET methods without reading the store, and returns only

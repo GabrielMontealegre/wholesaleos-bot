@@ -2,7 +2,7 @@
 (function(root){
   let data=null,response=null,question='',busy=false,message='',sequence=0,controller=null;
   const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  const actor=()=>root.APP?.unlocked&&root.APP?.currentUser?.role==='admin'&&root.APP.currentUser.id;
+  const actor=()=>root.WOSAskHost?root.WOSAskHost.actor():root.APP?.unlocked&&root.APP?.currentUser?.role==='admin'&&root.APP.currentUser.id;
   const icon=name=>root.WOSComponents.icon(name);
   const money=v=>typeof v==='number'&&Number.isFinite(v)?new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',maximumFractionDigits:0}).format(v):'Not recorded';
   const range=v=>v?money(v.low)+' to '+money(v.high):'Not established';
@@ -33,23 +33,25 @@
     try{const r=await fetch('/api/dashboard/ask-workspace',{credentials:'include',cache:'no-store',signal:pending.signal}),v=await r.json();if(ticket!==sequence||actor()!==identity)return;if(!r.ok||v.source_kind!=='derived_workflow'||v.read_only!==true||v.feed_incomplete!==true||!Array.isArray(v.records)||!Array.isArray(v.people)||!Array.isArray(v.actions)||!Array.isArray(v.events)||!Array.isArray(v.conversations)||!v.coverage)throw Error();data=v;message='Recorded snapshot loaded. Nothing changed.';}
     catch{if(ticket!==sequence||actor()!==identity)return;message='Snapshot unavailable. Check your dashboard login, then reload.';}finally{clearTimeout(timer);if(controller===pending)controller=null;if(ticket===sequence){busy=false;paint();}}
   }
-  function open(){if(!actor())return;const existing=document.getElementById('wos-ask-panel');if(existing){existing.focus();return;}const dialog=document.createElement('dialog');dialog.id='wos-ask-panel';dialog.className='wos-kit wos-ask-panel';document.body.appendChild(dialog);paint();dialog.addEventListener('close',()=>clear());dialog.showModal();load();}
+  function open(){if(!actor())return;const existing=document.getElementById('wos-ask-panel');if(existing){existing.focus();return;}const opener=document.activeElement,dialog=document.createElement('dialog');dialog.id='wos-ask-panel';dialog.className='wos-kit wos-ask-panel';document.body.appendChild(dialog);paint();dialog.addEventListener('close',()=>{clear();if(actor()&&opener?.isConnected)opener.focus();});dialog.showModal();load();}
   function ask(q){question=q;response=root.wosAskModel.answer(q,data);paint();}
-  function openRecord(kind,id){if(!actor()||!data)return;const rows=data.records.concat(data.people).filter(r=>r.kind===kind&&r.id===id);if(rows.length!==1)return;clear();if(kind==='deal')root.openReviewedDeal(id);else root.openBuyerFind(id);}
+  function openRecord(kind,id){if(!actor()||!data)return;const rows=data.records.concat(data.people).filter(r=>r.kind===kind&&r.id===id);if(rows.length!==1)return;const ref=rows[0].ref;clear();if(root.WOSAskHost)root.WOSAskHost.openRecord(ref);else if(kind==='deal')root.openReviewedDeal(id);else root.openBuyerFind(id);}
+  function openCalendar(){clear();if(root.WOSAskHost)root.WOSAskHost.openCalendar();else root.navigate('calendar',null);}
   const bubble=document.createElement('button');bubble.id='wos-ask-open';bubble.type='button';bubble.title='Ask about recorded deals, buyers and work';bubble.setAttribute('aria-label','Open Ask WholesaleOS');bubble.innerHTML=icon('message-circle');bubble.hidden=!actor();document.querySelector('.topbar')?.appendChild(bubble);
   document.addEventListener('click',e=>{
     if(e.target.closest('#wos-ask-open'))open();
     if(e.target.closest('[data-ask-close]'))document.getElementById('wos-ask-panel')?.close();
     if(e.target.closest('[data-ask-refresh]')&&!busy)load();
     const q=e.target.closest('[data-ask-question]');if(q&&data)ask(q.dataset.askQuestion);
-    const item=e.target.closest('[data-ask-item]');if(item&&response){const row=response.items[Number(item.dataset.askItem)];if(row?.kind==='calendar'||row?.kind==='conversation'){clear();root.navigate('calendar',null);}else if(row){const records=data.records.concat(data.people).filter(r=>r.kind===row.kind&&r.id===row.id);if(records.length===1){response={text:'Recorded dashboard context; no action taken.',items:[],record:records[0]};paint();}else{message='This item is outside the uniquely loaded record subset. Open Today for its canonical action.';paint();}}}
+    const item=e.target.closest('[data-ask-item]');if(item&&response){const row=response.items[Number(item.dataset.askItem)];if(row?.kind==='calendar'||row?.kind==='conversation'){openCalendar();}else if(row){const records=data.records.concat(data.people).filter(r=>r.kind===row.kind&&r.id===row.id);if(records.length===1){response={text:'Recorded dashboard context; no action taken.',items:[],record:records[0]};paint();}else{message='This item is outside the uniquely loaded record subset. Open Today for its canonical action.';paint();}}}
     const record=e.target.closest('[data-ask-record]');if(record)openRecord(record.dataset.askKind,record.dataset.askRecord);
-    if(e.target.closest('[data-ask-calendar]')){clear();root.navigate('calendar',null);}
+    if(e.target.closest('[data-ask-calendar]'))openCalendar();
   });
   document.addEventListener('submit',e=>{if(!e.target.matches('[data-ask-form]'))return;e.preventDefault();if(data&&actor())ask(e.target.querySelector('[data-ask-query]').value);});
   const signout=root.signOutDashboard;if(signout)root.signOutDashboard=function(){clear();bubble.hidden=true;return signout.apply(this,arguments);};
   const login=root.showDashboardLogin;if(login)root.showDashboardLogin=function(){clear();bubble.hidden=true;return login.apply(this,arguments);};
   root.addEventListener('wos:session-ended',()=>{clear();bubble.hidden=true;});
   root.addEventListener('pagehide',clear);
+  root.wosAskDemo={open,clear};
   new MutationObserver(()=>{const allowed=!!actor();if(bubble.hidden===allowed)bubble.hidden=!allowed;if(!allowed&&document.getElementById('wos-ask-panel'))clear();}).observe(document.body,{attributes:true,attributeFilter:['style'],childList:true,subtree:true});
 })(window);
