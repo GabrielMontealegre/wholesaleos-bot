@@ -1,5 +1,21 @@
 # Backlog
 
+2026-10-30 #412/D-063B native report-label consumer LOCAL CANDIDATE, not released.
+Fresh origin/mainc972 and architect priority/answers checked;471/472/478 still
+unanswered. Current producer453 emits per-message receipts, but native Reports
+read an unproduced raw labels array. Scoped correction accepts exact IMAP name
+receipts only, rejects raw/opaque REST/forged/conflicting/mixed evidence, never
+infers person roles/counts or adds requests/writers. New pure regression FIRST
+failed0!=1 then passed. Initial numerically green audit found selected phone tab
+clipping; new geometry assertion FIRST failed then Email-only tab selection
+scroll repair passed. Final auditeda4a175b FCP160.6/116.8/131.8ms;LH13.5 perf99/96,
+access100/100/actualReports1/tabfits/nooverflow. Three final audit images+15native
+UI views inspected; baseline and first visual failure retained, no score reuse.
+Trace issue-412-report-label-receipts.md; proof2026-10-30-report-label-candidate.
+Full289PR/main/current-head review/exactauto/live gates PENDING. No production
+private reads/captures/values/writes. Owned397proof35ced preserved deliberately.
+No nativeDeals/design sign-off or whole412/455/backlog completion;455 stays6/9.
+
 2026-10-30 #372/D-060 BOUNDED read-only demo DONE via PR397 RELEASED/VERIFIED.
 Actualmain c972d44025dc24911fb472d8448bfe9388df973e complete tree
 f2e3ad9dbe86ed14d9cbeab1dd9c2766e3db6ea0 identical testedcca28bd.

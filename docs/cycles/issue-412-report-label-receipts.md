@@ -39,6 +39,14 @@ origin/main before this bounded branch. No unrelated source was bundled.
 
 ## Tests And Evidence
 
+Final a4a175b exact changed-source audit PASS: FCP160.6/116.8/131.8ms at true
+1366/400/412, Lighthouse13.5 performance99/96/accessibility100/100, null runtime
+error/empty audit errors/no overflow. Actual Reports1 and selectedTabFits true
+during required Accessibility gathering, official implementation unchanged.
+Three final audit images and15 final native UI views inspected. Full289 PR/main,
+current-head review, automatic exact-source deploy and approved live gates remain
+PENDING. Proof: docs/screens/2026-10-30-report-label-candidate.
+
 New pure regression FIRST failed0!=1 for an actual-shaped provider receipt.
 After the scoped fix it passes exact report positives and raw/forged/opaque REST/
 wrong-scope/wrong-origin/malformed/accessor/conflicting-copy/mixed-thread negatives.
