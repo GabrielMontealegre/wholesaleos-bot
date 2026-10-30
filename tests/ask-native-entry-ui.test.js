@@ -50,6 +50,9 @@ const {view}=require('./ask-workspace.test');
    }
    const url=page.url();await opener.click();await loaded();assert.equal(reads,before+1);
    assert.equal(await page.locator('#workspace-root #wos-ask-panel').count(),0,'Ask is outside native content');
+   const initialBounds=await page.locator('#wos-ask-panel').boundingBox();
+   await page.locator('[data-ask-query]').fill(view.records[0].ref);await page.locator('[data-ask-form] button[type=submit]').click();await page.locator('.ask-context').waitFor();
+   assert.deepEqual(await page.locator('#wos-ask-panel').boundingBox(),initialBounds,'Ask frame stays stable when recorded context appears');
    await page.locator('[data-ask-query]').fill('SYNTHETIC local question');await page.locator('#wos-ask-panel .wos-voice-tools').waitFor();
    await page.keyboard.press('Escape');await page.locator('#wos-ask-panel').waitFor({state:'detached'});
    assert.equal(page.url(),url);assert(await opener.evaluate(x=>x===document.activeElement));

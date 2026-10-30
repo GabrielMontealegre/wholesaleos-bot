@@ -27,14 +27,14 @@ html[data-wos-scheme=light] .wos-settings-form .wos-control-icon{filter:none}
 #wos-ask-open{display:inline-flex;align-items:center;justify-content:center;flex:0 0 44px;width:44px;min-height:44px;border:1px solid var(--line,#394449);border-radius:8px;background:var(--card-2,#20272e);color:var(--link,#81bcff);cursor:pointer}
 #wos-ask-open[hidden]{display:none}
 @media(max-width:900px){body[data-wos-design="marketplace"] #app .topbar:has(#wos-ask-open:not([hidden])){grid-template-columns:44px minmax(0,1fr) repeat(4,44px)}}
-.wos-ask-panel{position:fixed;inset:auto 16px 16px auto;margin:0;box-sizing:border-box;width:440px;max-width:calc(100vw - 32px);max-height:calc(100dvh - 32px);padding:0;border:1px solid var(--line,#394449);border-radius:8px;background:var(--card,#14181e);color:var(--ink,#ecf1f6);font:14px Arial}
-.wos-ask-panel:has(.ask-has-context){width:940px}
+.wos-ask-panel{position:fixed;inset:16px 16px auto auto;margin:0;box-sizing:border-box;width:940px;max-width:calc(100vw - 32px);height:min(736px,calc(100dvh - 32px));max-height:calc(100dvh - 32px);padding:0;border:1px solid var(--line,#394449);border-radius:8px;background:var(--card,#14181e);color:var(--ink,#ecf1f6);font:14px Arial}
+.wos-ask-panel[open]{display:flex;flex-direction:column}
 .wos-ask-panel::backdrop{background:rgb(0 0 0 / 45%)}
-.wos-ask-panel header{display:flex;align-items:start;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--line,#394449)}
+.wos-ask-panel header{display:flex;flex-shrink:0;align-items:start;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--line,#394449)}
 .wos-ask-panel h2{font-size:18px;margin:0 0 6px}.wos-ask-panel h3{font-size:17px;margin-top:0}.wos-ask-panel h4{font-size:14px;margin-bottom:6px}
 .wos-ask-panel p{line-height:1.45;margin:8px 0;overflow-wrap:anywhere}.wos-ask-panel small{display:block;color:var(--muted,#aab7c2);line-height:1.4;overflow-wrap:anywhere}
-.ask-body{display:grid;grid-template-columns:minmax(0,1fr);max-height:calc(100dvh - 140px);overflow:auto;min-width:0}.ask-has-context{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
-.ask-chat,.ask-context{padding:12px 16px;min-width:0}.ask-context{border-left:1px solid var(--line,#394449)}
+.ask-body{display:grid;grid-template-columns:minmax(0,1fr);flex:1;min-height:0;overflow:auto;min-width:0;align-content:start}.ask-has-context{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+.ask-chat,.ask-context{padding:12px 16px;min-width:0}.ask-chat{box-sizing:border-box;width:100%;max-width:469px}.ask-context{border-left:1px solid var(--line,#394449)}
 .wos-ask-panel button,.wos-ask-panel select{min-height:44px;min-width:44px;border:1px solid var(--line,#394449);border-radius:6px;padding:8px 12px;background:var(--card-2,#20272e);color:var(--primary,#81bcff);font:inherit;white-space:normal;overflow-wrap:anywhere;cursor:pointer;max-width:100%}
 .wos-ask-panel button:disabled{opacity:.5;cursor:default}.wos-ask-panel nav,.ask-answer{display:grid;gap:8px;margin:12px 0}.ask-answer button{text-align:left}
 .wos-ask-panel label{display:grid;gap:6px}.wos-ask-panel textarea{box-sizing:border-box;width:100%;min-height:72px;resize:vertical;background:var(--card-2,#20272e);color:inherit;border:1px solid var(--line,#394449);border-radius:6px;padding:10px;font:inherit}
@@ -42,4 +42,4 @@ html[data-wos-scheme=light] .wos-settings-form .wos-control-icon{filter:none}
 .wos-ask-panel .ws-icon,#wos-ask-open .ws-icon{width:20px;height:20px;filter:invert(1)}
 html[data-wos-scheme=light] :is(.wos-ask-panel,#wos-ask-open) .ws-icon{filter:none}
 .ask-context dl{display:grid;grid-template-columns:1fr 1fr;gap:8px}.ask-context dd{margin:0;overflow-wrap:anywhere}.ask-stages{padding-left:20px;color:var(--muted,#aab7c2);font-size:12px}.ask-recorded{color:var(--good,#55d3a4)}
-@media(max-width:650px){.ask-has-context{grid-template-columns:minmax(0,1fr)}.ask-context{border-left:0;border-top:1px solid var(--line,#394449)}.wos-ask-panel{inset:auto 8px 8px auto;max-width:calc(100vw - 16px);max-height:calc(100dvh - 16px)}.ask-context dl{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:650px){.ask-has-context{grid-template-columns:minmax(0,1fr)}.ask-context{border-left:0;border-top:1px solid var(--line,#394449)}.wos-ask-panel{inset:8px 8px auto auto;max-width:calc(100vw - 16px);height:calc(100dvh - 16px);max-height:calc(100dvh - 16px)}.ask-context dl{grid-template-columns:minmax(0,1fr)}}

@@ -2,6 +2,27 @@
 
 ## 2026-10-30 Reconciliation In Progress
 
+Frozen4a0192a audit genuinely FAILED the90 performance gate: native Today85/82,
+native Email85/82, classic77/90 (desktop/mobile), accessibility100 throughout.
+Baseline99/96,99/96,94/100; all measured FCP under2s, actual expanded Ask context
+asserted DURING required Accessibility gathering, runtime/audit errors absent.
+No threshold waiver, unchanged rerun, route substitution or parent freeze.
+Bounded layout-only probe attributed native extraCLS .2348desktop/.2695phone
+to the dialog itself changing440->940px and growing upward. Classic also showed
+dialog growth plus underlying Today tools/public-deal visibility changes; no
+claim that every classic shift has the same cause. A new frame-stability test
+FIRST failed with the actual changed bounds, then scoped Ask-only stable frame
+CSS passed native+classic UI. Current UIkit4; parent Today/Email/Calendar behavior
+and nativeCSS15 remain unchanged. A fresh candidate audit is required.
+
+First audit's numeric evidence is retained, but its15 masked after screenshots
+were completely black: whole-app screenshot-mask rectangles covered the dialog
+despite it being outside those roots. They are NOT positive visual proof. All24
+initial images were inspected (nine baseline headers and fifteen black images).
+Capture is corrected to screenshot-only visibility masking of underlying roots
+before disk, with the dialog-outside-roots assertion retained; this happens AFTER
+metrics, not during Lighthouse or application behavior. No private/live capture.
+
 Existing PR397 remote5678942 is unchanged/unmerged/undeployed. Its local branch
 deliberately merges current edbd255 plus owned394 proof d9974d0; old owned
 2553b07 is retained at checkpoint/2026-10-19-demo-proof, not bundled with its
