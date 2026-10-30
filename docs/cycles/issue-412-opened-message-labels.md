@@ -47,8 +47,25 @@ external, not final proof. Final15 synthetic UI images inspected via contact.
 
 Existing mail-layout-model, mail-layout-provider-labels, mailbox-provider-labels,
 mailbox-attachments and five-size workspace-mailbox-chrome pass unchanged.
-Exact-source before/after audit, full PR/main gates, review and automatic live
-verification remain pending. No private production reads/captures/values used.
+Exact-source870f4e0 before/after audit PASS: FCP66.8/55.5/73.6ms at true
+1366/400/412; Lighthouse13.5 performance99/96/accessibility100/100, null runtime
+error/empty audit errors/no overflow. Actual opened body1/expanded label
+section1/badges3/reading height645/740/740 observed DURING the required official
+Accessibility gatherer, delegating its implementation unchanged. No app/layout/
+storage/category/threshold suppression. Actualmain19a baseline recorded
+298.8/150.2/56.7ms,98/96 performance,100 accessibility; not substituted for the
+candidate or rerun. All six audit images and15 final UI views inspected.
+Audit filenames retain the earlier helper's reports basename; the measured
+scope is the opened Primary message/labels, not the Reports category.
+Proof: docs/screens/2026-10-30-opened-message-labels-candidate.
+Full PR/main gates, review and automatic live verification remain pending.
+No private production reads/captures/values used.
+
+External strict public --opened-message-labels guard parses the actual native
+entry and requires one executable model5/Email17 script plus exact normalized
+asset bytes. Existing report/Ask/Profile/currentasset/security/44px guards
+remain; new versions apply only with the new flag. Offline exact/EOL positives
+and nine stale/disabled/duplicate/source negatives pass without network.
 
 PR482 docs-only release proof41fe6f1 deliberately preserved as this branch's
 parent, directly above actual main19a. Tested482 source branch untouched.

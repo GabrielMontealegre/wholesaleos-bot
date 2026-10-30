@@ -9,8 +9,11 @@ conflicting evidence withheld. No role/thread-wide label/total inference,
 requests/providers/writers/storage/API/CSS/shared-component change. New pure
 and five-size UI tests plus existing focused regressions PASS; first missing
 feature assertion and two new test-scaffolding corrections honestly recorded.
-Final15 synthetic UI images inspected; exact-source audit/full PR+MAIN/review/
-automatic deployment/live proof PENDING. Trace issue-412-opened-message-labels.md.
+Final15 synthetic UI images+six before/after audit images inspected. Exact870f4e0
+audit PASS:FCP66.8/55.5/73.6ms,LH13.5perf99/96/access100/100,actual opened body/
+expanded labels/nooverflow measured. Baseline retained,no rerun/substitution.
+Full291 PR+MAIN/review/automatic deployment/live proof PENDING.
+Trace issue-412-opened-message-labels.md.
 Owned482 docs proof41fe6f1 preserved deliberately; no source477/Claude bundle,
 no production private content/values/JSON/AX/captures. Whole412/design/native
 Deals/backlog NOTdone,455 remains6/9(67%).
