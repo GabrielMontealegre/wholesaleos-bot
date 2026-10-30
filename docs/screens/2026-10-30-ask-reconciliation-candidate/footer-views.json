@@ -1,0 +1,208 @@
+{
+  "synthetic_only": true,
+  "baseline": "edbd25545ee5518d37aa50469a364b0ec78a9a92",
+  "source_sha": "e8cdddef2e9678ca4a3231c69fb635b012b9a838",
+  "sizes": [
+    {
+      "mode": "after",
+      "surface": "today",
+      "width": 1366,
+      "fcp": 90.60000000149012,
+      "actual": {
+        "native": true,
+        "screen": "today",
+        "classicPage": null,
+        "ready": true,
+        "dialog": true,
+        "context": 1,
+        "overflow": false
+      },
+      "errors": [],
+      "recordButton": {
+        "x": 897,
+        "y": 695.71875,
+        "width": 161.421875,
+        "height": 44
+      }
+    },
+    {
+      "mode": "after",
+      "surface": "today",
+      "width": 400,
+      "fcp": 63.899999998509884,
+      "actual": {
+        "native": true,
+        "screen": "today",
+        "classicPage": null,
+        "ready": true,
+        "dialog": true,
+        "context": 1,
+        "overflow": false
+      },
+      "errors": [],
+      "recordButton": {
+        "x": 25,
+        "y": 850.734375,
+        "width": 161.421875,
+        "height": 44
+      }
+    },
+    {
+      "mode": "after",
+      "surface": "today",
+      "width": 412,
+      "fcp": 65.60000000149012,
+      "actual": {
+        "native": true,
+        "screen": "today",
+        "classicPage": null,
+        "ready": true,
+        "dialog": true,
+        "context": 1,
+        "overflow": false
+      },
+      "errors": [],
+      "recordButton": {
+        "x": 25,
+        "y": 850.4375,
+        "width": 161.421875,
+        "height": 44
+      }
+    },
+    {
+      "mode": "after",
+      "surface": "email",
+      "width": 1366,
+      "fcp": 56.19999999552965,
+      "actual": {
+        "native": true,
+        "screen": "email",
+        "classicPage": null,
+        "ready": true,
+        "dialog": true,
+        "context": 1,
+        "overflow": false
+      },
+      "errors": [],
+      "recordButton": {
+        "x": 897,
+        "y": 695.71875,
+        "width": 161.421875,
+        "height": 44
+      }
+    },
+    {
+      "mode": "after",
+      "surface": "email",
+      "width": 400,
+      "fcp": 81.10000000149012,
+      "actual": {
+        "native": true,
+        "screen": "email",
+        "classicPage": null,
+        "ready": true,
+        "dialog": true,
+        "context": 1,
+        "overflow": false
+      },
+      "errors": [],
+      "recordButton": {
+        "x": 25,
+        "y": 850.734375,
+        "width": 161.421875,
+        "height": 44
+      }
+    },
+    {
+      "mode": "after",
+      "surface": "email",
+      "width": 412,
+      "fcp": 51.5,
+      "actual": {
+        "native": true,
+        "screen": "email",
+        "classicPage": null,
+        "ready": true,
+        "dialog": true,
+        "context": 1,
+        "overflow": false
+      },
+      "errors": [],
+      "recordButton": {
+        "x": 25,
+        "y": 850.4375,
+        "width": 161.421875,
+        "height": 44
+      }
+    },
+    {
+      "mode": "after",
+      "surface": "classic",
+      "width": 1366,
+      "fcp": 106.20000000298023,
+      "actual": {
+        "native": false,
+        "screen": "classic",
+        "classicPage": "dashboard",
+        "ready": true,
+        "dialog": true,
+        "context": 1,
+        "overflow": false
+      },
+      "errors": [],
+      "recordButton": {
+        "x": 897,
+        "y": 695.109375,
+        "width": 161.421875,
+        "height": 44
+      }
+    },
+    {
+      "mode": "after",
+      "surface": "classic",
+      "width": 400,
+      "fcp": 86.70000000298023,
+      "actual": {
+        "native": false,
+        "screen": "classic",
+        "classicPage": "dashboard",
+        "ready": true,
+        "dialog": true,
+        "context": 1,
+        "overflow": false
+      },
+      "errors": [],
+      "recordButton": {
+        "x": 25,
+        "y": 850.75,
+        "width": 161.421875,
+        "height": 44
+      }
+    },
+    {
+      "mode": "after",
+      "surface": "classic",
+      "width": 412,
+      "fcp": 98.5,
+      "actual": {
+        "native": false,
+        "screen": "classic",
+        "classicPage": "dashboard",
+        "ready": true,
+        "dialog": true,
+        "context": 1,
+        "overflow": false
+      },
+      "errors": [],
+      "recordButton": {
+        "x": 25,
+        "y": 850.453125,
+        "width": 161.421875,
+        "height": 44
+      }
+    }
+  ],
+  "lighthouse": [],
+  "notes": "Unmodified parent screens; baseline has no Ask implementation. Candidate driver clicks actual header then asks a synthetic reference using the existing form. Required official Accessibility gatherer delegates unchanged and captures measurement-phase actual scope. No storage/app-state freeze or category suppression. Screenshots mask underlying application before disk; numeric-only Lighthouse outputs.",
+  "visual_supplement_only": true
+}

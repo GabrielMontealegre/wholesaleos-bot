@@ -13,7 +13,7 @@ search preservation and pagehide pass. Exact6ccb9f9 auditPASS Today98/96,
 Email99/96,classic93/100 performance/access100; all true3sizeFCP<2s, measured
 actual context, no overflow/runtime/auditerrors. Prior85/82/77 and87 failures,
 frame/contrast/owned-close fixes and invalid black images are honestly retained.
-Final15 images+baseline9 inspected; footer supplement and full288PR/main/
+Final15 images+baseline9+footer9 inspected; full288PR/main/
 deployment gates pending. No production private reads/writes/AI/provider/audio. Trace
 issue-372-read-only-demo.md. No whole372/370/412/backlog completion claim.
 

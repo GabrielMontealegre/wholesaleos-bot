@@ -13,7 +13,11 @@ No causality claim that owned-close repair explains every earlier87 timing.
 Native entry/return/draft/source/search/auth/pagehide/frame, classic readable
 headings/owned LucideX/30s timeout, More/voice/components and nine surrounding
 focused files pass. Fresh full288 PR/main and release gates remain PENDING.
-The action-footer visual supplement is pending; no unchanged audit rerun.
+Nine action-footer views now PASS44px/in-viewport after ordinary scrolling and
+were all inspected. First invocation correctly stopped before capture on
+untracked generated proof; after docs-only e8cddde commit, runtime/test/dependency
+identity to6ccb9f9 was verified and the clean-source supplement passed.
+No unchanged performance rerun; separate footer-views.json retains actual scope.
 
 Final b3a8a2a after audit FAILED classic-phone performance87 (desktop93), while
 native Today/Email99/96 and all access100 passed. Phone TBT191ms,CLS.209613,

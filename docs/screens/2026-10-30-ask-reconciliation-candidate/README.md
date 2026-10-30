@@ -31,7 +31,13 @@ proof. The dialog is asserted outside the underlying app roots. Underlying roots
 are hidden ONLY by screenshot-only style before disk, after measurements; that
 style is not present during Lighthouse or application interactions. No real
 Profile/mail/body/credential data or private live browser was used.
-Separate action-footer views are pending; no unchanged performance rerun needed.
+Nine supplementary action-footer views were also inspected. Their record action
+is44px and inside each viewport after normal scrolling. `footer-views.json`
+records only that visual supplement, not a performance rerun. Its docs-only
+e8cddde source is runtime/tests/dependencies-identical to audited6ccb9f9.
+The first footer invocation stopped before capture because the newly generated
+proof directory was untracked; proof was committed, the unchanged runtime was
+verified, and footer capture then passed. The clean-source guard was not waived.
 
 ## Retained History
 
