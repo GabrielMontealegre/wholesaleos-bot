@@ -1,5 +1,12 @@
 # Decisions
 
+ASSUMED: D-063B next bounded label presentation uses only opened-message IMAP
+name receipts agreeing with metadata and all loaded copies. Collapsed disclosure
+reuses existing badges/spacing; no thread-wide labels, REST mapping, roles,
+totals, extra requests or writers. Preserve482 docs-only release proof41fe6f1
+before branching; owner design/native Deals remain gated. --AGENTS2/3/5,
+approved439 phaseB and detailed412 message-label contract--2026-10-30.
+
 ASSUMED: D-063B next bounded native consumer is existing WOS reports filtering
 from453 per-message IMAP name receipts, not raw labels or guessed REST custom
 names. Require complete valid receipts on every thread member and consistent

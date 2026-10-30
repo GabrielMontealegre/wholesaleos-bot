@@ -64,7 +64,19 @@
       copied.push(entry.value);
     }
     if (new Set(copied).size !== copied.length) return null;
-    return { key: JSON.stringify(copied.sort()), report: copied.includes('WOS/Reports') || copied.includes('WOS Action') };
+    return { key: JSON.stringify(copied.sort()), names: copied, report: copied.includes('WOS/Reports') || copied.includes('WOS Action') };
+  }
+  function openedLabels(metadata, body, messages, options) {
+    if (!sameMessage(metadata, body, options) || !Array.isArray(messages) || messages.length > 50 ||
+        Array.from(messages).some(function (row) { return !row; })) return null;
+    var receipt = labelReceipt(metadata), opened = labelReceipt(body);
+    if (!receipt || !opened || receipt.key !== opened.key) return null;
+    var copies = messages.filter(function (row) { return row.id === metadata.id; });
+    if (!copies.length || copies.some(function (row) {
+      var copy = labelReceipt(row);
+      return identity(row) !== identity(metadata) || !copy || copy.key !== receipt.key;
+    })) return null;
+    return opened.names.slice();
   }
   function category(thread, messages) {
     if (thread.category === 'alerts') return 'alerts';
@@ -111,5 +123,5 @@
       counts_scope: 'loaded_threads', folder_total: null, can_load_older: false,
       unavailable: source.unavailable, duplicate_count: source.duplicate_count, source_kind: 'derived_workflow' };
   }
-  return { project: project, openedSnippet: openedSnippet, attachmentManifest: attachmentManifest };
+  return { project: project, openedSnippet: openedSnippet, attachmentManifest: attachmentManifest, openedLabels: openedLabels };
 });

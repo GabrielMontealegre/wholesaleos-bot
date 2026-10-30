@@ -60,6 +60,8 @@
         var header = '<strong>' + c.escape(message.from || 'Sender not recorded') + '</strong><time>' + c.escape(time(message.date)) + '</time>';
         var content = '<p class="ws-mail-body">' + c.escape(message.body || '(No readable text)') + '</p>';
         var metadata = chosen().messages.find(function (row) { return row.id === message.id; });
+        var labels = layout.openedLabels(metadata, message, state.messages, { now: now() });
+        if (labels && labels.length) content += '<details class="ws-mail-earlier" data-message-labels><summary>Message labels' + c.icon('chevron-down') + '</summary><p aria-label="Provider labels on this message">' + labels.map(function (name) { return c.badge(name, 'neutral'); }).join(' ') + '</p></details>';
         var attachments = layout.attachmentManifest(metadata, message, { now: now() });
         if (attachments && attachments.length) content += '<section class="ws-mail-attachments" aria-label="Message attachments"><h3>Attachments</h3><ul>' + attachments.map(function (part) {
           return '<li>' + c.badge(part.filename || 'Name not recorded', 'neutral') + '<p class="ws-muted">' + c.escape([
@@ -216,7 +218,7 @@
       var items = visible(), index = items.findIndex(function (row) { return row.key === state.selected; });
       if (event.key === 'j' || event.key === 'k') { var next = index < 0 ? 0 : Math.max(0, Math.min(items.length - 1, index + (event.key === 'j' ? 1 : -1))); if (items[next]) { event.preventDefault(); open(items[next].key); } }
       else if (event.key === 'r' && host.querySelector('#mail-reply') && !host.querySelector('#mail-reply').disabled) { event.preventDefault(); host.querySelector('#mail-reply').click(); }
-      else if (event.key === 'e') { event.preventDefault(); var earlier = host.querySelectorAll('.ws-mail-earlier'); earlier.forEach(function (item) { item.open = !item.open; }); }
+      else if (event.key === 'e') { event.preventDefault(); var earlier = host.querySelectorAll('.ws-mail-earlier:not([data-message-labels])'); earlier.forEach(function (item) { item.open = !item.open; }); }
     }
     function beforeUnload(event) { remember(); if (Array.from(drafts.values()).some(function (draft) { return draft.body.trim(); })) { event.preventDefault(); event.returnValue = ''; } }
     function destroy() { clearSlowBody(); disposed = true; sequence++; folderSequence++; metadataBusy = false; if (replyBinding) replyBinding.destroy(); drafts.clear(); outcomes.clear(); selectedRows.clear(); openedSnippets.clear(); state.messages = []; state.threads = []; state.body = []; state.query = ''; state.role = ''; host.classList.remove('ws-content--mail'); document.removeEventListener('keydown', keydown); root.removeEventListener('beforeunload', beforeUnload); host.replaceChildren(); }
