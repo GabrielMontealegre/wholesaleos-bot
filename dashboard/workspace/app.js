@@ -69,7 +69,7 @@
       c.button({ label: 'Open navigation', icon: 'menu', iconOnly: true, id: 'menu-open' }).replace('ws-button--icon', 'ws-button--icon ws-mobile-menu') +
       '<h1' + (screen === 'email' ? ' class="ws-sr-only"' : '') + '>' + (screen === 'email' ? 'Email' : 'Today') + '</h1>' +
       (screen === 'email' ? '<form class="ws-mail-search" role="search"><label class="ws-sr-only" for="mail-search">Search loaded mail</label>' + c.icon('search') + '<input id="mail-search" type="search" maxlength="300" placeholder="Search loaded mail" autocomplete="off" title="Searches the messages currently loaded; global mail, lead and buyer search is not connected"></form>' : '') + '<div class="ws-topbar-actions">' + c.button({ label: screen === 'email' ? 'Refresh email' : 'Refresh recorded work', icon: 'refresh-cw', iconOnly: true, id: 'refresh', help: 'Reload recorded work without running a batch' }) +
-      c.button({ label: 'Open Ask WholesaleOS', icon: 'message-circle', iconOnly: true, id: 'ask-open' }) +
+      c.button({ label: 'Open Ask WholesaleOS', icon: 'message-circle', iconOnly: true, id: 'ask-open', help: 'Ask about recorded deals, buyers and work' }) +
       c.button({ label: 'Account', icon: 'users', iconOnly: true, id: 'account-open' }) +
       '</div></header><div class="ws-help" id="help"' + (screen === 'email' ? ' hidden' : '') + '></div><main class="ws-content" id="today-content" aria-busy="true">' +
       c.skeleton('Loading recorded work') + '</main></div></div>' +

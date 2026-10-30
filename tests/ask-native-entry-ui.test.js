@@ -34,6 +34,8 @@ const {view}=require('./ask-workspace.test');
   for(const size of [{width:1366,height:768},{width:400,height:915},{width:412,height:915},{width:1038,height:503}])for(const screen of ['today','email']){
    await page.setViewportSize(size);const before=reads;await page.goto(base+'/app?view='+screen);
    const opener=page.getByRole('button',{name:'Open Ask WholesaleOS',exact:true});await opener.waitFor();await page.waitForLoadState('networkidle');
+   assert.equal(await opener.getAttribute('data-help'),'Ask about recorded deals, buyers and work');
+   if(screen==='email')assert.equal(await opener.getAttribute('title'),'Ask about recorded deals, buyers and work');
    assert.equal(reads,before,'No Ask fetch on native load');
    assert.equal(await page.locator('.ws-sidebar .ws-nav a').count(),2,'No native Deals migration');
    assert.equal(await page.locator('.wos-voice-tools').count(),0,'Voice does not attach to native Email');
