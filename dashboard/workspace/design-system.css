@@ -226,7 +226,6 @@ h3 { font-size: var(--ws-type-base); line-height: 1.4; }
 .ws-mail-sender small { color: var(--ws-muted); font-weight: 400; }
 .ws-mail-snippet { color: var(--ws-muted); }
 .ws-mail-row:hover, .ws-mail-row[aria-pressed="true"] { background: var(--ws-surface); }
-.ws-mail-row--unread { box-shadow: inset 3px 0 var(--ws-blue); }
 .ws-mail-row-top { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--ws-space-2); }
 .ws-mail-row-top strong { min-width: 0; overflow-wrap: anywhere; }
 .ws-mail-row time { font-size: var(--ws-type-xs); color: var(--ws-muted); }

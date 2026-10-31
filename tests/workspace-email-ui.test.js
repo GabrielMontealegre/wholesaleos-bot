@@ -9,7 +9,7 @@ async function prove() {
   const metadata = (id, patch = {}) => ({ id, source_kind: 'connected_mailbox', from: 'Synthetic Sender <sender@example.test>', sender_name: 'Synthetic Sender',
     subject: 'Synthetic conversation ' + 'long subject '.repeat(6), date: stamp, thread_key: key, direction: 'in', link_status: 'linked',
     conversation: { role: 'buyer', role_source_kind: 'operator_input', role_recorded_at: stamp }, ...patch });
-  const rows = [metadata('first'), metadata('latest', { date: '2026-10-20T12:01:00Z' }), metadata('other', { thread_key: 'c'.repeat(64), sender_name: 'Another synthetic person' }), metadata('alert', { thread_key: 'b'.repeat(64), from: 'alerts@redfin.com', sender_name: 'Synthetic alert' })];
+  const rows = [metadata('first', { unread: true }), metadata('latest', { date: '2026-10-20T12:01:00Z', unread: true }), metadata('other', { thread_key: 'c'.repeat(64), sender_name: 'Another synthetic person', read: true }), metadata('alert', { thread_key: 'b'.repeat(64), from: 'alerts@redfin.com', sender_name: 'Synthetic alert' })];
   const message = id => ({ ...rows.find(row => row.id === id), body: id === 'first' ? 'Earlier synthetic message' : 'LATEST SYNTHETIC TEXT\n' + 'Visible source text. '.repeat(250) + '\nFINAL SYNTHETIC LINE <img src=x onerror=attack()>' });
   try {
     for (const width of [1366, 400, 412]) {
@@ -42,6 +42,15 @@ async function prove() {
       await page.getByRole('tab', { name: 'Buyers', exact: true }).click();
       assert.equal(await page.locator('.ws-mail-row').count(), 2, 'Buyers retains the two sourced human threads and excludes the automated listing alert');
       assert.equal(bodyReads, 0, 'No message body fetched on load');
+      const unread = page.locator('.ws-mail-row--unread');
+      assert.equal(await unread.count(), 1, 'Only source-backed unread threads get unread styling');
+      assert.equal(await unread.evaluate(el => getComputedStyle(el).boxShadow), 'none', 'Unread messages must not join into a blue vertical stripe');
+      assert.equal(await unread.locator('.ws-mail-sender').evaluate(el => getComputedStyle(el).fontWeight), '700', 'Unread senders remain bold');
+      assert.equal(await page.locator('.ws-mail-row:not(.ws-mail-row--unread) .ws-mail-sender').evaluate(el => getComputedStyle(el).fontWeight), '400', 'Read senders retain normal weight');
+      await unread.focus();
+      await page.keyboard.press('Tab');
+      await page.keyboard.press('Shift+Tab');
+      assert(await unread.evaluate(el => el.matches(':focus-visible') && getComputedStyle(el).outlineStyle !== 'none'), 'Removing the unread stripe preserves keyboard focus');
       assert.equal(await page.locator('.ws-composer').count(), 0, 'The default mail view never reserves an empty reply box');
       assert(await page.locator('.ws-mail-list').evaluate(el => el.getBoundingClientRect().width >= el.parentElement.getBoundingClientRect().width - 1), 'List owns the main-area width, not half of a split pane');
       assert.equal(await page.locator('#help').isVisible(), false, 'Email reserves no blank help strip');
@@ -51,6 +60,7 @@ async function prove() {
       await page.locator('#refresh').hover();
       assert.equal(await page.locator('.ws-mail-list').evaluate(el => el.getBoundingClientRect().top), listTop, 'Hover help cannot shift the list');
       await page.getByRole('tab', { name: 'Alerts', exact: true }).click();
+      assert.equal(await page.locator('.ws-mail-row--unread').count(), 0, 'Unknown read state is not presented as unread');
       assert((await page.locator('.ws-mail-row').innerText()).includes('Synthetic alert'));
       await page.getByRole('tab', { name: 'Alerts', exact: true }).press('Home');
       assert.equal(await page.getByRole('tab', { name: 'Primary', exact: true }).getAttribute('aria-selected'), 'true');
