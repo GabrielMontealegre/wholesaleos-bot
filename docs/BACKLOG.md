@@ -1,5 +1,32 @@
 # Backlog
 
+2026-10-31 owner mailbox stripe fix LOCAL CANDIDATE in draft PR486, NOT released.
+Removed only the unread-row inset blue shadow; bold unread senders and keyboard
+focus remain. CSS cache15->16; no provider/API/storage/category/writer changes.
+Synthetic regression FIRST failed on the actual shadow, then passed1366/400/412.
+All six before/after synthetic images inspected and staged byte-identity checked.
+First candidate Lighthouse desktop87performance/100accessibility FAILED the90
+gate; baseline99/96perf and100access had a phone bf-cache audit error. Retain
+both reports; cause unknown, no unchanged score retries or threshold suppression.
+First local289-file suite TERMINAL284/5/0,600s/file; all289timings retained,
+sum2946.53s NOTwall. Failures: dashboard-deal-mount-order,lead-geography-ui,
+pipeline-buyer-context-ui,pipeline-workspace-ui,remembered-device-ui. Causes
+unknown; no assertion changes or unchanged reruns. First PR
+CI41244445374/job124664839185 SUCCESS289/0/0,600s/file,
+13m10job wall, sum741.20s NOTwall, all289timings retained. No merge/deploy claim.
+Docs-only checkpoint branch item/412-mail-unread-stripe-checkpoint preserves
+all578 CI+local timing rows and failed audits; original tested PR head1c77f6f
+unchanged. No new PR/main/CI/deploy for checkpoint proof.
+Trace docs/cycles/issue-412-mail-unread-stripe.md. Continue bounded diagnosis,
+never production private probes. Broader backlog active;455 remains6/9(67%).
+
+Prior rollback484 is VERIFIED at actualmain78897742, complete tree5b2d001e,
+with289/0/0 PR and independent MAIN, exact automaticb0728caf and bounded live
+gates already passed. Do not redo that release. PR483 remains BLOCKED under485,
+cause UNKNOWN; no unchanged remerge/readiness retry. Owned docs-only closeout
+branch item/412-rollback484-release-proof@4fe26f3 remains pushed and untouched.
+The older candidate notes below are history, not current release instructions.
+
 2026-10-30 #412/D-063B native report-label consumer LOCAL CANDIDATE, not released.
 Fresh origin/mainc972 and architect priority/answers checked;471/472/478 still
 unanswered. Current producer453 emits per-message receipts, but native Reports

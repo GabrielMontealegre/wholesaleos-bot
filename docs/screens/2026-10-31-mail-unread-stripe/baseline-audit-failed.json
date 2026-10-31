@@ -1,0 +1,43 @@
+{
+  "synthetic_only": true,
+  "baseline": "78897742b9aabe161b2f61e44c2241f44c6f4a4e",
+  "candidate": "1c77f6fcb8f1f6432b84ebd76d0a38f524eb86fa",
+  "lighthouse": [
+    {
+      "mode": "before",
+      "width": 1366,
+      "observed": {
+        "ready": true,
+        "primary": true,
+        "rows": 12,
+        "unread": 10,
+        "striped": 10,
+        "overflow": false
+      },
+      "version": "13.5.0",
+      "performance": 99,
+      "accessibility": 100,
+      "runtimeError": null,
+      "auditErrors": []
+    },
+    {
+      "mode": "before",
+      "width": 412,
+      "observed": {
+        "ready": true,
+        "primary": true,
+        "rows": 12,
+        "unread": 10,
+        "striped": 10,
+        "overflow": false
+      },
+      "version": "13.5.0",
+      "performance": 96,
+      "accessibility": 100,
+      "runtimeError": null,
+      "auditErrors": [
+        "bf-cache"
+      ]
+    }
+  ]
+}
