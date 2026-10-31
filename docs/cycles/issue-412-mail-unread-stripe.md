@@ -112,3 +112,21 @@ force Dashboard in the test, loosen mount gates, or attribute this to the CSS
 change. Capture the selecting navigation call/stack in a future bounded
 diagnostic before choosing any repair. No additional score/full-suite/CI run,
 product repair, merge, deploy, or production access occurred.
+
+### Page-writer instrument result
+
+A separate bounded diagnostic instrument observed window.APP installation and
+subsequent page assignments, forwarding the original values without selecting
+a destination. Its source is retained to disclose that it replaces the page
+data property with an accessor and adds asynchronous binding observations.
+Those changes can affect timing; this is not an uninstrumented gate result.
+The unchanged synthetic test completed all1366/400/412 assertions, exit0 in
+18.467s. The initial destination remained Dashboard; captured assignment stacks
+were the test's later explicit navigate calls. The unexpected initial Leads
+transition did not reproduce, so its writer is STILL UNKNOWN. Do not call this
+a fix, a flake finding, a passing replacement for the original full suite, or
+permission to merge. No assertions/deadlines were weakened and no product
+source changed. All original failures remain retained; Lighthouse87 is still
+failed. No further unchanged mount diagnostic should be run to seek green.
+Next work is static navigation/hydration writer analysis using these retained
+stacks and source, or separately designed deterministic lifecycle instrumentation.

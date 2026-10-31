@@ -1,0 +1,790 @@
+{
+  "kind": "synthetic-mount-diagnostic-not-release-gate",
+  "node": "v22.22.0",
+  "events": [
+    {
+      "phase": "start",
+      "unchangedAssertions": true,
+      "unchangedDeadlines": true
+    },
+    {
+      "phase": "requestfailed",
+      "local": false,
+      "pathname": "/css2",
+      "resourceType": "stylesheet"
+    },
+    {
+      "phase": "wait-start",
+      "elapsedMs": 3974,
+      "state": {
+        "readyState": "complete",
+        "content": true,
+        "today": true,
+        "publicDesk": true,
+        "pipelineEntry": false,
+        "login": false,
+        "scripts": 52,
+        "page": "dashboard",
+        "unlocked": true,
+        "todayFeature": true,
+        "todayRegistered": true,
+        "publicDeskRegistered": true,
+        "todayRenderer": true
+      }
+    },
+    {
+      "phase": "wait-success",
+      "elapsedMs": 3996,
+      "state": {
+        "readyState": "complete",
+        "content": true,
+        "today": true,
+        "publicDesk": true,
+        "pipelineEntry": false,
+        "login": false,
+        "scripts": 52,
+        "page": "dashboard",
+        "unlocked": true,
+        "todayFeature": true,
+        "todayRegistered": true,
+        "publicDeskRegistered": true,
+        "todayRenderer": true
+      }
+    },
+    {
+      "phase": "wait-start",
+      "elapsedMs": 4086,
+      "state": {
+        "readyState": "complete",
+        "content": true,
+        "today": true,
+        "publicDesk": true,
+        "pipelineEntry": false,
+        "login": false,
+        "scripts": 52,
+        "page": "dashboard",
+        "unlocked": true,
+        "todayFeature": true,
+        "todayRegistered": true,
+        "publicDeskRegistered": true,
+        "todayRenderer": true
+      }
+    },
+    {
+      "phase": "wait-success",
+      "elapsedMs": 4106,
+      "state": {
+        "readyState": "complete",
+        "content": true,
+        "today": true,
+        "publicDesk": true,
+        "pipelineEntry": false,
+        "login": false,
+        "scripts": 52,
+        "page": "dashboard",
+        "unlocked": true,
+        "todayFeature": true,
+        "todayRegistered": true,
+        "publicDeskRegistered": true,
+        "todayRenderer": true
+      }
+    },
+    {
+      "phase": "wait-start",
+      "elapsedMs": 4217,
+      "state": {
+        "readyState": "complete",
+        "content": true,
+        "today": true,
+        "publicDesk": true,
+        "pipelineEntry": false,
+        "login": false,
+        "scripts": 52,
+        "page": "dashboard",
+        "unlocked": true,
+        "todayFeature": true,
+        "todayRegistered": true,
+        "publicDeskRegistered": true,
+        "todayRenderer": true
+      }
+    },
+    {
+      "phase": "wait-success",
+      "elapsedMs": 4235,
+      "state": {
+        "readyState": "complete",
+        "content": true,
+        "today": true,
+        "publicDesk": true,
+        "pipelineEntry": false,
+        "login": false,
+        "scripts": 52,
+        "page": "dashboard",
+        "unlocked": true,
+        "todayFeature": true,
+        "todayRegistered": true,
+        "publicDeskRegistered": true,
+        "todayRenderer": true
+      }
+    },
+    {
+      "phase": "wait-start",
+      "elapsedMs": 7464,
+      "state": {
+        "readyState": "complete",
+        "content": true,
+        "today": true,
+        "publicDesk": true,
+        "pipelineEntry": false,
+        "login": false,
+        "scripts": 52,
+        "page": "dashboard",
+        "unlocked": true,
+        "todayFeature": true,
+        "todayRegistered": true,
+        "publicDeskRegistered": true,
+        "todayRenderer": true
+      }
+    },
+    {
+      "phase": "wait-success",
+      "elapsedMs": 7479,
+      "state": {
+        "readyState": "complete",
+        "content": true,
+        "today": true,
+        "publicDesk": true,
+        "pipelineEntry": false,
+        "login": false,
+        "scripts": 52,
+        "page": "dashboard",
+        "unlocked": true,
+        "todayFeature": true,
+        "todayRegistered": true,
+        "publicDeskRegistered": true,
+        "todayRenderer": true
+      }
+    },
+    {
+      "phase": "page-writer",
+      "previous": "dashboard",
+      "next": "other",
+      "stack": "Error: synthetic_page_write\n    at Object.set [as page] (<anonymous>:21:24)\n    at navigate (http://127.0.0.1:58960/dashboard/:660:12)\n    at window.navigate (http://127.0.0.1:58960/dashboard/:27232:21)\n    at window.navigate (http://127.0.0.1:58960/dashboard/:27393:13)\n    at root.navigate (http://127.0.0.1:58960/dashboard/wos-operational-views.js?v=3:59:75)\n    at eval (eval at evaluate (:226:30), <anonymous>:1:7)\n    at UtilityScript.evaluate (<anonymous>:228:17)\n    at UtilityScript.<anonymous> (<anonymous>:1:44)"
+    },
+    {
+      "phase": "wait-start",
+      "elapsedMs": 7645,
+      "state": {
+        "readyState": "complete",
+        "content": true,
+        "today": false,
+        "publicDesk": true,
+        "pipelineEntry": false,
+        "login": false,
+        "scripts": 52,
+        "page": "other-or-missing",
+        "unlocked": true,
+        "todayFeature": true,
+        "todayRegistered": true,
+        "publicDeskRegistered": true,
+        "todayRenderer": true
+      }
+    },
+    {
+      "phase": "wait-success",
+      "elapsedMs": 7892,
+      "state": {
+        "readyState": "complete",
+        "content": true,
+        "today": false,
+        "publicDesk": true,
+        "pipelineEntry": false,
+        "login": false,
+        "scripts": 52,
+        "page": "other-or-missing",
+        "unlocked": true,
+        "todayFeature": true,
+        "todayRegistered": true,
+        "publicDeskRegistered": true,
+        "todayRenderer": true
+      }
+    },
+    {
+      "phase": "page-writer",
+      "previous": "other",
+      "next": "other",
+      "stack": "Error: synthetic_page_write\n    at Object.set [as page] (<anonymous>:21:24)\n    at navigate (http://127.0.0.1:58960/dashboard/:660:12)\n    at window.navigate (http://127.0.0.1:58960/dashboard/:27232:21)\n    at window.navigate (http://127.0.0.1:58960/dashboard/:27393:13)\n    at root.navigate (http://127.0.0.1:58960/dashboard/wos-operational-views.js?v=3:59:75)\n    at eval (eval at evaluate (:226:30), <anonymous>:1:7)\n    at UtilityScript.evaluate (<anonymous>:228:17)\n    at UtilityScript.<anonymous> (<anonymous>:1:44)"
+    },
+    {
+      "phase": "page-writer",
+      "previous": "other",
+      "next": "other",
+      "stack": "Error: synthetic_page_write\n    at Object.set [as page] (<anonymous>:21:24)\n    at navigate (http://127.0.0.1:58960/dashboard/:660:12)\n    at window.navigate (http://127.0.0.1:58960/dashboard/:27232:21)\n    at window.navigate (http://127.0.0.1:58960/dashboard/:27393:13)\n    at root.navigate (http://127.0.0.1:58960/dashboard/wos-operational-views.js?v=3:59:75)\n    at eval (eval at evaluate (:226:30), <anonymous>:1:7)\n    at UtilityScript.evaluate (<anonymous>:228:17)\n    at UtilityScript.<anonymous> (<anonymous>:1:44)"
+    },
+    {
+      "phase": "page-writer",
+      "previous": "other",
+      "next": "dashboard",
+      "stack": "Error: synthetic_page_write\n    at Object.set [as page] (<anonymous>:21:24)\n    at navigate (http://127.0.0.1:58960/dashboard/:660:12)\n    at window.navigate (http://127.0.0.1:58960/dashboard/:27232:21)\n    at window.navigate (http://127.0.0.1:58960/dashboard/:27393:13)\n    at root.navigate (http://127.0.0.1:58960/dashboard/wos-operational-views.js?v=3:59:75)\n    at eval (eval at evaluate (:226:30), <anonymous>:1:7)\n    at UtilityScript.evaluate (<anonymous>:228:17)\n    at UtilityScript.<anonymous> (<anonymous>:1:44)"
+    },
+    {
+      "phase": "wait-start",
+      "elapsedMs": 8279,
+      "state": {
+        "readyState": "complete",
+        "content": true,
+        "today": true,
+        "publicDesk": true,
+        "pipelineEntry": false,
+        "login": false,
+        "scripts": 52,
+        "page": "dashboard",
+        "unlocked": true,
+        "todayFeature": true,
+        "todayRegistered": true,
+        "publicDeskRegistered": true,
+        "todayRenderer": true
+      }
+    },
+    {
+      "phase": "wait-success",
+      "elapsedMs": 8325,
+      "state": {
+        "readyState": "complete",
+        "content": true,
+        "today": true,
+        "publicDesk": true,
+        "pipelineEntry": false,
+        "login": false,
+        "scripts": 52,
+        "page": "dashboard",
+        "unlocked": true,
+        "todayFeature": true,
+        "todayRegistered": true,
+        "publicDeskRegistered": true,
+        "todayRenderer": true
+      }
+    },
+    {
+      "phase": "requestfailed",
+      "local": false,
+      "pathname": "/css2",
+      "resourceType": "stylesheet"
+    },
+    {
+      "phase": "wait-start",
+      "elapsedMs": 9276,
+      "state": {
+        "readyState": "complete",
+        "content": true,
+        "today": true,
+        "publicDesk": true,
+        "pipelineEntry": false,
+        "login": false,
+        "scripts": 52,
+        "page": "dashboard",
+        "unlocked": true,
+        "todayFeature": true,
+        "todayRegistered": true,
+        "publicDeskRegistered": true,
+        "todayRenderer": true
+      }
+    },
+    {
+      "phase": "wait-success",
+      "elapsedMs": 9298,
+      "state": {
+        "readyState": "complete",
+        "content": true,
+        "today": true,
+        "publicDesk": true,
+        "pipelineEntry": false,
+        "login": false,
+        "scripts": 52,
+        "page": "dashboard",
+        "unlocked": true,
+        "todayFeature": true,
+        "todayRegistered": true,
+        "publicDeskRegistered": true,
+        "todayRenderer": true
+      }
+    },
+    {
+      "phase": "wait-start",
+      "elapsedMs": 9345,
+      "state": {
+        "readyState": "complete",
+        "content": true,
+        "today": true,
+        "publicDesk": true,
+        "pipelineEntry": false,
+        "login": false,
+        "scripts": 52,
+        "page": "dashboard",
+        "unlocked": true,
+        "todayFeature": true,
+        "todayRegistered": true,
+        "publicDeskRegistered": true,
+        "todayRenderer": true
+      }
+    },
+    {
+      "phase": "wait-success",
+      "elapsedMs": 9363,
+      "state": {
+        "readyState": "complete",
+        "content": true,
+        "today": true,
+        "publicDesk": true,
+        "pipelineEntry": false,
+        "login": false,
+        "scripts": 52,
+        "page": "dashboard",
+        "unlocked": true,
+        "todayFeature": true,
+        "todayRegistered": true,
+        "publicDeskRegistered": true,
+        "todayRenderer": true
+      }
+    },
+    {
+      "phase": "wait-start",
+      "elapsedMs": 9433,
+      "state": {
+        "readyState": "complete",
+        "content": true,
+        "today": true,
+        "publicDesk": true,
+        "pipelineEntry": false,
+        "login": false,
+        "scripts": 52,
+        "page": "dashboard",
+        "unlocked": true,
+        "todayFeature": true,
+        "todayRegistered": true,
+        "publicDeskRegistered": true,
+        "todayRenderer": true
+      }
+    },
+    {
+      "phase": "wait-success",
+      "elapsedMs": 9462,
+      "state": {
+        "readyState": "complete",
+        "content": true,
+        "today": true,
+        "publicDesk": true,
+        "pipelineEntry": false,
+        "login": false,
+        "scripts": 52,
+        "page": "dashboard",
+        "unlocked": true,
+        "todayFeature": true,
+        "todayRegistered": true,
+        "publicDeskRegistered": true,
+        "todayRenderer": true
+      }
+    },
+    {
+      "phase": "wait-start",
+      "elapsedMs": 12707,
+      "state": {
+        "readyState": "complete",
+        "content": true,
+        "today": true,
+        "publicDesk": true,
+        "pipelineEntry": false,
+        "login": false,
+        "scripts": 52,
+        "page": "dashboard",
+        "unlocked": true,
+        "todayFeature": true,
+        "todayRegistered": true,
+        "publicDeskRegistered": true,
+        "todayRenderer": true
+      }
+    },
+    {
+      "phase": "wait-success",
+      "elapsedMs": 12721,
+      "state": {
+        "readyState": "complete",
+        "content": true,
+        "today": true,
+        "publicDesk": true,
+        "pipelineEntry": false,
+        "login": false,
+        "scripts": 52,
+        "page": "dashboard",
+        "unlocked": true,
+        "todayFeature": true,
+        "todayRegistered": true,
+        "publicDeskRegistered": true,
+        "todayRenderer": true
+      }
+    },
+    {
+      "phase": "page-writer",
+      "previous": "dashboard",
+      "next": "other",
+      "stack": "Error: synthetic_page_write\n    at Object.set [as page] (<anonymous>:21:24)\n    at navigate (http://127.0.0.1:58960/dashboard/:660:12)\n    at window.navigate (http://127.0.0.1:58960/dashboard/:27232:21)\n    at window.navigate (http://127.0.0.1:58960/dashboard/:27393:13)\n    at root.navigate (http://127.0.0.1:58960/dashboard/wos-operational-views.js?v=3:59:75)\n    at eval (eval at evaluate (:226:30), <anonymous>:1:7)\n    at UtilityScript.evaluate (<anonymous>:228:17)\n    at UtilityScript.<anonymous> (<anonymous>:1:44)"
+    },
+    {
+      "phase": "wait-start",
+      "elapsedMs": 12792,
+      "state": {
+        "readyState": "complete",
+        "content": true,
+        "today": false,
+        "publicDesk": true,
+        "pipelineEntry": false,
+        "login": false,
+        "scripts": 52,
+        "page": "other-or-missing",
+        "unlocked": true,
+        "todayFeature": true,
+        "todayRegistered": true,
+        "publicDeskRegistered": true,
+        "todayRenderer": true
+      }
+    },
+    {
+      "phase": "wait-success",
+      "elapsedMs": 12815,
+      "state": {
+        "readyState": "complete",
+        "content": true,
+        "today": false,
+        "publicDesk": true,
+        "pipelineEntry": false,
+        "login": false,
+        "scripts": 52,
+        "page": "other-or-missing",
+        "unlocked": true,
+        "todayFeature": true,
+        "todayRegistered": true,
+        "publicDeskRegistered": true,
+        "todayRenderer": true
+      }
+    },
+    {
+      "phase": "page-writer",
+      "previous": "other",
+      "next": "other",
+      "stack": "Error: synthetic_page_write\n    at Object.set [as page] (<anonymous>:21:24)\n    at navigate (http://127.0.0.1:58960/dashboard/:660:12)\n    at window.navigate (http://127.0.0.1:58960/dashboard/:27232:21)\n    at window.navigate (http://127.0.0.1:58960/dashboard/:27393:13)\n    at root.navigate (http://127.0.0.1:58960/dashboard/wos-operational-views.js?v=3:59:75)\n    at eval (eval at evaluate (:226:30), <anonymous>:1:7)\n    at UtilityScript.evaluate (<anonymous>:228:17)\n    at UtilityScript.<anonymous> (<anonymous>:1:44)"
+    },
+    {
+      "phase": "page-writer",
+      "previous": "other",
+      "next": "other",
+      "stack": "Error: synthetic_page_write\n    at Object.set [as page] (<anonymous>:21:24)\n    at navigate (http://127.0.0.1:58960/dashboard/:660:12)\n    at window.navigate (http://127.0.0.1:58960/dashboard/:27232:21)\n    at window.navigate (http://127.0.0.1:58960/dashboard/:27393:13)\n    at root.navigate (http://127.0.0.1:58960/dashboard/wos-operational-views.js?v=3:59:75)\n    at eval (eval at evaluate (:226:30), <anonymous>:1:7)\n    at UtilityScript.evaluate (<anonymous>:228:17)\n    at UtilityScript.<anonymous> (<anonymous>:1:44)"
+    },
+    {
+      "phase": "page-writer",
+      "previous": "other",
+      "next": "dashboard",
+      "stack": "Error: synthetic_page_write\n    at Object.set [as page] (<anonymous>:21:24)\n    at navigate (http://127.0.0.1:58960/dashboard/:660:12)\n    at window.navigate (http://127.0.0.1:58960/dashboard/:27232:21)\n    at window.navigate (http://127.0.0.1:58960/dashboard/:27393:13)\n    at root.navigate (http://127.0.0.1:58960/dashboard/wos-operational-views.js?v=3:59:75)\n    at eval (eval at evaluate (:226:30), <anonymous>:1:7)\n    at UtilityScript.evaluate (<anonymous>:228:17)\n    at UtilityScript.<anonymous> (<anonymous>:1:44)"
+    },
+    {
+      "phase": "wait-start",
+      "elapsedMs": 12992,
+      "state": {
+        "readyState": "complete",
+        "content": true,
+        "today": true,
+        "publicDesk": true,
+        "pipelineEntry": false,
+        "login": false,
+        "scripts": 52,
+        "page": "dashboard",
+        "unlocked": true,
+        "todayFeature": true,
+        "todayRegistered": true,
+        "publicDeskRegistered": true,
+        "todayRenderer": true
+      }
+    },
+    {
+      "phase": "wait-success",
+      "elapsedMs": 13020,
+      "state": {
+        "readyState": "complete",
+        "content": true,
+        "today": true,
+        "publicDesk": true,
+        "pipelineEntry": false,
+        "login": false,
+        "scripts": 52,
+        "page": "dashboard",
+        "unlocked": true,
+        "todayFeature": true,
+        "todayRegistered": true,
+        "publicDeskRegistered": true,
+        "todayRenderer": true
+      }
+    },
+    {
+      "phase": "requestfailed",
+      "local": false,
+      "pathname": "/css2",
+      "resourceType": "stylesheet"
+    },
+    {
+      "phase": "wait-start",
+      "elapsedMs": 13974,
+      "state": {
+        "readyState": "complete",
+        "content": true,
+        "today": true,
+        "publicDesk": true,
+        "pipelineEntry": false,
+        "login": false,
+        "scripts": 52,
+        "page": "dashboard",
+        "unlocked": true,
+        "todayFeature": true,
+        "todayRegistered": true,
+        "publicDeskRegistered": true,
+        "todayRenderer": true
+      }
+    },
+    {
+      "phase": "wait-success",
+      "elapsedMs": 13990,
+      "state": {
+        "readyState": "complete",
+        "content": true,
+        "today": true,
+        "publicDesk": true,
+        "pipelineEntry": false,
+        "login": false,
+        "scripts": 52,
+        "page": "dashboard",
+        "unlocked": true,
+        "todayFeature": true,
+        "todayRegistered": true,
+        "publicDeskRegistered": true,
+        "todayRenderer": true
+      }
+    },
+    {
+      "phase": "wait-start",
+      "elapsedMs": 14033,
+      "state": {
+        "readyState": "complete",
+        "content": true,
+        "today": true,
+        "publicDesk": true,
+        "pipelineEntry": false,
+        "login": false,
+        "scripts": 52,
+        "page": "dashboard",
+        "unlocked": true,
+        "todayFeature": true,
+        "todayRegistered": true,
+        "publicDeskRegistered": true,
+        "todayRenderer": true
+      }
+    },
+    {
+      "phase": "wait-success",
+      "elapsedMs": 14041,
+      "state": {
+        "readyState": "complete",
+        "content": true,
+        "today": true,
+        "publicDesk": true,
+        "pipelineEntry": false,
+        "login": false,
+        "scripts": 52,
+        "page": "dashboard",
+        "unlocked": true,
+        "todayFeature": true,
+        "todayRegistered": true,
+        "publicDeskRegistered": true,
+        "todayRenderer": true
+      }
+    },
+    {
+      "phase": "wait-start",
+      "elapsedMs": 14123,
+      "state": {
+        "readyState": "complete",
+        "content": true,
+        "today": true,
+        "publicDesk": true,
+        "pipelineEntry": false,
+        "login": false,
+        "scripts": 52,
+        "page": "dashboard",
+        "unlocked": true,
+        "todayFeature": true,
+        "todayRegistered": true,
+        "publicDeskRegistered": true,
+        "todayRenderer": true
+      }
+    },
+    {
+      "phase": "wait-success",
+      "elapsedMs": 14146,
+      "state": {
+        "readyState": "complete",
+        "content": true,
+        "today": true,
+        "publicDesk": true,
+        "pipelineEntry": false,
+        "login": false,
+        "scripts": 52,
+        "page": "dashboard",
+        "unlocked": true,
+        "todayFeature": true,
+        "todayRegistered": true,
+        "publicDeskRegistered": true,
+        "todayRenderer": true
+      }
+    },
+    {
+      "phase": "wait-start",
+      "elapsedMs": 17377,
+      "state": {
+        "readyState": "complete",
+        "content": true,
+        "today": true,
+        "publicDesk": true,
+        "pipelineEntry": false,
+        "login": false,
+        "scripts": 52,
+        "page": "dashboard",
+        "unlocked": true,
+        "todayFeature": true,
+        "todayRegistered": true,
+        "publicDeskRegistered": true,
+        "todayRenderer": true
+      }
+    },
+    {
+      "phase": "wait-success",
+      "elapsedMs": 17389,
+      "state": {
+        "readyState": "complete",
+        "content": true,
+        "today": true,
+        "publicDesk": true,
+        "pipelineEntry": false,
+        "login": false,
+        "scripts": 52,
+        "page": "dashboard",
+        "unlocked": true,
+        "todayFeature": true,
+        "todayRegistered": true,
+        "publicDeskRegistered": true,
+        "todayRenderer": true
+      }
+    },
+    {
+      "phase": "page-writer",
+      "previous": "dashboard",
+      "next": "other",
+      "stack": "Error: synthetic_page_write\n    at Object.set [as page] (<anonymous>:21:24)\n    at navigate (http://127.0.0.1:58960/dashboard/:660:12)\n    at window.navigate (http://127.0.0.1:58960/dashboard/:27232:21)\n    at window.navigate (http://127.0.0.1:58960/dashboard/:27393:13)\n    at root.navigate (http://127.0.0.1:58960/dashboard/wos-operational-views.js?v=3:59:75)\n    at eval (eval at evaluate (:226:30), <anonymous>:1:7)\n    at UtilityScript.evaluate (<anonymous>:228:17)\n    at UtilityScript.<anonymous> (<anonymous>:1:44)"
+    },
+    {
+      "phase": "wait-start",
+      "elapsedMs": 17474,
+      "state": {
+        "readyState": "complete",
+        "content": true,
+        "today": false,
+        "publicDesk": true,
+        "pipelineEntry": false,
+        "login": false,
+        "scripts": 52,
+        "page": "other-or-missing",
+        "unlocked": true,
+        "todayFeature": true,
+        "todayRegistered": true,
+        "publicDeskRegistered": true,
+        "todayRenderer": true
+      }
+    },
+    {
+      "phase": "wait-success",
+      "elapsedMs": 17496,
+      "state": {
+        "readyState": "complete",
+        "content": true,
+        "today": false,
+        "publicDesk": true,
+        "pipelineEntry": false,
+        "login": false,
+        "scripts": 52,
+        "page": "other-or-missing",
+        "unlocked": true,
+        "todayFeature": true,
+        "todayRegistered": true,
+        "publicDeskRegistered": true,
+        "todayRenderer": true
+      }
+    },
+    {
+      "phase": "page-writer",
+      "previous": "other",
+      "next": "other",
+      "stack": "Error: synthetic_page_write\n    at Object.set [as page] (<anonymous>:21:24)\n    at navigate (http://127.0.0.1:58960/dashboard/:660:12)\n    at window.navigate (http://127.0.0.1:58960/dashboard/:27232:21)\n    at window.navigate (http://127.0.0.1:58960/dashboard/:27393:13)\n    at root.navigate (http://127.0.0.1:58960/dashboard/wos-operational-views.js?v=3:59:75)\n    at eval (eval at evaluate (:226:30), <anonymous>:1:7)\n    at UtilityScript.evaluate (<anonymous>:228:17)\n    at UtilityScript.<anonymous> (<anonymous>:1:44)"
+    },
+    {
+      "phase": "page-writer",
+      "previous": "other",
+      "next": "other",
+      "stack": "Error: synthetic_page_write\n    at Object.set [as page] (<anonymous>:21:24)\n    at navigate (http://127.0.0.1:58960/dashboard/:660:12)\n    at window.navigate (http://127.0.0.1:58960/dashboard/:27232:21)\n    at window.navigate (http://127.0.0.1:58960/dashboard/:27393:13)\n    at root.navigate (http://127.0.0.1:58960/dashboard/wos-operational-views.js?v=3:59:75)\n    at eval (eval at evaluate (:226:30), <anonymous>:1:7)\n    at UtilityScript.evaluate (<anonymous>:228:17)\n    at UtilityScript.<anonymous> (<anonymous>:1:44)"
+    },
+    {
+      "phase": "page-writer",
+      "previous": "other",
+      "next": "dashboard",
+      "stack": "Error: synthetic_page_write\n    at Object.set [as page] (<anonymous>:21:24)\n    at navigate (http://127.0.0.1:58960/dashboard/:660:12)\n    at window.navigate (http://127.0.0.1:58960/dashboard/:27232:21)\n    at window.navigate (http://127.0.0.1:58960/dashboard/:27393:13)\n    at root.navigate (http://127.0.0.1:58960/dashboard/wos-operational-views.js?v=3:59:75)\n    at eval (eval at evaluate (:226:30), <anonymous>:1:7)\n    at UtilityScript.evaluate (<anonymous>:228:17)\n    at UtilityScript.<anonymous> (<anonymous>:1:44)"
+    },
+    {
+      "phase": "wait-start",
+      "elapsedMs": 17687,
+      "state": {
+        "readyState": "complete",
+        "content": true,
+        "today": true,
+        "publicDesk": true,
+        "pipelineEntry": false,
+        "login": false,
+        "scripts": 52,
+        "page": "dashboard",
+        "unlocked": true,
+        "todayFeature": true,
+        "todayRegistered": true,
+        "publicDeskRegistered": true,
+        "todayRenderer": true
+      }
+    },
+    {
+      "phase": "wait-success",
+      "elapsedMs": 17722,
+      "state": {
+        "readyState": "complete",
+        "content": true,
+        "today": true,
+        "publicDesk": true,
+        "pipelineEntry": false,
+        "login": false,
+        "scripts": 52,
+        "page": "dashboard",
+        "unlocked": true,
+        "todayFeature": true,
+        "todayRegistered": true,
+        "publicDeskRegistered": true,
+        "todayRenderer": true
+      }
+    },
+    {
+      "phase": "exit",
+      "code": 0,
+      "elapsedMs": 18467
+    }
+  ]
+}
