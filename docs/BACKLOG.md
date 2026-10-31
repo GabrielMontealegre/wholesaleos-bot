@@ -1,5 +1,9 @@
 # Backlog
 
+2026-10-31 usage warning: secondary92% used; primary74% used at checkpoint.
+Continue authorized work until exhaustion; reserve the final primary5% for
+rollback only. No reset, purchase, credits, or weekly hold.
+
 2026-10-31 owner mailbox stripe fix LOCAL CANDIDATE in draft PR486, NOT released.
 Removed only the unread-row inset blue shadow; bold unread senders and keyboard
 focus remain. CSS cache15->16; no provider/API/storage/category/writer changes.

@@ -65,3 +65,34 @@ Test-generated exports/cycle-34-synthetic-proof/cycle-34-synthetic-proof.json
 is left unstaged and untouched; it is not part of the mailbox fix.
 The rollback484 remains verified; PR483 remains blocked, cause unknown.
 No real message opening, private content probes, screenshots, or writes.
+
+## Bounded mount diagnostic, 2026-10-31
+
+Fresh origin/main and operating documents checked; issue485 remains open with
+no comments. PR486 remains the only open mailbox-stripe candidate. No prior
+release or production verification was repeated.
+
+One instrumented run of dashboard-deal-mount-order.test.js used explicit bundled
+Node22.22.0, pinned Playwright and the local hermetic preload. The test source,
+assertions and 30-second wait deadline were unchanged. This was a diagnostic,
+not a replacement full-suite gate. It failed naturally, exit1, after40.191s.
+At wait entry and timeout, document.readyState was complete and #content existed,
+but Today, public desk and Pipeline entry were absent. No pageerror event or
+HTTP status>=400 event was observed by this instrument; the existing fixture
+blocked an external stylesheet request. Neither that request nor Node version
+is established as the cause. Reproduction on Node22 rules out a failure exclusive
+to Node24 for this mount diagnostic, not an environment/product cause generally.
+
+The source trace shows Today registration gated by todayActionCenter and the
+public desk gated by current page. Current instrumentation did not capture
+those two states, so neither predicate is established as the cause. Do not
+change either guard or unrelated classic runtime to force the mailbox PR green.
+The retained Lighthouse candidate report contains scores and structural scope
+but no metric breakdown/trace; its87 remains a failed gate, cause unknown.
+All five original local failures and both failed audits remain authoritative.
+No full-suite or Lighthouse rerun, assertion change, repair, merge or deploy.
+
+The synthetic diagnostic JSON and exact instrument source are retained beside
+the prior evidence. Next bounded investigation should observe current-page and
+feature-registration lifecycle at the existing failing wait, not retry scores
+or enlarge timeouts. The two unrelated generated exports remain unstaged.
