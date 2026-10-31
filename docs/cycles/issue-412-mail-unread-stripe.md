@@ -207,3 +207,8 @@ boundary; do not bundle it into the CSS-only PR486 or silently force Dashboard.
 Duplicate search found existing needs-architect issue360 covering the same
 mount-order failure history. Record this new controlled evidence there rather
 than opening another startup issue. No owner relay or PR483 diagnosis requested.
+The attempted evidence/scope comment to360 was rejected by auto-review as
+external communication/owner relay. Nothing was posted. Do not retry through
+another tool or route; the prepared question remains external and local only.
+This is a communication restriction, not a product-test failure. Preserve the
+evidence and request explicit approval before any such comment is attempted.
