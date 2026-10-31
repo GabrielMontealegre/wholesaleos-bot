@@ -156,3 +156,28 @@ Do not bundle a classic startup rewrite into the CSS-only PR. Next diagnostic
 design can deterministically delay synthetic session hydration across these
 existing timer boundaries and observe their invocation without changing the
 APP.page descriptor. All original failed release gates remain held.
+
+### Controlled session-delay observation
+
+A new synthetic browser harness served the unchanged classic dashboard with
+GET-only fixtures and blocked every nonlocal request. It wrapped only the
+three identified startup timer callbacks to snapshot structural state before
+and after the original callback; APP.page remained an ordinary data property.
+No content was cleared, destination forced, or application source replaced.
+The immediate-session control and a session response held until all800/1000/
+2000ms callbacks ran both stayed on Dashboard. In the delayed case all three
+callbacks observed locked identity and nonempty content and left the page
+unchanged. After releasing that synthetic GET, identity unlocked and Today
+mounted on Dashboard. Both cases completed; result and exact instrument retained.
+
+Therefore delaying session hydration alone did NOT reproduce the missing-mount
+failure in this controlled fixture. The isolated empty-content timer hazard
+remains real, but is not established as the earlier failure's cause. Do not
+repair those timers based solely on the original failure, or relabel this
+diagnostic as a passing release gate. This harness uses generic empty API data
+outside auth/leads/buyers, not every fixture response from the original test;
+it is a hypothesis check, not full parity. Original failures remain held.
+No full-suite/CI/Lighthouse or unchanged mount-test retry, merge, deployment,
+private access, or product change occurred. Next investigation should compare
+the original fixture and init/render call order, including when content can be
+emptied; do not repeat this session-delay experiment unchanged.

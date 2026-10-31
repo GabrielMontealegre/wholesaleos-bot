@@ -1,0 +1,70 @@
+'use strict';
+const fs = require('node:fs'), path = require('node:path'), assert = require('node:assert/strict');
+const express = require('express'), pw = require('playwright');
+const root = path.resolve(__dirname, '../wholesaleos-autopilot');
+const { launchChromiumWithResolvedBrowser } = require(path.join(root, 'modules/research/playwright-browser-resolver'));
+const output = path.join(__dirname, 'mail-stripe-hydration-first.json');
+assert.equal(fs.existsSync(output), false);
+const proof = { kind: 'controlled-synthetic-session-diagnostic-not-release-gate', node: process.version, cases: [] };
+const save = () => fs.writeFileSync(output, JSON.stringify(proof, null, 2) + '\n');
+(async () => {
+  const app = express();
+  app.use((req, res, next) => ['GET', 'HEAD'].includes(req.method) ? next() : res.sendStatus(405));
+  app.get('/api/auth/session', (_, res) => res.json({ authenticated: true, role: 'admin' }));
+  app.get('/api/leads', (_, res) => res.json({ leads: [], totalAll: 0, totalFiltered: 0 }));
+  app.get('/api/buyers', (_, res) => res.json({ buyers: [] }));
+  app.get('/api/*', (_, res) => res.json([]));
+  app.get('/favicon.ico', (_, res) => res.sendStatus(204));
+  app.use('/dashboard', express.static(path.join(root, 'dashboard')));
+  const server = await new Promise(resolve => { const s = app.listen(0, '127.0.0.1', () => resolve(s)); });
+  const base = 'http://127.0.0.1:' + server.address().port;
+  let browser;
+  const deadline = setTimeout(() => { save(); process.exit(1); }, 60000);
+  try {
+    browser = (await launchChromiumWithResolvedBrowser(pw, { headless: true })).browser;
+    for (const mode of ['immediate-session', 'session-after-startup-timers']) {
+      const context = await browser.newContext();
+      let release;
+      const barrier = new Promise(resolve => { release = resolve; });
+      let sessionRequests = 0;
+      await context.route('**/*', async route => {
+        const req = route.request(), u = new URL(req.url());
+        if (!['GET', 'HEAD'].includes(req.method()) || !req.url().startsWith(base + '/')) return route.abort();
+        if (u.pathname === '/api/auth/session') {
+          sessionRequests++;
+          if (mode !== 'immediate-session') await barrier;
+        }
+        return route.continue();
+      });
+      await context.addInitScript(() => {
+        window.__syntheticTimerEvents = [];
+        const snapshot = () => ({ page: window.APP?.page || 'missing', unlocked: window.APP?.unlocked === true, contentEmpty: !document.getElementById('content')?.innerHTML.trim(), today: !!document.querySelector('#content #wos-today-workspace') });
+        const original = window.setTimeout;
+        window.setTimeout = function (callback, delay, ...args) {
+          const code = typeof callback === 'function' ? Function.prototype.toString.call(callback) : '';
+          const selected = code.includes('function ensureFirstLoad') || code.includes('innerHTML.trim().length < 50');
+          if (!selected) return original.call(this, callback, delay, ...args);
+          return original.call(this, function (...values) {
+            const event = { delay, before: snapshot() };
+            try { return callback.apply(this, values); }
+            finally { event.after = snapshot(); window.__syntheticTimerEvents.push(event); }
+          }, delay, ...args);
+        };
+      });
+      const page = await context.newPage();
+      await page.goto(base + '/dashboard/', { waitUntil: 'domcontentloaded' });
+      await page.waitForFunction(() => window.__syntheticTimerEvents.length === 3, null, { timeout: 10000 });
+      const beforeRelease = await page.evaluate(() => ({ events: window.__syntheticTimerEvents, page: window.APP?.page, unlocked: window.APP?.unlocked === true, pageDescriptorIsData: Object.hasOwn(Object.getOwnPropertyDescriptor(window.APP, 'page'), 'value') }));
+      release();
+      await page.waitForFunction(() => window.APP?.unlocked === true, null, { timeout: 10000 });
+      const afterRelease = await page.evaluate(() => ({ page: window.APP.page, unlocked: window.APP.unlocked === true, today: !!document.querySelector('#content #wos-today-workspace') }));
+      proof.cases.push({ mode, sessionRequests, beforeRelease, afterRelease }); save();
+      assert.equal(beforeRelease.pageDescriptorIsData, true);
+      await context.close();
+    }
+  } finally {
+    if (browser) await browser.close();
+    server.closeAllConnections(); await new Promise(resolve => server.close(resolve)); clearTimeout(deadline);
+  }
+  console.log('Controlled synthetic hydration diagnostic retained; no release-gate replacement.');
+})().catch(error => { proof.error = { name: error.name, message: error.message }; save(); console.error(error.stack); process.exitCode = 1; });
