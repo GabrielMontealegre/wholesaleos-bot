@@ -1,0 +1,66 @@
+'use strict';
+const fs = require('node:fs');
+const path = require('node:path');
+const pw = require('playwright');
+const out = path.join(__dirname, 'mail-stripe-mount-lifecycle-first.json');
+if (fs.existsSync(out)) throw Error('diagnostic_output_already_exists');
+const report = { kind: 'synthetic-mount-diagnostic-not-release-gate', node: process.version, events: [] };
+function record(event) {
+  report.events.push(event);
+  fs.writeFileSync(out, JSON.stringify(report, null, 2) + '\n');
+}
+async function snapshot(page, phase) {
+  const url = new URL(page.url());
+  if (url.hostname !== '127.0.0.1') throw Error('diagnostic_requires_local_fixture');
+  const state = await page.evaluate(() => ({
+    readyState: document.readyState,
+    content: !!document.getElementById('content'),
+    today: !!document.querySelector('#content #wos-today-workspace'),
+    publicDesk: !!document.querySelector('#content #wos-public-deals'),
+    pipelineEntry: !!document.querySelector('[data-today-pipeline]'),
+    login: !!document.querySelector('input[type=password]'),
+    scripts: document.scripts.length,
+    page: typeof APP !== 'undefined' && ['dashboard', 'leads', 'gmail', 'pipeline'].includes(APP.page) ? APP.page : 'other-or-missing',
+    unlocked: typeof APP !== 'undefined' && APP.unlocked === true,
+    todayFeature: window.wosDashboardFeatures?.todayActionCenter === true,
+    todayRegistered: !!window.wosTodayWorkspace,
+    publicDeskRegistered: !!window.__wosPublicDealsTestHooks,
+    todayRenderer: typeof window.renderDashboard === 'function' && window.renderDashboard.toString().includes('overdueExpanded')
+  }));
+  record({ phase, elapsedMs: Date.now() - started, state });
+}
+const started = Date.now();
+const launch = pw.chromium.launch.bind(pw.chromium);
+pw.chromium.launch = async function (...args) {
+  const browser = await launch(...args);
+  const newContext = browser.newContext.bind(browser);
+  browser.newContext = async function (...contextArgs) {
+    const context = await newContext(...contextArgs);
+    context.on('page', page => {
+      page.on('pageerror', error => record({ phase: 'pageerror', name: error.name }));
+      page.on('requestfailed', request => {
+        const url = new URL(request.url());
+        record({ phase: 'requestfailed', local: url.hostname === '127.0.0.1', pathname: url.pathname, resourceType: request.resourceType() });
+      });
+      page.on('response', response => {
+        if (response.status() >= 400) record({ phase: 'http-error', status: response.status(), pathname: new URL(response.url()).pathname });
+      });
+      const wait = page.waitForFunction.bind(page);
+      page.waitForFunction = async function (...waitArgs) {
+        await snapshot(page, 'wait-start');
+        try {
+          const result = await wait(...waitArgs);
+          await snapshot(page, 'wait-success');
+          return result;
+        } catch (error) {
+          await snapshot(page, 'wait-failure');
+          throw error;
+        }
+      };
+    });
+    return context;
+  };
+  return browser;
+};
+record({ phase: 'start', unchangedAssertions: true, unchangedDeadlines: true });
+process.on('exit', code => record({ phase: 'exit', code, elapsedMs: Date.now() - started }));

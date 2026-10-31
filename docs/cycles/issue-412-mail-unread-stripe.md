@@ -96,3 +96,19 @@ The synthetic diagnostic JSON and exact instrument source are retained beside
 the prior evidence. Next bounded investigation should observe current-page and
 feature-registration lifecycle at the existing failing wait, not retry scores
 or enlarge timeouts. The two unrelated generated exports remain unstaged.
+
+### Follow-up lifecycle observation
+
+One further synthetic-only instrumented diagnostic added the previously missing
+current-page and registration booleans; assertions and deadlines stayed intact.
+Node22.22.0 again reached the same mount wait and failed naturally. At entry,
+APP.page was leads, unlocked was true, todayActionCenter was true, both Today
+and public-desk modules were registered, and the Today renderer was installed.
+This is a wrong-destination observation, not evidence of missing registration.
+The source public-desk mount intentionally excludes leads; the failing test
+expects Dashboard mounts without asserting the destination first. The writer
+or navigation lifecycle that selected leads is not yet identified. Do not
+force Dashboard in the test, loosen mount gates, or attribute this to the CSS
+change. Capture the selecting navigation call/stack in a future bounded
+diagnostic before choosing any repair. No additional score/full-suite/CI run,
+product repair, merge, deploy, or production access occurred.

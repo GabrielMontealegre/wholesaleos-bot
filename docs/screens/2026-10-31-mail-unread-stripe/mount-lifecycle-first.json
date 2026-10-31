@@ -1,0 +1,60 @@
+{
+  "kind": "synthetic-mount-diagnostic-not-release-gate",
+  "node": "v22.22.0",
+  "events": [
+    {
+      "phase": "start",
+      "unchangedAssertions": true,
+      "unchangedDeadlines": true
+    },
+    {
+      "phase": "requestfailed",
+      "local": false,
+      "pathname": "/css2",
+      "resourceType": "stylesheet"
+    },
+    {
+      "phase": "wait-start",
+      "elapsedMs": 15932,
+      "state": {
+        "readyState": "complete",
+        "content": true,
+        "today": false,
+        "publicDesk": false,
+        "pipelineEntry": false,
+        "login": false,
+        "scripts": 52,
+        "page": "leads",
+        "unlocked": true,
+        "todayFeature": true,
+        "todayRegistered": true,
+        "publicDeskRegistered": true,
+        "todayRenderer": true
+      }
+    },
+    {
+      "phase": "wait-failure",
+      "elapsedMs": 46352,
+      "state": {
+        "readyState": "complete",
+        "content": true,
+        "today": false,
+        "publicDesk": false,
+        "pipelineEntry": false,
+        "login": false,
+        "scripts": 52,
+        "page": "leads",
+        "unlocked": true,
+        "todayFeature": true,
+        "todayRegistered": true,
+        "publicDeskRegistered": true,
+        "todayRenderer": true
+      }
+    },
+    {
+      "phase": "exit",
+      "code": 1,
+      "elapsedMs": 95148
+    }
+  ]
+}
