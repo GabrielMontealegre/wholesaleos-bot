@@ -181,3 +181,29 @@ No full-suite/CI/Lighthouse or unchanged mount-test retry, merge, deployment,
 private access, or product change occurred. Next investigation should compare
 the original fixture and init/render call order, including when content can be
 emptied; do not repeat this session-delay experiment unchanged.
+
+### Controlled parser-blocking script observation
+
+Static comparison found that session restoration begins at DOMContentLoaded
+(index.html20824), while the inline startup timers are registered before the
+parser-blocking public-desk script at29119. Initial #content at370 contains a
+short HTML comment, not an empty string. A session-only delay begins too late
+to exercise this parser interval.
+
+One changed synthetic experiment held the public-desk script GET until the
+three existing startup callbacks completed, then released script/session GETs.
+Application source, initial content and APP.page data descriptor were unchanged.
+The immediate control stayed Dashboard. With the script held, the actual1000ms
+fallback changed Dashboard->Leads while locked;800/2000ms callbacks did not
+change the page. After release, identity unlocked but stayed Leads and Today
+was absent. This reproduces a specific startup navigation failure under an
+explicit controlled parser delay. It does NOT prove this delay occurred in the
+original five failures or explain Lighthouse87, and does not establish PR483's
+cause. No product fix, original-test/full-suite/CI/Lighthouse retry, merge,
+deployment, or production request occurred. Exact instrument/result retained.
+
+The next decision is a separate, narrowly scoped startup-fallback stabilization
+boundary; do not bundle it into the CSS-only PR486 or silently force Dashboard.
+Duplicate search found existing needs-architect issue360 covering the same
+mount-order failure history. Record this new controlled evidence there rather
+than opening another startup issue. No owner relay or PR483 diagnosis requested.

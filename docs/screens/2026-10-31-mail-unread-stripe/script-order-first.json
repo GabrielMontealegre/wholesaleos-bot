@@ -1,0 +1,128 @@
+{
+  "kind": "controlled-synthetic-session-diagnostic-not-release-gate",
+  "node": "v22.22.0",
+  "cases": [
+    {
+      "mode": "immediate-session",
+      "sessionRequests": 1,
+      "beforeRelease": {
+        "events": [
+          {
+            "delay": 800,
+            "before": {
+              "page": "dashboard",
+              "unlocked": true,
+              "contentEmpty": false,
+              "today": true
+            },
+            "after": {
+              "page": "dashboard",
+              "unlocked": true,
+              "contentEmpty": false,
+              "today": true
+            }
+          },
+          {
+            "delay": 1000,
+            "before": {
+              "page": "dashboard",
+              "unlocked": true,
+              "contentEmpty": false,
+              "today": true
+            },
+            "after": {
+              "page": "dashboard",
+              "unlocked": true,
+              "contentEmpty": false,
+              "today": true
+            }
+          },
+          {
+            "delay": 2000,
+            "before": {
+              "page": "dashboard",
+              "unlocked": true,
+              "contentEmpty": false,
+              "today": true
+            },
+            "after": {
+              "page": "dashboard",
+              "unlocked": true,
+              "contentEmpty": false,
+              "today": true
+            }
+          }
+        ],
+        "page": "dashboard",
+        "unlocked": true,
+        "pageDescriptorIsData": true
+      },
+      "afterRelease": {
+        "page": "dashboard",
+        "unlocked": true,
+        "today": true
+      }
+    },
+    {
+      "mode": "session-and-public-script-after-startup-timers",
+      "sessionRequests": 1,
+      "beforeRelease": {
+        "events": [
+          {
+            "delay": 800,
+            "before": {
+              "page": "dashboard",
+              "unlocked": false,
+              "contentEmpty": false,
+              "today": false
+            },
+            "after": {
+              "page": "dashboard",
+              "unlocked": false,
+              "contentEmpty": false,
+              "today": false
+            }
+          },
+          {
+            "delay": 1000,
+            "before": {
+              "page": "dashboard",
+              "unlocked": false,
+              "contentEmpty": false,
+              "today": false
+            },
+            "after": {
+              "page": "leads",
+              "unlocked": false,
+              "contentEmpty": false,
+              "today": false
+            }
+          },
+          {
+            "delay": 2000,
+            "before": {
+              "page": "leads",
+              "unlocked": false,
+              "contentEmpty": false,
+              "today": false
+            },
+            "after": {
+              "page": "leads",
+              "unlocked": false,
+              "contentEmpty": false,
+              "today": false
+            }
+          }
+        ],
+        "page": "leads",
+        "unlocked": false,
+        "pageDescriptorIsData": true
+      },
+      "afterRelease": {
+        "page": "leads",
+        "unlocked": true,
+        "today": false
+      }
+    }
+  ]
+}

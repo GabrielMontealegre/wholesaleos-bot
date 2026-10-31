@@ -1,6 +1,6 @@
 # Backlog
 
-2026-10-31 usage warning: secondary95% used; primary3% used at checkpoint.
+2026-10-31 usage warning: secondary95% used; primary6% used at checkpoint.
 Continue authorized work until exhaustion; reserve the final primary5% for
 rollback only. No reset, purchase, credits, or weekly hold.
 
