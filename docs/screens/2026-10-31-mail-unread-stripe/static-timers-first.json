@@ -1,0 +1,70 @@
+{
+  "kind": "deterministic-source-timer-hazard-not-live-cause",
+  "rendererStub": "models the existing renderLeads page assignment; does not execute its UI",
+  "assertions": 12,
+  "cases": [
+    {
+      "timerBlock": 0,
+      "contentKind": "empty",
+      "delays": [
+        800,
+        2000
+      ],
+      "calls": 2,
+      "selectedPageAfter": "leads",
+      "unlockedAfter": false
+    },
+    {
+      "timerBlock": 0,
+      "contentKind": "short-placeholder",
+      "delays": [
+        800,
+        2000
+      ],
+      "calls": 0,
+      "selectedPageAfter": "dashboard",
+      "unlockedAfter": false
+    },
+    {
+      "timerBlock": 0,
+      "contentKind": "populated",
+      "delays": [
+        800,
+        2000
+      ],
+      "calls": 0,
+      "selectedPageAfter": "dashboard",
+      "unlockedAfter": false
+    },
+    {
+      "timerBlock": 1,
+      "contentKind": "empty",
+      "delays": [
+        1000
+      ],
+      "calls": 1,
+      "selectedPageAfter": "leads",
+      "unlockedAfter": false
+    },
+    {
+      "timerBlock": 1,
+      "contentKind": "short-placeholder",
+      "delays": [
+        1000
+      ],
+      "calls": 1,
+      "selectedPageAfter": "leads",
+      "unlockedAfter": false
+    },
+    {
+      "timerBlock": 1,
+      "contentKind": "populated",
+      "delays": [
+        1000
+      ],
+      "calls": 0,
+      "selectedPageAfter": "dashboard",
+      "unlockedAfter": false
+    }
+  ]
+}

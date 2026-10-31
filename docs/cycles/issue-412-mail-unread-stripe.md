@@ -130,3 +130,29 @@ source changed. All original failures remain retained; Lighthouse87 is still
 failed. No further unchanged mount diagnostic should be run to seek green.
 Next work is static navigation/hydration writer analysis using these retained
 stacks and source, or separately designed deterministic lifecycle instrumentation.
+
+### Static startup-timer hazard
+
+Source analysis found two existing classic startup fallbacks at index.html
+lines27115-27137 and27433-27447. The first calls renderLeads at800/2000ms when
+#content is empty; the second calls it at1000ms when content has fewer than50
+characters. Neither first checks APP.unlocked or preserves the selected page.
+The active renderLeads implementation at26189 assigns APP.page='leads'. Its
+returned markup is discarded by those fallback callers. This supplies a concrete
+possible writer for the earlier wrong-destination observation, not proof it ran
+in either failed browser diagnostic.
+
+A bounded VM diagnostic executed the source-extracted timer IIFEs unchanged
+with synthetic empty/short/populated DOM states. A disclosed renderer stub
+models the existing page assignment; it does not execute the actual UI. All
+six cases/12 behavioral assertions matched: both fallbacks selected Leads from
+locked Dashboard with empty content; only the1000ms fallback did so with a
+short loading placeholder; populated content preserved Dashboard. No network,
+browser, credentials or production data were used. Exact instrument and result
+are retained. This proves the isolated source hazard, not the five local test
+causes, Lighthouse cause, or a product repair. No mount/score/full-suite/CI retry.
+
+Do not bundle a classic startup rewrite into the CSS-only PR. Next diagnostic
+design can deterministically delay synthetic session hydration across these
+existing timer boundaries and observe their invocation without changing the
+APP.page descriptor. All original failed release gates remain held.

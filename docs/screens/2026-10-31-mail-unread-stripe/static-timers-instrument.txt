@@ -1,0 +1,41 @@
+'use strict';
+const fs = require('node:fs');
+const path = require('node:path');
+const vm = require('node:vm');
+const assert = require('node:assert/strict');
+const root = path.resolve(__dirname, '../wholesaleos-autopilot');
+const source = fs.readFileSync(path.join(root, 'dashboard/index.html'), 'utf8');
+const output = path.join(__dirname, 'mail-stripe-static-timers-first.json');
+assert.equal(fs.existsSync(output), false, 'retain first diagnostic result');
+function block(marker, end) {
+  const start = source.indexOf(marker);
+  assert.ok(start >= 0);
+  const stop = source.indexOf(end, start);
+  assert.ok(stop > start);
+  return source.slice(start, stop);
+}
+const blocks = [
+  block('// Ensure leads render immediately on first page load', '// Fire after short delay').split('// Fire after short delay')[0],
+  block('(function firstLoadFix()', '// \u2500\u2500 Wholesaling Guide')
+];
+// The first block ends inside its IIFE; retain the actual scheduling and closure.
+const firstStart = source.indexOf('// Ensure leads render immediately on first page load');
+const firstEnd = source.indexOf('})();', firstStart) + '})();'.length;
+blocks[0] = source.slice(firstStart, firstEnd);
+const cases = [];
+for (const [index, code] of blocks.entries()) {
+  for (const content of ['', '<p>Loading</p>', '<section>' + 'x'.repeat(80) + '</section>']) {
+    const APP = { page: 'dashboard', unlocked: false };
+    const timers = [];
+    let calls = 0;
+    const context = { APP, window: {}, document: { readyState: 'loading', getElementById: id => id === 'content' ? { innerHTML: content } : null }, setTimeout: (fn, delay) => timers.push({ fn, delay }), renderLeads: () => { calls++; APP.page = 'leads'; return '<section>unused render output</section>'; } };
+    vm.runInNewContext(code, context, { timeout: 1000 });
+    for (const timer of timers) timer.fn();
+    const shouldCall = index === 0 ? content === '' : content.length < 50;
+    assert.equal(calls > 0, shouldCall);
+    assert.equal(APP.page, shouldCall ? 'leads' : 'dashboard');
+    cases.push({ timerBlock: index, contentKind: content === '' ? 'empty' : content.length < 50 ? 'short-placeholder' : 'populated', delays: timers.map(t => t.delay), calls, selectedPageAfter: APP.page, unlockedAfter: APP.unlocked });
+  }
+}
+fs.writeFileSync(output, JSON.stringify({ kind: 'deterministic-source-timer-hazard-not-live-cause', rendererStub: 'models the existing renderLeads page assignment; does not execute its UI', assertions: 12, cases }, null, 2) + '\n');
+console.log('Static timer hazard: all six source-extracted cases matched; not proof of original gate cause.');
