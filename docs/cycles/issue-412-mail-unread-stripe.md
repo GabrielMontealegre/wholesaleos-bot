@@ -212,3 +212,24 @@ external communication/owner relay. Nothing was posted. Do not retry through
 another tool or route; the prepared question remains external and local only.
 This is a communication restriction, not a product-test failure. Preserve the
 evidence and request explicit approval before any such comment is attempted.
+
+### Independent geography-test static trace
+
+While communication approval is pending, read-only source analysis traced the
+separate lead-geography-ui failure without running it or changing assertions.
+After selecting TX and county Example, selecting city Northville does not change
+the expected filtered total (one). The next wait checks the synchronously set
+city filter and that same total, so its predicate alone does not prove the
+city-specific response has completed before the following FL selection.
+Additionally, loadLeadsFromAPI clears _leadsLoading in finally at21348-21349,
+then awaits a buyers GET before leadQueueRenderWhenStable at21353. Thus even a
+loading=false observation alone does not establish completion of the final
+render. These are concrete ordering gaps in the fixture/test contract, not a
+proven explanation for the original selectOption[] failure or permission to
+weaken its assertion. No relationship to the mailbox CSS change is established.
+
+Any future independent geography diagnostic should observe request/response
+generation and final-render order around the city->state transition with the
+original assertions intact. Do not add arbitrary waits, retry selectOption,
+alter production filters, rerun the unchanged suite, or post another question.
+No product change or browser run occurred in this static investigation.
