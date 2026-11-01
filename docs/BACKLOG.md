@@ -1,5 +1,16 @@
 # Backlog
 
+2026-11-01 #487/#454v2 LOCAL preparation on item/454-v2-field-validation.
+New pure extension-field validator and synthetic20-row/negative tests pass;
+existingv1 snapshot tests pass unchanged. NOT wired into importer or UI yet;
+no full suite/CI/PR/merge/deployment or complete-v2 claim. See cycle trace
+issue-454-v2-decision-desk.md for field assumptions and required integration.
+PR486 remains DRAFT, exactgreen1c77; production-impacting merge attempt was
+auto-review denied, explicit approval requested once. Do not retry or bypass.
+Owned f098341 docs-only mailbox checkpoint and all previous proof branches
+preserved. Two generated exports remain unstaged, never bundled into v2 work.
+PR483/report-label work DEFERRED under487/D-065; no diagnostics/re-release.
+
 2026-10-30 #412/D-063B native report-label consumer LOCAL CANDIDATE, not released.
 Fresh origin/mainc972 and architect priority/answers checked;471/472/478 still
 unanswered. Current producer453 emits per-message receipts, but native Reports

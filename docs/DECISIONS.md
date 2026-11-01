@@ -1270,3 +1270,14 @@ two-second email label is local, current-selection-bound and does not repaint or
 persist data. Existing auth/clock/source/draft authority remains unchanged; Deals
 uses the existing classic destination, not an unapproved native screen.
 --Owner455.6,AGENTS source truth/additive consistency--2026-10-29.
+
+ASSUMED: #487/#454 v2 uses value_fixed for reported value after repairs and a
+nullable numeric buyer_number in open-item numbers; existing v1 per-deal buyer
+object remains unchanged. Agent id is explicit for outreach.agent_id joins;
+null means unknown, never inferred. Open-item/agent IDs join the snapshot ID
+namespace, outreach refs are unique queue references. Future due/follow-up days
+are allowed; reported happened/last-touch dates cannot exceed generated_at.
+These are local validation contract choices, not provider facts or send
+authority. Full base/extension validation, exact-byte receipts and v1 reader
+compatibility must be wired before exposing v2 imports -- D-065/#487,AGENTS
+truth and conservative additive compatibility --2026-11-01.
