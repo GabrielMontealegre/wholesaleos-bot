@@ -6,7 +6,7 @@ function record(value,required,allowed=required){
  const keys=Reflect.ownKeys(value);
  if(required.some(key=>!Object.hasOwn(value,key))||keys.some(key=>!allowed.includes(key)||!Object.hasOwn(Object.getOwnPropertyDescriptor(value,key),'value')))invalid();
 }
-function list(value){if(!Array.isArray(value)||value.length>10000||Reflect.ownKeys(value).length!==value.length+1)invalid();for(let i=0;i<value.length;i++){const d=Object.getOwnPropertyDescriptor(value,String(i));if(!d||!Object.hasOwn(d,'value'))invalid();}return value;}
+function list(value){if(!Array.isArray(value)||Object.getPrototypeOf(value)!==Array.prototype||value.length>10000||Reflect.ownKeys(value).length!==value.length+1)invalid();for(let i=0;i<value.length;i++){const d=Object.getOwnPropertyDescriptor(value,String(i));if(!d||!Object.hasOwn(d,'value'))invalid();}return value;}
 function id(value){if(typeof value!=='string'||!value.trim()||value.length>300||/[\x00-\x1f\x7f]/.test(value))invalid();return value;}
 function day(value){if(typeof value!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(value))invalid();const at=Date.parse(value+'T00:00:00Z');if(!Number.isFinite(at)||new Date(at).toISOString().slice(0,10)!==value)invalid();return at;}
 function scheduleFollowUps(outreach,interactionLog,options){

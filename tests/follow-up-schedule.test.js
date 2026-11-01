@@ -27,6 +27,7 @@ assert.equal(scheduleFollowUps([one],[q,event(one,'reply','reply',today)],{today
 assert.equal(scheduleFollowUps([one],[{...q,at:today},event(one,'same-day-reply','reply',today)],{today})[0].status,'answered_needs_decision','Day precision cannot falsely reject a reply after questions on the same day');
 assert.equal(scheduleFollowUps([{...one,answered:true}],[q],{today})[0].status,'answered_needs_decision');
 assert.equal(scheduleFollowUps([one],[],{today})[0].status,'awaiting_questions');
+assert.equal(scheduleFollowUps([{...one,follow_up_on:'2026-11-15'}],[],{today})[0].status,'awaiting_questions','Future planned dates are allowed but never invent sent questions');
 assert.equal(scheduleFollowUps([{...one,agent_id:null}],[],{today})[0].status,'missing_agent');
 assert.equal(scheduleFollowUps([one],[q],{today:'2026-10-30'})[0].status,'daily_limit');
 assert.equal(scheduleFollowUps([one],[event(one,'q','questions','2026-10-29'),event(one,'f1','follow_up','2026-10-30','F1')],{today})[0].status,'waiting');
@@ -42,12 +43,14 @@ for(const bad of [
 ])assert.throws(()=>scheduleFollowUps([one],bad,{today}),/follow_up_schedule_invalid/);
 assert.throws(()=>scheduleFollowUps([one,one],[],{today}),/follow_up_schedule_invalid/);
 assert.throws(()=>scheduleFollowUps([one],undefined,{today}),/follow_up_schedule_invalid/);
+assert.throws(()=>scheduleFollowUps([one],[event(one,'f1','follow_up',today,'F1')],{today}),/follow_up_schedule_invalid/);
 assert.throws(()=>scheduleFollowUps([one],[],{}),/follow_up_schedule_invalid/);
 assert.throws(()=>scheduleFollowUps([one],[q,event(one,'reply','reply','2026-10-30'),event(one,'f1','follow_up',today,'F1')],{today}),/follow_up_schedule_invalid/);
 const sequence=[event(one,'q','questions','2026-10-01'),event(one,'f1','follow_up','2026-10-02','F1'),event(one,'f2','follow_up','2026-10-04','F2'),event(one,'f3','follow_up','2026-10-07','F3')];
 assert.equal(scheduleFollowUps([one],sequence,{today:'2026-10-13'})[0].status,'waiting');assert.equal(scheduleFollowUps([one],sequence,{today:'2026-10-14'})[0].next_step,'F4');
 assert.deepEqual(scheduleFollowUps(rows.slice().reverse(),log.slice().reverse(),{today}),result,'Input order does not change stable schedule');
 let calls=0;const forged={...q};Object.defineProperty(forged,'at',{get(){calls++;return today;}});assert.throws(()=>scheduleFollowUps([one],[forged],{today}),/follow_up_schedule_invalid/);assert.equal(calls,0);
+const custom=[q];Object.setPrototypeOf(custom,{[Symbol.iterator](){calls++;return [q][Symbol.iterator]();}});assert.throws(()=>scheduleFollowUps([one],custom,{today}),/follow_up_schedule_invalid/);assert.equal(calls,0,'Untrusted array iterator is never invoked');
 const fs=require('node:fs'),http=require('node:http'),https=require('node:https'),restore=[],effects=[];
 try{for(const [object,names] of [[Date,['now']],[fs,['readFileSync','writeFileSync']],[http,['request','get']],[https,['request','get']]])for(const name of names){const old=object[name];restore.push(()=>{object[name]=old;});object[name]=()=>{effects.push(name);throw Error('forbidden');};}assert.deepEqual(scheduleFollowUps(rows,log,{today}),result);assert.deepEqual(effects,[]);}finally{restore.reverse().forEach(fn=>fn());}
 assert(!JSON.stringify(result).includes('price'));assert(!JSON.stringify(result).includes('message'),'Engine returns schedule identifiers, not sendable drafts');

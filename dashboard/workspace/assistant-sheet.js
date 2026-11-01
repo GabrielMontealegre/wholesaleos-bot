@@ -86,7 +86,7 @@
         if(!result.response.ok){answerUnknown=true;answerMessage=result.response.status===409?'This file or answer changed. Refresh before choosing again.':'The answer could not be verified. Refresh before choosing again.';return;}
         var row=desk.saved(result.data,view,input);answerRows.set(row.item_id,row);answerMessage='Answer recorded.';
       }catch(_){if(alive(t)){answerUnknown=true;answerMessage='The answer may be recorded. Refresh before choosing again.';}}
-      finally{if(alive(t)&&view){answerBusy=false;draw();var focus=host.querySelector('#decision-tab-'+deskTab);if(focus)focus.focus();}else answerBusy=false;}
+      finally{if(alive(t)&&view){answerBusy=false;draw();var index=desk.items(view).findIndex(function(row){return row.id===item.id;}),focus=deskTab==='desk'?host.querySelector('[data-decision-choice="'+index+':'+choice+'"]'):host.querySelector('#decision-tab-'+deskTab);if(!focus||focus.disabled)focus=host.querySelector('#assistant-refresh');if(focus)focus.focus();}else answerBusy=false;}
     }
     async function copyText(index){var t=ticket,row=view&&view.texts[index];if(!row)return;try{if(!root.navigator.clipboard||typeof root.navigator.clipboard.writeText!=='function')throw Error();await root.navigator.clipboard.writeText(row.text);if(alive(t))status('Text copied. Nothing was sent.');}catch(_){if(alive(t))status('Text could not be copied. Nothing was sent.');}}
     function buyers(){

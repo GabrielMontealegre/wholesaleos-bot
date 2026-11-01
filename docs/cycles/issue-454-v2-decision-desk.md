@@ -1,5 +1,22 @@
 # Decision Desk v2
 
+## Local Answer Readback Polish
+
+Owner notes now appear alongside the recorded answer after GET readback,
+separately from assistant drafts, with escaped multiline text. A completed
+answer restores focus to its choice; an uncertain/stale choice restores focus
+to Refresh instead of a disabled control. Switching tabs during the operation
+keeps focus in the selected tab. Synthetic three-width UI checks cover every
+A/B/C append and a lost POST response: the persisted C answer is recovered by
+GET, never a blind repeat write. Existing answer history remains append-only.
+All original assertions remain; new checks cover focus, stored note display,
+the complete button row's 44px/in-card geometry and unknown-outcome recovery.
+Three answer-readback viewport images were inspected at 1366/400/412 in
+../.wholesaleos-release-proof/decision-desk-answer-readback. Additional whole-
+card development captures were inspected; mobile captures did not include the
+bottom note, so the explicit scrolled viewport captures above establish its
+visible placement. This is synthetic development proof, not live verification.
+
 ## Local Pure Follow-Up Engine
 
 modules/deals/follow-up-schedule.js consumes outreach identity/state and an

@@ -1,5 +1,11 @@
 # Backlog
 
+2026-11-01 #487/#454v2 LOCAL answer UI edge cases verified: persisted notes,
+choice/Refresh focus, all A/B/C appends and lost-POST GET-only recovery at
+1366/400/412. Three visible answer-note readback screenshots inspected. Pure
+20-row follow-up engine remains non-sending and clock-free. Final coordinated
+acceptance/review pending, no release claim or merge-restriction bypass.
+
 2026-11-01 #487/#454v2 LOCAL pure follow-up scheduler added: F1+1/F2+2/F3+3/
 F4+7 then park, reply stop, cross-property agent daily cap, no drafts/prices/
 sender/clock/network. Synthetic20-row schedule and identity/date/sequence/
