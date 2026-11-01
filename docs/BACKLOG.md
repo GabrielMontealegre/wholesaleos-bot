@@ -1,5 +1,13 @@
 # Backlog
 
+2026-11-01 #487/#454v2 FIRST FULL LOCAL gate FAILED on frozen b1b0f6f:
+296/1/0 of297, explicit Node22.22,600s/file, natural exit1. Failed file:
+remembered-device-ui.test.js (25.91s), cause UNKNOWN; raw values withheld.
+All297 timing rows retained; sum1214.04s is NOT wall time. No retry/waiver/
+assertion change; no exact-head CI exists, so no environment-skip/pass claim.
+Candidate stays LOCAL/UNPUSHED/UNRELEASED. Prior486 failures remain unchanged;
+execution approval is not retried. Two generated exports preserved unstaged.
+
 2026-11-01 #487/#454v2 coordinated LOCAL review passed acceptance checks and
 fixed two pre-release gaps: answer routes now authorize/limit/parse before
 generic server parsers; stored v2 schema/base accessors reject without reads.

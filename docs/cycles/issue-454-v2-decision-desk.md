@@ -1,5 +1,32 @@
 # Decision Desk v2
 
+## First Full Local Suite: Failed
+
+Frozen source b1b0f6fab53c4d54a7f57be38b7e0eec4a56a6ff was tested once with
+the unchanged dynamic full-suite runner: 297 files, 600 seconds per file,
+explicit WOS_NODE pinned to Node22.22, pinned Playwright and the local hermetic
+preload (no checkout dotenv or external provider access). The run terminated
+naturally with exit1: **296 passed, 1 failed, 0 skipped**. The failed file is
+remembered-device-ui.test.js (25.91s); cause is UNKNOWN. Raw error/credential
+values are withheld. No assertion/deadline was changed, no test cancelled or
+skipped, and no unchanged full-suite or focused retry was performed afterward.
+
+All 297 timing rows are retained in
+docs/screens/2026-11-01-decision-desk-v2/first-local-full.json. File durations sum
+to 1214.04 seconds, NOT wall time. The raw log's observed first/last-write span
+is 2026-11-01T02:40:52.836Z to 03:01:14.148Z (1221.312s); this is not asserted
+to be the exact job wall clock. Raw synthetic output remains outside the repo
+at ../.wholesaleos-release-proof/454-v2-b1b0f6f-first-local-full.txt.
+
+All v2/answer/follow-up tests passed within this first full run. Four files that
+failed on the older PR486 local run pass on this different source/runtime run;
+that does NOT repair, explain, supersede or erase the older five failures.
+No Node/environment/flake attribution is made. Exact-head CI does not exist
+for this unpushed candidate, so D-065's CI-authority rule cannot turn its local
+failure into a pass or an environment skip. CI and release acceptance remain
+pending. Local feature acceptance checks below remain valid, not full-suite
+green. No PR/push/merge/deploy was attempted and the candidate remains local.
+
 ## Coordinated Local Acceptance Review
 
 Review found and fixed two integration gaps before any release:
