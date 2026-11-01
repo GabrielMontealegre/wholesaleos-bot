@@ -1,5 +1,20 @@
 # Decisions
 
+ASSUMED: #487 walk_plan remains optional/null and otherwise has exact rung,
+nullable bounded status and nullable UTC-ISO scheduled_at (future allowed).
+A signed_partner_buyer label alone cannot prove the required buyer agreement.
+Allow optional buyer_agreement {buyer_id,non_circumvention_signed,signed_at,
+reference} only for that rung: exact buyer ID must join this snapshot's buyers,
+the signed flag is true/false/null, signed_at is null or not after generated_at,
+and reference is nullable reported record reference. Display the buyer-walker
+rung/status/time only when the exact join, true flag, signed time and reference
+are all present. Otherwise retain the imported report but show only that buyer
+agreement confirmation is needed, never its free-form walker detail. This is
+an assistant-reported agreement record, NOT legal verification or canonical
+agreement authority. Do not reuse JV flags, buyer approval/POF or parse names
+as signing evidence. No new document reader, writer, booking or provider.
+-- AGENTS3/5,#487 comment6553264253 --2026-11-01.
+
 ASSUMED: #487 follow-up engine consumes an explicit recorded-interaction
 projection {id,ref,agent_id,kind,step,at,source_kind}; kind is questions,
 follow_up or reply, step is F1-F4 only for follow_up, at is a canonical UTC day,

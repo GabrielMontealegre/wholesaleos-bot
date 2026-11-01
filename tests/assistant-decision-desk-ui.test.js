@@ -11,6 +11,9 @@ async function main(){
  try{for(const width of [1366,400,412]){
   let store={buyers:[],reviewed_deals:[]},authenticated=true,writes=0,answerPosts=0,hold=false,holdRead=false,lose=false,release;
   const data=fixture();data.open_items[0].suggestion='Synthetic draft <img src=x>\nSecond line.';
+  data.open_items[0].walk_plan={rung:'agent_video',status:'waiting for a time <img src=x>',scheduled_at:null};
+  data.open_items[1].walk_plan={rung:'signed_partner_buyer',status:'scheduled',scheduled_at:'2026-11-02T15:00:00Z',buyer_agreement:{buyer_id:data.buyers[0].id,non_circumvention_signed:true,signed_at:'2026-10-30T12:00:00Z',reference:'synthetic-agreement-ref'}};
+  data.open_items[2].walk_plan={rung:'signed_partner_buyer',status:'SYNTHETIC_WITHHELD_WALKER',scheduled_at:'2026-11-02T15:00:00Z'};
   const app=express();
   app.get('/api/auth/session',(_,res)=>res.json({authenticated,role:'admin'}));
   app.get('/api/dashboard/today-workspace',(_,res)=>res.json({source_kind:'derived_workflow',now,today:'2026-10-31',counts:{},actions:[],best_deals:[],last_24h:[],capabilities:{assistant_snapshot_import:true}}));
@@ -30,6 +33,8 @@ async function main(){
    const choice=page.locator('[data-decision-choice="0:A"]');await page.waitForFunction(()=>document.querySelector('[data-decision-choice="0:A"]')?.disabled===false);
    assert.equal(await page.locator('[data-decision-card]').count(),3);assert.equal(await page.getByText('Synthetic decision 3',{exact:true}).count(),0);assert.equal(await page.getByText('Synthetic decision 4',{exact:true}).count(),0);
    assert.equal(await page.locator('.ws-decision-draft').first().textContent(),data.open_items[0].suggestion);assert.equal(await page.locator('#assistant-slot img[src=x]').count(),0);
+   const walks=page.locator('[data-decision-walk]');assert.equal(await walks.count(),3);assert.equal(await walks.nth(0).textContent(),'Walk: agent video call, waiting for a time <img src=x>');assert((await walks.nth(1).textContent()).startsWith('Walk: partner buyer (agreement reported signed), scheduled'));assert.equal(await walks.nth(2).textContent(),'Walk: buyer agreement confirmation needed.');assert(!(await page.locator('#assistant-slot').innerText()).includes('SYNTHETIC_WITHHELD_WALKER'));
+   if(process.env.WOS_WALK_PROOF_DIR){fs.mkdirSync(process.env.WOS_WALK_PROOF_DIR,{recursive:true});await walks.first().scrollIntoViewIfNeeded();await page.screenshot({path:path.join(process.env.WOS_WALK_PROOF_DIR,'synthetic-walk-'+width+'.png')});}
    assert((await page.locator('#assistant-slot').innerText()).includes('1 follow-ups due today'));
    assert((await page.locator('.ws-decision-numbers').first().innerText()).includes('$0'));
    await page.locator('[data-decision-note="0"]').fill('Synthetic owner note');hold=true;await choice.click();

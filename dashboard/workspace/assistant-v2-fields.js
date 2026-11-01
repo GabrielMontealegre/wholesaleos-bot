@@ -51,8 +51,13 @@ function validateV2Fields(snapshot, { now, existingIds = [] } = {}) {
   const seen = new Set();
   list(existingIds, value => { id(value); if (seen.has(value)) fail('duplicate_id'); seen.add(value); }, 10000);
   const unique = value => { id(value); if (seen.has(value)) fail('duplicate_id'); seen.add(value); };
+  let buyerIds;
+  function knownBuyer(value) {
+    if (!buyerIds) { buyerIds = new Set(); list(field(snapshot, 'buyers'), buyer => { const key = field(buyer, 'id'); id(key); if (buyerIds.has(key)) fail('duplicate_id'); buyerIds.add(key); }); }
+    if (!buyerIds.has(value)) fail('reference_invalid');
+  }
   list(field(snapshot, 'open_items'), item => {
-    record(item, ['id', 'tier', 'status', 'title', 'who', 'happened', 'numbers', 'suggestion', 'options', 'pick', 'due', 'refs']);
+    record(item, ['id', 'tier', 'status', 'title', 'who', 'happened', 'numbers', 'suggestion', 'options', 'pick', 'due', 'refs', ...(item && Object.hasOwn(item, 'walk_plan') ? ['walk_plan'] : [])]);
     unique(item.id);
     if (!Number.isSafeInteger(item.tier) || item.tier < 1 || item.tier > 5) fail('field_invalid');
     text(item.status, 80); text(item.title, 300); text(item.suggestion, 8000, true, true);
@@ -65,6 +70,23 @@ function validateV2Fields(snapshot, { now, existingIds = [] } = {}) {
     if (item.pick !== null && !['A', 'B', 'C'].includes(item.pick)) fail('field_invalid');
     if (item.due !== null) day(item.due);
     record(item.refs, ['thread', 'draft']); text(item.refs.thread, 2048, true); text(item.refs.draft, 200, true);
+    if (Object.hasOwn(item, 'walk_plan') && item.walk_plan !== null) {
+      const walk = item.walk_plan;
+      record(walk, ['rung', 'status', 'scheduled_at', ...(walk && Object.hasOwn(walk, 'buyer_agreement') ? ['buyer_agreement'] : [])]);
+      if (!['agent_video', 'contractor_bid', 'signed_partner_buyer', 'paid_walker'].includes(walk.rung)) fail('field_invalid');
+      text(walk.status, 300, true);
+      if (walk.scheduled_at !== null) timestamp(walk.scheduled_at, Infinity);
+      if (Object.hasOwn(walk, 'buyer_agreement')) {
+        if (walk.rung !== 'signed_partner_buyer') fail('field_invalid');
+        if (walk.buyer_agreement !== null) {
+          const agreement = walk.buyer_agreement;
+          record(agreement, ['buyer_id', 'non_circumvention_signed', 'signed_at', 'reference']);
+          if (agreement.buyer_id !== null) { id(agreement.buyer_id); knownBuyer(agreement.buyer_id); }
+          flag(agreement.non_circumvention_signed); text(agreement.reference, 2048, true);
+          if (agreement.signed_at !== null) timestamp(agreement.signed_at, generated);
+        }
+      }
+    }
   });
   const agents = new Set();
   list(field(snapshot, 'agents'), agent => {

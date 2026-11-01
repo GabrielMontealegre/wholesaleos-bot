@@ -93,7 +93,9 @@
       if (!v2 || typeof v2.validateV2Fields !== 'function') invalid();
       v2.validateV2Fields(source, { now:receipt.imported_at, existingIds:Array.from(ids) });
       var reported = function(row){return Object.assign({},JSON.parse(JSON.stringify(row)),{provenance:provenance()});};
-      var items = source.open_items.map(function(row){var value=reported(row);value.reported_pick=value.pick;delete value.pick;return value;});
+      var items = source.open_items.map(function(row){var value=reported(row);value.reported_pick=value.pick;delete value.pick;
+        if(value.walk_plan&&value.walk_plan.rung==='signed_partner_buyer'){var agreement=value.walk_plan.buyer_agreement;value.walk_buyer_agreement_reported_signed=!!(agreement&&agreement.non_circumvention_signed===true&&agreement.signed_at!==null&&agreement.reference!==null&&source.buyers.some(function(buyer){return buyer.id===agreement.buyer_id;}));}
+        return value;});
       var today = options.today === undefined ? null : day(options.today);
       extension = { decision_desk:{item_ids:items.map(function(item){return item.id;}),tiers:[1,2,3].map(function(tier){return {tier:tier,items:items.filter(function(item){return item.tier===tier;})};}),
         counts:[1,2,3,4,5].map(function(tier){return {tier:tier,count:items.filter(function(item){return item.tier===tier;}).length};}),

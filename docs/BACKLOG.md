@@ -1,5 +1,13 @@
 # Backlog
 
+2026-11-01 #487 walk-plan addendum LOCAL implementation: optional reported
+plan/plain Walk line, exact same-snapshot buyer agreement evidence gate, no
+booking/contact/payment or canonical promotion. New20-row/negative/import and
+three-width UI checks pass; three synthetic screens inspected. Earlier full
+b1 gate remains296/1/0, unknown remembered-device cause, not retried/waived.
+New runtime full/CI/release gates pending; no PR/push/merge/deploy,486 denial
+honored and unrelated exports preserved.
+
 2026-11-01 #487/#454v2 FIRST FULL LOCAL gate FAILED on frozen b1b0f6f:
 296/1/0 of297, explicit Node22.22,600s/file, natural exit1. Failed file:
 remembered-device-ui.test.js (25.91s), cause UNKNOWN; raw values withheld.

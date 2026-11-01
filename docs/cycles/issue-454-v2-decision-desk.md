@@ -1,5 +1,49 @@
 # Decision Desk v2
 
+## Walk-Plan Addendum: Local Only
+
+Issue487 comment6553264253 adds optional open_items[].walk_plan. The shared
+validator now accepts absent/null plans or exact {rung,status,scheduled_at}
+records. Rungs are agent_video, contractor_bid, signed_partner_buyer and
+paid_walker. Status is nullable bounded plain text; scheduled_at is null or
+strict UTC ISO, including future appointments. Unknown keys, invalid types,
+ambiguous/impossible dates and accessors reject the whole file without writes.
+Existing absent-field v1/v2 files remain compatible.
+
+Trace: shared assistant-v2-fields.js is the server adapter and browser-model
+validator; original-byte importer/latest receipt checks remain authoritative.
+assistant-model.js owns copied reported data and derives a buyer display gate;
+decision-desk.js renders an escaped plain-text Walk line with existing card
+source provenance. No new controller command, appointment booking, contact,
+payment, provider request, storage writer or canonical workflow is introduced.
+Only validator/model/Desk asset caches advance to2/4/2, respectively.
+
+The requested three fields do not identify a buyer or record an agreement.
+To enforce the signing condition without inventing facts, a buyer plan may
+also report buyer_agreement {buyer_id,non_circumvention_signed,signed_at,
+reference}. This engineering assumption is logged in DECISIONS. The exact ID
+must join a buyer in the same snapshot; only a true flag plus a nonfuture
+signed time and nonnull record reference permits the buyer-walker display.
+The label explicitly says agreement reported signed, not legally verified.
+Absent/false/unknown/incomplete evidence withholds the rung's free-form status
+and appointment time and displays only agreement confirmation needed. A JV
+non_circumvention check, buyer approval/POF or role/name cannot satisfy it.
+The optional report does not create a canonical signed-agreement record.
+
+New synthetic feature test FIRST failed unsupported-field validation, then
+passed: all rungs,20-item batch, absent/null compatibility, exact buyer joins,
+unknown/unsigned withholding, future scheduled versus future signed dates,
+escaping/accessor negatives and whole-file nonmutation. Shared v2 fields,
+import/model integration and actual1366/400/412 Decision Desk tests pass with
+the new field, a reported-signed buyer and an unverified buyer. Three new
+synthetic Walk viewport images were inspected and copied byte-identically with
+hashes to docs/screens/2026-11-01-decision-desk-walk-plan; no production content
+was read.
+No unchanged remembered-device/full-suite/CI/Lighthouse retry was performed.
+The previous b1 full-local failure remains296/1/0; it is not replaced by these
+focused passes and does not cover this new runtime version. New-head full/CI
+release gates are not run. Local development only, no push/PR/merge/deploy.
+
 ## First Full Local Suite: Failed
 
 Frozen source b1b0f6fab53c4d54a7f57be38b7e0eec4a56a6ff was tested once with
