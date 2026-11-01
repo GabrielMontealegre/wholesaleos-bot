@@ -1270,3 +1270,28 @@ two-second email label is local, current-selection-bound and does not repaint or
 persist data. Existing auth/clock/source/draft authority remains unchanged; Deals
 uses the existing classic destination, not an unapproved native screen.
 --Owner455.6,AGENTS source truth/additive consistency--2026-10-29.
+
+## D-065: Money-Path Priority and Bounded Release Proof
+
+Architect issue487, confirmed2026-11-01, overrides older backlog order.
+Engineering in open codex-task issues is authorized subject to AGENTS safety
+and STOP triggers. Release proof is capped at one exact-head PR CI and one main
+CI, automatic deploy, health200/dashboard/item read-only check, and changed-screen
+1366/400/412 screenshots. No Lighthouse unless the item concerns performance;
+no unchanged-screen audit matrix. PR bodies use the template in at most25 lines.
+Exact-head green CI is authoritative over local-machine failures; retain the
+actual local outcomes and list their D-065 environment exclusions honestly.
+PR486 may proceed; existing failed local/audit records are not erased.
+D-065b: unchanged-baseline UI performance debt is not a regression only when
+the candidate is at least baseline on every measured metric, with no safety
+change. PR477 is authorized under that comparison; track classic Today CLS
+debt separately at the bottom of the backlog.
+PR483/report-label consumer work is DEFERRED, not blocked; no re-release or
+further diagnostics. Plain dates get one bounded reintroduction from current
+main with unsigned numeric geometry evidence; another failure means DEFERRED.
+Test labels use only explicit test_data/synthetic/fixture boolean markers at
+import/render boundaries plus a demo-asset build guard, never text censorship.
+Next priority after these closures is454v2 Decision Desk, agents/outreach and
+pure follow-up scheduling, preserving v1 imports and append-only admin answers.
+No messages are sent. Details/acceptance remain authoritative in issue487;
+then owner order is369,375,376. This does not waive privacy or business safety.

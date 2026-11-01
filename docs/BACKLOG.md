@@ -1,5 +1,25 @@
 # Backlog
 
+Fresh usage2026-11-01: primary7% used,secondary1% used; no reset/purchase by agent.
+
+2026-11-01 release authorization restriction: auto-review rejected the combined
+PR486 body/ready/merge command despite new D-065 direction, because issue-based
+approval was not accepted for a production-impacting merge. No command ran;
+fresh PR state remains DRAFT/OPEN,head1c77,mergedAt=null. Do not bypass or retry
+via another route. Explicit owner approval for merging486/automatic deployment
+is required by that restriction. D-065 is logged below;485 deferral is logged
+locally but its issue closure has not been performed. No production changes.
+
+2026-11-01 D-065/issue487 supersedes the blocked-goal audit below. Architect
+authorizes PR486 release using exact-head green CI and bounded proof; retain
+the original local failures and prior audit reports, no unchanged reruns.
+PR483 report-label consumer work is now DEFERRED, not BLOCKED: no re-release
+or diagnostics. Follow487 order:486,477/478,471,472,then454v2 Decision Desk.
+No owner relay or duplicate startup question; previous360 denial is not retried.
+One PR CI + one main CI, automatic deploy,health/dashboard/item check,changed
+screens1366/400/412; no Lighthouse for these nonperformance slices. Whole
+backlog/455 remain incomplete until actual delivery. Runtime candidate unchanged.
+
 2026-10-31 goal blocked audit: same scope/approval blockers revalidated over
 three consecutive resumed goal turns. Previous turns were NO PROGRESS, not
 live-process waits. Fresh origin/main instructions unchanged;360/471/472/478/
@@ -11,7 +31,7 @@ Do not repeat the approval request, bypass the denial, rerun unchanged failed
 gates, merge486, or redo verified484. Resume only after user authorization or
 a relevant external-state change. Whole backlog and455(6/9) remain incomplete.
 
-2026-10-31 usage warning: secondary97% used; primary15% used at checkpoint.
+Historical2026-10-31 usage warning: secondary97% used; primary15% used then.
 Continue authorized work until exhaustion; reserve the final primary5% for
 rollback only. No reset, purchase, credits, or weekly hold.
 

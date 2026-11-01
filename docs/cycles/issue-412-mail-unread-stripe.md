@@ -1,5 +1,23 @@
 # Mailbox unread stripe
 
+## D-065 Release Direction and Execution Restriction
+
+Architect487/D-065 now explicitly directs release of486 using existing exact-head
+green CI, bounded section7 proof, and no Lighthouse for nonperformance work.
+The five local failures remain actual failed results, excluded from release
+blocking by that decision rather than rewritten as passes. Existing289/0/0
+PR CI41244445374 at1c77 was revalidated; no CI or performance audit rerun.
+Source diff and unchanged safety/keyboard/read-state behavior self-reviewed.
+A22-line PR body was prepared locally. Auto-review rejected the combined
+body-update/ready/merge command: issue-based direction was not accepted as
+explicit authorization for the production-impacting merge. Nothing ran.
+Fresh remote state remains OPEN,DRAFT,head1c77,mergedAt=null. Do not retry with
+another tool or split action; obtain explicit owner approval for merge and
+automatic deployment. This is an execution restriction, not a new product
+failure. PR483/report-label work is DEFERRED under D-065, with no diagnostics
+or re-release. Issue485 closure has not been performed; local decision logged.
+No new production request, build, deploy, test, screenshot, or credential action.
+
 Owner request, 2026-10-31: remove the vertical blue line through the mailbox
 list and continue building. This is independent of blocked PR483/issue485.
 
