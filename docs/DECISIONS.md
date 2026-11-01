@@ -1,5 +1,19 @@
 # Decisions
 
+ASSUMED: #487 follow-up engine consumes an explicit recorded-interaction
+projection {id,ref,agent_id,kind,step,at,source_kind}; kind is questions,
+follow_up or reply, step is F1-F4 only for follow_up, at is a canonical UTC day,
+and source_kind is recorded_interaction. This is an internal input contract,
+not proof of provider authorship or permission to send. Exact outreach-agent
+joins, unique events and valid prior steps are required; missing questions or
+agent identity withhold a follow-up. Any reply (or reported answered=true)
+stops all properties for that agent. Daily cap includes questions and all
+follow-ups across properties. Several eligible properties yield one stable
+priority/ref recommendation, never drafts, prices, networking or automation.
+Same-day reply ordering is unknown at day precision and safely stops rather
+than rejecting a legitimate same-day reply. Historical sends after a reply on
+a later day refuse. No automatic sequence restart. -- AGENTS3/4/5,#487 --2026-11-01.
+
 ASSUMED: D-063B next bounded native consumer is existing WOS reports filtering
 from453 per-message IMAP name receipts, not raw labels or guessed REST custom
 names. Require complete valid receipts on every thread member and consistent

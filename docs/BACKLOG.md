@@ -1,5 +1,12 @@
 # Backlog
 
+2026-11-01 #487/#454v2 LOCAL pure follow-up scheduler added: F1+1/F2+2/F3+3/
+F4+7 then park, reply stop, cross-property agent daily cap, no drafts/prices/
+sender/clock/network. Synthetic20-row schedule and identity/date/sequence/
+purity negatives pass. UI/import/answer checkpoint remains local. Coordinated
+acceptance and final edge-case review still pending; no full suite/CI/PR/push/
+merge/deploy. Existing486 execution restriction unchanged and not retried.
+
 2026-11-01 #487/#454v2 LOCAL Decision Desk/Agents/Outreach views now wired;
 explicit A/B/C answers append with guarded readback, latest-source binding,
 no blind retry, and late-auth clearing. Synthetic 1366/400/412 UI, focused

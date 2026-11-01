@@ -1,5 +1,36 @@
 # Decision Desk v2
 
+## Local Pure Follow-Up Engine
+
+modules/deals/follow-up-schedule.js consumes outreach identity/state and an
+explicit recorded-interaction projection, with today injected. No existing
+follow-up schedule consumer/producer was found in the scoped trace. The new
+module is pure and not a hidden timer, sender, provider adapter or log writer.
+It computes F1 +1 day after questions, F2 +2 after F1, F3 +3 after F2, F4 +7
+after F3, then parks. A late actual step shifts the next due date from that
+recorded step. Missing questions/agent withhold follow-ups. Any agent reply
+stops all of that agent's property sequences and reports needs-decision.
+Reported answered=true is also a conservative stop, never send authority.
+
+Only one recommendation per agent is returned, chosen by property priority/ref;
+the daily cap spans questions/follow-ups across every property. The output is
+derived identifiers/dates/status only: no sendable text or prices. Exact joins,
+unique event IDs/receipts, valid prior steps/cadence and strict canonical days
+reject forged, stale, future, duplicate or malformed records. Empty/missing
+history never invents a question. Same-day replies stop conservatively because
+day precision cannot establish intraday ordering. The contract is logged as an
+assumption, not a claim that an untrusted source_kind authenticates a message.
+
+New test first failed MODULE_NOT_FOUND, honestly exposing the missing module.
+The 20-row synthetic batch now passes all F1/F2/F3/F4/park stages, exact due
+dates, boundaries, any-property reply stop, shared-agent daily cap, stable
+ordering, missing/forged/stale/future/duplicate/accessor negatives, input
+nonmutation and clock/filesystem/network purity spies. Self-review corrected
+an initially too-strict same-day reply ordering before checkpointing.
+No runtime outreach ingestion, real interaction capture or message automation
+is implied. Coordinated acceptance/review is still pending; no full suite, CI,
+PR, push, merge, deployment or whole-v2 release claim.
+
 ## Local Desk UI Checkpoint
 
 Decision Desk now renders full tier 1-3 context, reported people/history/numbers,
