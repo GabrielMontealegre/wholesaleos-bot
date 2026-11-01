@@ -1,5 +1,16 @@
 # Backlog
 
+2026-10-31 goal blocked audit: same scope/approval blockers revalidated over
+three consecutive resumed goal turns. Previous turns were NO PROGRESS, not
+live-process waits. Fresh origin/main instructions unchanged;360/471/472/478/
+485 remain OPEN without comments and PR486 remains DRAFT at1c77, not merged.
+No explicit approval for the denied360 comment has arrived. No authorized
+independent implementation slice was identified under the current restrictions.
+Mark the goal BLOCKED, not complete; retain all evidence and owned branches.
+Do not repeat the approval request, bypass the denial, rerun unchanged failed
+gates, merge486, or redo verified484. Resume only after user authorization or
+a relevant external-state change. Whole backlog and455(6/9) remain incomplete.
+
 2026-10-31 usage warning: secondary97% used; primary15% used at checkpoint.
 Continue authorized work until exhaustion; reserve the final primary5% for
 rollback only. No reset, purchase, credits, or weekly hold.
