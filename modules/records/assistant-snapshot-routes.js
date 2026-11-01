@@ -13,6 +13,7 @@ function requireSnapshotPayload(req, res, next) {
 }
 function registerAssistantSnapshotRoutes(app, { db, requireAdmin, now = () => new Date().toISOString() }) {
   if (typeof requireAdmin !== 'function' || typeof db?.readDBStrict !== 'function' || typeof db?.writeDB !== 'function') throw Error('assistant_snapshot_dependencies_required');
+  require('./assistant-decision-answer-routes').registerDecisionAnswerRoutes(app, { db, requireAdmin, now });
   const route = '/api/dashboard/assistant-snapshots';
   const noStore = (req, res, next) => { res.set('Cache-Control', 'no-store'); next(); };
   function error(res, failure) {

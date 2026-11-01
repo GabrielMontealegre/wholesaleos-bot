@@ -1,5 +1,33 @@
 # Decision Desk v2
 
+## Local Owner-Answer Log
+
+New pure assistant-decision-answers.js appends owner answers to a separate
+assistant_decision_answers array, never to the imported file, canonical buyers,
+outreach, provider messages or snapshot pick. Inputs name the exact latest
+actor-owned v2 receipt and item. Choice is exactly A/B/C; note is bounded text;
+answered_at comes from the injected server clock. Client actor/time fields refuse.
+An explicit UUID request is actor-scoped and idempotent; conflicting reuse or
+a new answer for a superseded/foreign/missing receipt refuses. Exact old replay
+returns its prior receipt without a write, even after another import. A later
+intentional answer appends rather than overwriting history.
+
+Snapshot-route registration now adds GET/POST assistant-snapshot-answers behind
+the same signed-admin guard, no-store, exact same-origin/header requirement,
+strict small JSON payload and redacted error handling. It is not a mailbox or
+send endpoint. Upload-only keys are not accepted as sessions. GET is owner-only,
+paged with a bounded limit and exact own cursor; it omits operator/request IDs.
+History is fail-closed for malformed, duplicate, foreign-source, future-dated or
+nonmonotonic receipts. No private input values enter diagnostics.
+
+The new pure test first failed because the answer module did not exist, an
+honest missing feature. Pure and local synthetic route tests now pass, covering
+append/readback, two actors, stale/forged/conflicting requests, idempotence,
+privacy/CSRF/type/size/error boundaries and no canonical mutation/clock/network
+or filesystem effects. Existing snapshot v1/v2 routes/integration still pass.
+Actual A/B/C UI clicks, Desk/Agents/Outreach screens and follow-up engine remain
+unimplemented; no full suite, CI, PR, production write or release claim.
+
 ## Local Integration Checkpoint
 
 Version2 now runs both the existing base-field validator and shared extension

@@ -1,5 +1,12 @@
 # Backlog
 
+2026-11-01 #487/#454v2 LOCAL owner-answer log/API added: source-bound latest-v2
+item A/B/C choices append separately, actor-scoped idempotent UUID requests,
+server time and private paged GET. No imported/canonical/provider mutation.
+Pure/route negatives and existing snapshot integration/routes pass. UI buttons,
+Desk/Agents/Outreach views and follow-up engine remain; no full suite/CI/PR/
+push/merge/deploy. Pending486 merge approval is neither retried nor bypassed.
+
 2026-11-01 #487/#454v2 LOCAL integration advances: both base/extension validation
 now guard v2 append/read, exact hashes and v1 history retained; uploader and
 compatible API capability wired. Pure native projection adds tier counts,
