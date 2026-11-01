@@ -2,15 +2,15 @@
 const express = require('express');
 const { appendAnswer, readAnswers, answerId, publicAnswer } = require('./assistant-decision-answers');
 const CODES = new Set(['fields_invalid', 'field_invalid', 'actor_required', 'store_invalid', 'clock_invalid', 'snapshot_stale', 'request_conflict', 'query_invalid']);
-function registerDecisionAnswerRoutes(app, { db, requireAdmin, now }) {
-  if (typeof requireAdmin !== 'function' || typeof now !== 'function' || typeof db?.readDBStrict !== 'function' || typeof db?.writeDB !== 'function') throw Error('assistant_answer_dependencies_required');
+function registerDecisionAnswerRoutes(app, { db, requireAdmin, now = () => new Date().toISOString(), limiter = (req, res, next) => next() }) {
+  if (typeof requireAdmin !== 'function' || typeof now !== 'function' || typeof limiter !== 'function' || typeof db?.readDBStrict !== 'function' || typeof db?.writeDB !== 'function') throw Error('assistant_answer_dependencies_required');
   const route = '/api/dashboard/assistant-snapshot-answers';
   function error(res, failure) {
     const suffix = typeof failure?.code === 'string' && failure.code.replace(/^assistant_answer_/, '');
     const known = CODES.has(suffix) && failure.code === 'assistant_answer_' + suffix;
     res.status(known ? failure.status || 400 : 503).json({ ok: false, code: known ? failure.code : 'assistant_answer_unavailable' });
   }
-  app.all(route, (req, res, next) => { res.set('Cache-Control', 'no-store'); next(); }, requireAdmin, (req, res, next) => {
+  app.all(route, (req, res, next) => { res.set('Cache-Control', 'no-store'); next(); }, requireAdmin, limiter, (req, res, next) => {
     if (!['GET', 'POST'].includes(req.method)) return res.status(405).json({ ok: false, code: 'assistant_answer_method_invalid' });
     if (req.method === 'GET' && (req.get('transfer-encoding') || Number(req.get('content-length') || 0) !== 0)) return res.status(400).json({ ok: false, code: 'assistant_answer_payload_invalid' });
     next();

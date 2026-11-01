@@ -53,6 +53,11 @@ invalid(v => { v.unknown = true; });
 const badReceipt = structuredClone(receipt); badReceipt.snapshot.open_items[0].tier = 9;
 assert.throws(() => model.project(badReceipt), /assistant_sheet_invalid/);
 assert.throws(() => snapshot.latestSnapshot({ assistant_snapshots: [badReceipt] }, options), /assistant_snapshot_store_invalid/);
+let accessorCalls=0;
+for(const corrupt of [value=>Object.defineProperty(value.snapshot,'version',{enumerable:true,get(){accessorCalls++;return 2;}}),value=>Object.defineProperty(value.snapshot.deals[0],'name',{enumerable:true,get(){accessorCalls++;return 'Synthetic getter';}})]){
+ const value=structuredClone(receipt);corrupt(value);assert.throws(()=>snapshot.latestSnapshot({assistant_snapshots:[value]},options),/assistant_snapshot_store_invalid/);
+}
+assert.equal(accessorCalls,0,'Schema selection and base validation must not invoke stored v2 accessors');
 
 (async () => {
   let store = {}, writes = 0;

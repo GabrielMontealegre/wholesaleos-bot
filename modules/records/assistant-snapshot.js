@@ -8,8 +8,8 @@ const MONEY = ['ask', 'seller_number', 'our_offer', 'target', 'value_fixed', 're
 const REQUEST_ID = /^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/;
 function fail(code, status = code === 'store_invalid' ? 503 : 400) { throw Object.assign(Error('assistant_snapshot_' + code), { code: 'assistant_snapshot_' + code, status }); }
 function object(value, keys) {
-  if (!value || typeof value !== 'object' || Array.isArray(value) || Object.keys(value).length !== keys.length ||
-      keys.some(key => !Object.hasOwn(value, key))) fail('fields_invalid');
+  if (!value || typeof value !== 'object' || Array.isArray(value) || ![Object.prototype, null].includes(Object.getPrototypeOf(value)) || Reflect.ownKeys(value).length !== keys.length ||
+      keys.some(key => !Object.hasOwn(value, key) || !Object.hasOwn(Object.getOwnPropertyDescriptor(value, key), 'value'))) fail('fields_invalid');
 }
 function text(value, max = 500, { nullable = false, multiline = false } = {}) {
   if (nullable && value === null) return;
@@ -51,7 +51,9 @@ function sourceURL(value) {
   catch (_) { fail('source_url_invalid'); }
 }
 function validate(snapshot, now, { storedReplies = false } = {}) {
-  object(snapshot, ['schema', 'version', 'generated_at', 'deals', 'buyers', 'texts', 'calls', 'emails_waiting', ...(snapshot?.version === 2 ? ['open_items', 'agents', 'outreach'] : [])]);
+  const version = snapshot && typeof snapshot === 'object' && Object.getOwnPropertyDescriptor(snapshot, 'version');
+  if (!version || !Object.hasOwn(version, 'value')) fail('fields_invalid');
+  object(snapshot, ['schema', 'version', 'generated_at', 'deals', 'buyers', 'texts', 'calls', 'emails_waiting', ...(version.value === 2 ? ['open_items', 'agents', 'outreach'] : [])]);
   if (snapshot.schema !== 'wos-assistant-snapshot') fail('schema_invalid');
   if (![1, 2].includes(snapshot.version)) fail('version_invalid');
   const generated = time(snapshot.generated_at, now, 'generated_at_invalid'), ids = new Set(), dealIds = new Set();

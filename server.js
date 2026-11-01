@@ -164,6 +164,8 @@ function getDallasCompIntelligenceAgent() {
 
 const enrichQ = require('./enrichment-queue'); // Phase 3A
 // Authorize private file traffic before generic parsers can inspect or echo it.
+require('./modules/records/assistant-decision-answer-routes').registerDecisionAnswerRoutes(app, { db, requireAdmin,
+  limiter: (req, res, next) => apiLimiter(req, res, next) });
 app.use('/api/dashboard/assistant-snapshots', (req, res, next) => { res.set('Cache-Control', 'no-store'); next(); },
   require('./modules/records/assistant-key-upload').createAssistantKeyUpload({ db, limiter: (req, res, next) => apiLimiter(req, res, next) }),
   requireAdmin, require('./modules/records/assistant-snapshot-routes').requireSnapshotPayload);

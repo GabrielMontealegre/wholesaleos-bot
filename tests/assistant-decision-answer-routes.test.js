@@ -1,13 +1,13 @@
 'use strict';
 const assert = require('node:assert/strict'), express = require('express');
-const { registerAssistantSnapshotRoutes } = require('../modules/records/assistant-snapshot-routes');
+const { registerDecisionAnswerRoutes } = require('../modules/records/assistant-decision-answer-routes');
 const { appendSnapshot } = require('../modules/records/assistant-snapshot');
 const { fixture } = require('./helpers/assistant-snapshot-v2-fixture');
 const now = '2026-10-31T12:00:00Z';
 (async () => {
   let store = appendSnapshot({ buyers: [] }, Buffer.from(JSON.stringify(fixture())), { now, operatorId: 'synthetic-owner', filename: 'synthetic.json' }), writes = 0;
   const app = express();
-  registerAssistantSnapshotRoutes(app, { now: () => now, db: { readDBStrict: () => store, writeDB: value => { store = value; writes++; } }, requireAdmin: (req, res, next) => {
+  registerDecisionAnswerRoutes(app, { now: () => now, db: { readDBStrict: () => store, writeDB: value => { store = value; writes++; } }, requireAdmin: (req, res, next) => {
     if (req.get('X-Test-Session') !== 'signed') return res.sendStatus(401);
     if (req.get('X-Test-Role') !== 'admin') return res.sendStatus(403);
     req.currentUser = { id: req.get('X-Test-Actor') || 'synthetic-owner' }; next();

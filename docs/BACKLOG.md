@@ -1,5 +1,13 @@
 # Backlog
 
+2026-11-01 #487/#454v2 coordinated LOCAL review passed acceptance checks and
+fixed two pre-release gaps: answer routes now authorize/limit/parse before
+generic server parsers; stored v2 schema/base accessors reject without reads.
+Both new regressions failed first, then focused auth/import/answer/UI tests
+passed. Twelve inspected byte-identical synthetic screens retained with hashes.
+Local preparation is not CI/production completion: no full suite/PR/push/merge/
+deploy; existing486 approval restriction remains untouched, exports preserved.
+
 2026-11-01 #487/#454v2 LOCAL answer UI edge cases verified: persisted notes,
 choice/Refresh focus, all A/B/C appends and lost-POST GET-only recovery at
 1366/400/412. Three visible answer-note readback screenshots inspected. Pure

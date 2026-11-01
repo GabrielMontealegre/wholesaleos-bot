@@ -1,5 +1,52 @@
 # Decision Desk v2
 
+## Coordinated Local Acceptance Review
+
+Review found and fixed two integration gaps before any release:
+
+- The answer router was initially registered indirectly with snapshot routes,
+  after server.js generic parsers. Its standalone route tests did not expose
+  that order. A new real-source ordering assertion failed first. The answer
+  router now registers explicitly before generic parsers, with signed-admin
+  authorization, the same shared rate limiter, its own strict 8kb parser and
+  redacted/no-store error responses. No duplicate registration remains.
+  A synthetic middleware-order test verifies unauthorized malformed JSON never
+  reaches parsing, signed malformed/oversized/wrong-type inputs stay redacted,
+  and no answer request reaches the generic parser. This was a local review
+  defect, not observed production exposure; nothing here was deployed.
+- Dynamic v1/v2 root-key selection accessed stored version before checking its
+  descriptor. New stored-v2 accessor negatives failed first. Schema selection
+  now requires an own data descriptor, and base object validation rejects
+  accessor/nonplain/extra-key records before reading them. JSON v1/v2 files
+  remain accepted. The model already rejects accessors before projection.
+
+| #487 Acceptance | Local Evidence |
+| --- | --- |
+| V2 import with correct full tiers/counts | v2 integration + actual 1366/400/412 UI |
+| A/B/C append and assistant-readable GET | pure log/routes + all three UI choices/readback |
+| 20-row follow-up cadence | pure schedule batch, F1/F2/F3/F4/park + negatives |
+| V1 remains accepted | v1 importer/model/routes/uploader + earlier v1 UI |
+| Bad tier/duplicate/future file rejected whole | v2 import integration/extension tests |
+| Privacy/no hidden sending | pre-parser auth test, source/identity/purity spies, blocked external UI network |
+
+Local acceptance checks pass; this is not full-suite/CI or production acceptance.
+Focused post-fix checks also pass for API session gate, key upload/key routes,
+v1 snapshot routes, uploader, answer log/routes, v2 UI/import and follow-up.
+No existing safety assertion was weakened. Only explicit unsupported-version
+examples changed from 2 to 3 because #487 intentionally adds version 2.
+The pure engine's headless API meets the requested pure-module/batch contract;
+there is no new runtime producer, provider send or unattended schedule to wire.
+Displayed outreach due counts remain reported snapshot state, not proof that
+an actual follow-up was sent or that the pure engine has run in production.
+
+Twelve inspected synthetic images (initial Desk/Agents/Outreach + answer
+readback at three widths) are retained in docs/screens/2026-11-01-decision-desk-v2.
+Each was copied byte-identically from its inspected development output;
+manifest.json retains the hashes. Extra uninspected development captures are
+not included. No private snapshot file or production image is committed.
+Release gates remain pending. No full suite, CI, PR, push, merge or deployment
+was attempted; pending486 approval is not retried, split or bypassed.
+
 ## Local Answer Readback Polish
 
 Owner notes now appear alongside the recorded answer after GET readback,

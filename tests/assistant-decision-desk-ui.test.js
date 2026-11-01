@@ -2,6 +2,7 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),express=require('express');
 const {fixture}=require('./helpers/assistant-snapshot-v2-fixture');
 const {registerAssistantSnapshotRoutes}=require('../modules/records/assistant-snapshot-routes');
+const {registerDecisionAnswerRoutes}=require('../modules/records/assistant-decision-answer-routes');
 const {appendSnapshot}=require('../modules/records/assistant-snapshot');
 const {launchChromiumWithResolvedBrowser}=require('../modules/research/playwright-browser-resolver');
 const now='2026-10-31T12:00:00Z';
@@ -14,7 +15,8 @@ async function main(){
   app.get('/api/auth/session',(_,res)=>res.json({authenticated,role:'admin'}));
   app.get('/api/dashboard/today-workspace',(_,res)=>res.json({source_kind:'derived_workflow',now,today:'2026-10-31',counts:{},actions:[],best_deals:[],last_24h:[],capabilities:{assistant_snapshot_import:true}}));
   app.use('/api/dashboard/assistant-snapshot-answers',(req,res,next)=>{if(req.method==='POST')answerPosts++;if(req.method==='POST'&&lose){res.json=()=>{res.destroy();return res;};}else if(req.method==='POST'&&hold||req.method==='GET'&&holdRead){hold=false;holdRead=false;const json=res.json.bind(res);res.json=body=>{release=()=>json(body);return res;};}next();});
-  registerAssistantSnapshotRoutes(app,{db:{readDBStrict:()=>store,writeDB:value=>{store=value;writes++;}},requireAdmin(req,res,next){if(!authenticated)return res.status(401).json({code:'SESSION_REQUIRED'});req.currentUser={id:'synthetic-owner',role:'admin'};next();},now:()=>now});
+  const dependencies={db:{readDBStrict:()=>store,writeDB:value=>{store=value;writes++;}},requireAdmin(req,res,next){if(!authenticated)return res.status(401).json({code:'SESSION_REQUIRED'});req.currentUser={id:'synthetic-owner',role:'admin'};next();},now:()=>now};
+  registerDecisionAnswerRoutes(app,dependencies);registerAssistantSnapshotRoutes(app,dependencies);
   app.get('/app',(_,res)=>res.sendFile(path.join(__dirname,'../dashboard/workspace/index.html')));
   app.get('/favicon.ico',(_,res)=>res.status(204).end());app.use('/dashboard',express.static(path.join(__dirname,'../dashboard')));
   const server=await new Promise(resolve=>{const s=app.listen(0,'127.0.0.1',()=>resolve(s));});
