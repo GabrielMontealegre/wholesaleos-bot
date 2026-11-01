@@ -61,4 +61,4 @@ try {
   assert.doesNotThrow(() => validateV2Fields(batch, { now }));
   assert.deepEqual(effects, [], 'Pure extension validation has no clock, filesystem or network side effects');
 } finally { restore.reverse().forEach(fn => fn()); }
-console.log('assistant-snapshot-v2-fields: synthetic extension fields,20-row batch,strict unknown/null/date/reference boundaries and no mutation passed; not wired to import yet');
+console.log('assistant-snapshot-v2-fields: synthetic extension fields,20-row batch,strict unknown/null/date/reference boundaries and no mutation passed');

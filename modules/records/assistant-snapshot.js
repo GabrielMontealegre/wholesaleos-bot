@@ -1,6 +1,7 @@
 'use strict';
 const crypto = require('node:crypto');
 const { TextDecoder } = require('node:util');
+const { validateV2Fields } = require('./assistant-snapshot-v2-fields');
 const MAX_BYTES = 1024 * 1024;
 const STAGES = ['finding_buyer', 'offer_out', 'under_contract', 'buyer_assigned', 'closed', 'dead'];
 const MONEY = ['ask', 'seller_number', 'our_offer', 'target', 'value_fixed', 'repairs', 'buyer_number', 'fee_estimate_low', 'fee_estimate_high'];
@@ -50,9 +51,9 @@ function sourceURL(value) {
   catch (_) { fail('source_url_invalid'); }
 }
 function validate(snapshot, now, { storedReplies = false } = {}) {
-  object(snapshot, ['schema', 'version', 'generated_at', 'deals', 'buyers', 'texts', 'calls', 'emails_waiting']);
+  object(snapshot, ['schema', 'version', 'generated_at', 'deals', 'buyers', 'texts', 'calls', 'emails_waiting', ...(snapshot?.version === 2 ? ['open_items', 'agents', 'outreach'] : [])]);
   if (snapshot.schema !== 'wos-assistant-snapshot') fail('schema_invalid');
-  if (snapshot.version !== 1) fail('version_invalid');
+  if (![1, 2].includes(snapshot.version)) fail('version_invalid');
   const generated = time(snapshot.generated_at, now, 'generated_at_invalid'), ids = new Set(), dealIds = new Set();
   function unique(value) { id(value); if (ids.has(value)) fail('duplicate_id'); ids.add(value); }
   function dealRef(value) { if (value !== null) { id(value); if (!dealIds.has(value)) fail('reference_invalid'); } }
@@ -97,6 +98,7 @@ function validate(snapshot, now, { storedReplies = false } = {}) {
     dealRef(message.deal); if (message.draft_ref !== null && (typeof message.draft_ref !== 'string' || !/^[a-zA-Z0-9_-]{1,200}$/.test(message.draft_ref))) fail('reference_invalid');
     if (!Number.isSafeInteger(message.rank) || message.rank < 1) fail('rank_invalid');
   });
+  if (snapshot.version === 2) validateV2Fields(snapshot, { now: new Date(now).toISOString(), existingIds: [...ids] });
 }
 function decodeSnapshot(bytes, { now } = {}) {
   const clock = time(now, Infinity, 'clock_invalid');

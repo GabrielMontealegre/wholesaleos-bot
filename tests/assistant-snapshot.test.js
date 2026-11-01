@@ -28,7 +28,7 @@ function invalid(change, code) {
   assert.throws(() => decodeSnapshot(buffer, { now }), error => error.code === 'assistant_snapshot_' + code);
   assert.deepEqual(buffer, copy);
 }
-invalid(v => { v.version = 2; }, 'version_invalid');
+invalid(v => { v.version = 3; }, 'version_invalid');
 invalid(v => { v.schema = 'forged'; }, 'schema_invalid');
 invalid(v => { delete v.generated_at; }, 'fields_invalid');
 invalid(v => { v.generated_at = '2026-10-27T00:00:00Z'; }, 'generated_at_invalid');

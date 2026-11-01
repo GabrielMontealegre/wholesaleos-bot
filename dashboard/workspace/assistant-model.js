@@ -1,9 +1,9 @@
 'use strict';
 (function (root, factory) {
-  var api = factory();
+  var api = factory(typeof module === 'object' && module.exports ? require('./assistant-v2-fields') : root && root.WOSAssistantV2Fields);
   if (typeof module === 'object' && module.exports) module.exports = api;
   if (root) root.WOSAssistantModel = api;
-})(typeof window !== 'undefined' ? window : null, function () {
+})(typeof window !== 'undefined' ? window : null, function (v2) {
   var STAGES = ['finding_buyer', 'offer_out', 'under_contract', 'buyer_assigned', 'closed', 'dead'];
   function invalid() { throw Error('assistant_sheet_invalid'); }
   function str(value, max, nullable) {
@@ -43,7 +43,7 @@
     if (typeof body !== 'string' || body.length > 8000) return null;
     try { return 'sms:' + number + '?&body=' + encodeURIComponent(body); } catch (_) { return null; }
   }
-  function project(receipt) {
+  function project(receipt, options) {
     if (receipt === null) return null;
     try {
       var nodes = 0;
@@ -54,14 +54,14 @@
         Reflect.ownKeys(value).forEach(function(key){var d=Object.getOwnPropertyDescriptor(value,key);if(typeof key!=='string' || !Object.hasOwn(d,'value')) invalid();plain(d.value,depth+1);});
       }
       plain(receipt,0);
-      return build(receipt);
+      return build(receipt, options || {});
     } catch (_) { invalid(); }
   }
-  function build(receipt) {
+  function build(receipt, options) {
     if (!receipt || receipt.source_kind !== 'assistant_snapshot_import' || !/^[a-f0-9]{64}$/.test(receipt.id) || !/^[a-f0-9]{64}$/.test(receipt.file_sha256) ||
         typeof receipt.filename !== 'string' || !/^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}\.json$/.test(receipt.filename) || receipt.filename.includes('..')) invalid();
     var source = receipt.snapshot;
-    if (!source || source.schema !== 'wos-assistant-snapshot' || source.version !== 1 || receipt.generated_at !== source.generated_at) invalid();
+    if (!source || source.schema !== 'wos-assistant-snapshot' || ![1,2].includes(source.version) || receipt.generated_at !== source.generated_at) invalid();
     iso(receipt.imported_at); iso(source.generated_at);
     if (Date.parse(source.generated_at) > Date.parse(receipt.imported_at)) invalid();
     var ids = new Set(), dealIds = new Set();
@@ -88,10 +88,25 @@
     var emails = ranked(source.emails_waiting,function(r){return {who:str(r.who,200),role:str(r.role,300),subject:str(r.subject,500),deal:ref(r.deal),href:'/app?preview=1&view=email',provenance:provenance()};});
     var buyers = list(source.buyers,1000).map(function(r){unique(r.id); if (![true,false,null].includes(r.pof) || !['approved','pending','rejected',null].includes(r.approval)) invalid();var reply=null;if(Object.hasOwn(r,'last_reply_at')){reply=iso(r.last_reply_at);if(Date.parse(reply)>Date.parse(receipt.imported_at))invalid();}return {id:r.id,name:str(r.name,200),company:str(r.company,300,true),areas:list(r.areas,100).map(function(a){return str(a,200);}),buy_box:str(r.buy_box,4000,true),reported_pof:r.pof,reported_approval:r.approval,last_contact:capturedDay(r.last_contact,true),last_reply_at:reply,deals_sent:list(r.deals_sent,1000).map(function(value){if(value===null)invalid();return ref(value);}),phone:str(r.phone,80,true),email:str(r.email,320,true),source_url:safeURL(r.source_url),provenance:provenance()};});
     var needs = deals.filter(function(d){return d.needs_gabriel!==null;}).slice().sort(function(a,b){return Date.parse(b.updated_at)-Date.parse(a.updated_at);});
-    return { receipt_id:receipt.id,file_sha256:receipt.file_sha256,generated_at:source.generated_at,imported_at:receipt.imported_at,filename:receipt.filename,
+    var extension = {};
+    if (source.version === 2) {
+      if (!v2 || typeof v2.validateV2Fields !== 'function') invalid();
+      v2.validateV2Fields(source, { now:receipt.imported_at, existingIds:Array.from(ids) });
+      var reported = function(row){return Object.assign({},JSON.parse(JSON.stringify(row)),{provenance:provenance()});};
+      var items = source.open_items.map(function(row){var value=reported(row);value.reported_pick=value.pick;delete value.pick;return value;});
+      var today = options.today === undefined ? null : day(options.today);
+      extension = { decision_desk:{tiers:[1,2,3].map(function(tier){return {tier:tier,items:items.filter(function(item){return item.tier===tier;})};}),
+        counts:[1,2,3,4,5].map(function(tier){return {tier:tier,count:items.filter(function(item){return item.tier===tier;}).length};}),
+        lower_tier_count:items.filter(function(item){return item.tier>=4;}).length},
+        agents:source.agents.map(reported),outreach:source.outreach.map(reported),
+        outreach_counts:{contacted:source.outreach.filter(function(row){return row.contacted===true;}).length,
+          answered:source.outreach.filter(function(row){return row.answered===true;}).length,
+          follow_ups_due:today===null?null:source.outreach.filter(function(row){return row.answered!==true&&row.follow_up_on!==null&&row.follow_up_on<=today;}).length} };
+    }
+    return Object.assign({ receipt_id:receipt.id,file_sha256:receipt.file_sha256,generated_at:source.generated_at,imported_at:receipt.imported_at,filename:receipt.filename,
       needs_next:needs[0] || null,calls:calls,texts:texts.filter(function(r){return r.status==='drafted';}),emails:emails,
       stages:STAGES.map(function(stage){return {stage:stage,deals:deals.filter(function(d){return d.stage===stage;})};}),buyers:buyers,
-      reported_approved_buyers:buyers.filter(function(b){return b.reported_approval==='approved';}).length,recent_replies:buyers.filter(function(b){return b.last_reply_at!==null;}).sort(function(a,b){return Date.parse(b.last_reply_at)-Date.parse(a.last_reply_at);}).slice(0,10) };
+      reported_approved_buyers:buyers.filter(function(b){return b.reported_approval==='approved';}).length,recent_replies:buyers.filter(function(b){return b.last_reply_at!==null;}).sort(function(a,b){return Date.parse(b.last_reply_at)-Date.parse(a.last_reply_at);}).slice(0,10) },extension);
   }
   return { project:project, phoneLink:phoneLink };
 });

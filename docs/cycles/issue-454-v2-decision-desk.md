@@ -1,5 +1,39 @@
 # Decision Desk v2
 
+## Local Integration Checkpoint
+
+Version2 now runs both the existing base-field validator and shared extension
+validator before any append. Exact original bytes still determine the hash;
+actor ownership, append-only history, request replay and v1 acceptance remain.
+Stored-receipt/latest validation accepts mixed v1/v2 history and rejects corrupt
+v2 data. API keeps its compatible version1 capability field and adds explicit
+supported_versions:[1,2]. The local uploader accepts either payload version;
+its upload-key format, target, redirects, caps and request ownership are unchanged.
+
+The shared extension implementation lives in dashboard/workspace as a pure
+browser/CommonJS asset; the server adapter re-exports it. Native loading order
+loads it before assistant-model3. Model projection retains v1 output, adds full
+tiers1-3 with tier4-5 counts, reported agent/outreach data and provenance. Imported
+pick becomes reported_pick, never an authoritative owner answer. Due counts
+remain unknown without an injected day. Decision Desk controls/screens, answers
+log/API and follow-up engine are STILL NOT IMPLEMENTED. No whole-v2 completion.
+
+Focused v2 import/read/model/browser-VM/local-admin-route tests pass, including
+whole-file bad-tier/duplicate/future/base-source rejection, exact bytes, mixed
+history and nonmutation. Existing v1 snapshot/model/routes and uploader tests
+pass; existing reply-reader checks are retained. New VM test initially failed
+on undeclared result scaffolding; explicit globalThis corrected that harness
+without changing assertions. Restricted localhost fetch attempts failed; the
+same focused route tests passed under escalated localhost hermetic execution
+with external requests blocked. No product/environment cause attribution.
+
+Existing assertions intentionally changed: assistant-snapshot.test.js and
+upload-assistant-snapshot.test.js unsupported version2 -> version3 because487
+now explicitly supports2. The same rejection intent remains; uploader gained
+a real synthetic-key/local-route v2 positive case. No safety assertion weakened.
+These local changes are not pushed, in a PR, full-suite tested, or released.
+The earlier preparation-only notes below describe the previous local checkpoint.
+
 ## Current Scope
 
 Issue487/D-065 authorizes additive snapshot v2, Decision Desk, an append-only

@@ -1,5 +1,13 @@
 # Backlog
 
+2026-11-01 #487/#454v2 LOCAL integration advances: both base/extension validation
+now guard v2 append/read, exact hashes and v1 history retained; uploader and
+compatible API capability wired. Pure native projection adds tier counts,
+reported agents/outreach/provenance with unknown-day due count. Focused v2,
+v1, routes/model/uploader checks pass; no full suite/CI/PR/deploy. Actual Desk
+screens/answers/follow-up engine still required. No merge restriction bypass.
+Previous unused-validator checkpoint below is history, not current integration.
+
 2026-11-01 #487/#454v2 LOCAL preparation on item/454-v2-field-validation.
 New pure extension-field validator and synthetic20-row/negative tests pass;
 existingv1 snapshot tests pass unchanged. NOT wired into importer or UI yet;
