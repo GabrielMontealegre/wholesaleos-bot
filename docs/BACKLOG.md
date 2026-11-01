@@ -1,8 +1,19 @@
 # Backlog
 
-2026-10-31 usage warning: secondary96% used; primary10% used at checkpoint.
+2026-10-31 usage warning: secondary97% used; primary15% used at checkpoint.
 Continue authorized work until exhaustion; reserve the final primary5% for
 rollback only. No reset, purchase, credits, or weekly hold.
+
+2026-10-31 resumed goal audit: NO PROGRESS, not a live-process wait.
+Fresh origin/main and current instructions checked. Issues360/471/472/478/485
+are OPEN with no comments; no new scope decision. Owner455 remains6/9(67%);
+4A/5/8B2 remain blocked. 454 real-key/first-upload and463 owner protection
+actions are not agent work. Claude-owned433/434 remain untouched. The pending
+issue360 communication approval was neither inferred from goal resumption nor
+retried. No release/test waiver or independent implementation scope invented.
+PR486 remains held; no product tests/CI/audits/deploy/private probes repeated. Source
+PR1c77 and both unrelated generated exports preserved. Goal remains active;
+resume only a genuinely authorized next slice or an approved decision boundary.
 
 2026-10-31 owner mailbox stripe fix LOCAL CANDIDATE in draft PR486, NOT released.
 Removed only the unread-row inset blue shadow; bold unread senders and keyboard
