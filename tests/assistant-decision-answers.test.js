@@ -18,6 +18,11 @@ const second = appendAnswer(first, { ...input, choice: 'C', note: 'Synthetic cla
 assert.equal(second.assistant_decision_answers.length, 2);
 assert.deepEqual(second.assistant_decision_answers[0], first.assistant_decision_answers[0]);
 assert.deepEqual(readAnswers(second, options).items.map(row => row.choice), ['A', 'C']);
+assert.deepEqual(readAnswers(second, {...options,snapshotId:input.snapshot_id,latestOnly:true}).items.map(row=>row.choice),['C']);
+assert.equal(readAnswers(second,{...options,snapshotId:'0'.repeat(64),latestOnly:true}).items.length,0);
+assert.throws(()=>readAnswers(second,{...options,latestOnly:true}),/query_invalid/);
+assert.throws(()=>readAnswers(second,{...options,snapshotId:input.snapshot_id,latestOnly:'1'}),/query_invalid/);
+assert.throws(()=>readAnswers(second,{...options,snapshotId:input.snapshot_id,latestOnly:true,after:first.assistant_decision_answers[0].id}),/query_invalid/);
 assert.equal(readAnswers(second, { ...options, operatorId: 'another-owner' }).items.length, 0);
 const page = readAnswers(second, { ...options, limit: 1 });
 assert.equal(page.items.length, 1); assert.equal(page.next_after, page.items[0].id);

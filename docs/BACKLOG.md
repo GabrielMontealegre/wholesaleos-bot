@@ -1,5 +1,12 @@
 # Backlog
 
+2026-11-01 #487/#454v2 LOCAL Decision Desk/Agents/Outreach views now wired;
+explicit A/B/C answers append with guarded readback, latest-source binding,
+no blind retry, and late-auth clearing. Synthetic 1366/400/412 UI, focused
+answer/import/model tests and unchanged-intent v1 UI pass; nine local synthetic
+screens inspected. Pure follow-up engine/remaining coordinated acceptance
+still required. No full suite/CI/PR/push/merge/deploy; 486 approval not retried.
+
 2026-11-01 #487/#454v2 LOCAL owner-answer log/API added: source-bound latest-v2
 item A/B/C choices append separately, actor-scoped idempotent UUID requests,
 server time and private paged GET. No imported/canonical/provider mutation.

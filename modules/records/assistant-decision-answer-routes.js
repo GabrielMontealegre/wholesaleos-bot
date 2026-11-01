@@ -17,9 +17,11 @@ function registerDecisionAnswerRoutes(app, { db, requireAdmin, now }) {
   });
   app.get(route, (req, res) => {
     try {
-      if (Object.keys(req.query).some(key => !['after', 'limit'].includes(key)) || req.query.limit !== undefined && (typeof req.query.limit !== 'string' || !/^[1-9]\d{0,3}$/.test(req.query.limit))) return res.status(400).json({ ok: false, code: 'assistant_answer_query_invalid' });
-      res.json({ ok: true, ...readAnswers(db.readDBStrict(), { now: now(), operatorId: req.currentUser?.id,
-        after: req.query.after === undefined ? null : req.query.after, limit: req.query.limit === undefined ? 100 : Number(req.query.limit) }) });
+      if (Object.keys(req.query).some(key => !['after', 'limit', 'snapshot_id', 'latest_only'].includes(key)) || req.query.limit !== undefined && (typeof req.query.limit !== 'string' || !/^[1-9]\d{0,3}$/.test(req.query.limit)) || req.query.latest_only !== undefined && !['0', '1'].includes(req.query.latest_only)) return res.status(400).json({ ok: false, code: 'assistant_answer_query_invalid' });
+      const at = now();
+      res.json({ ok: true, now: at, ...readAnswers(db.readDBStrict(), { now: at, operatorId: req.currentUser?.id,
+        after: req.query.after === undefined ? null : req.query.after, limit: req.query.limit === undefined ? 100 : Number(req.query.limit),
+        snapshotId: req.query.snapshot_id === undefined ? null : req.query.snapshot_id, latestOnly: req.query.latest_only === '1' }) });
     } catch (failure) { error(res, failure); }
   });
   app.post(route, (req, res, next) => {
@@ -31,11 +33,11 @@ function registerDecisionAnswerRoutes(app, { db, requireAdmin, now }) {
     next();
   }, express.json({ strict: true, limit: '8kb' }), (req, res) => {
     try {
-      const before = db.readDBStrict(), operatorId = req.currentUser?.id;
-      const after = appendAnswer(before, req.body, { now: now(), operatorId });
+      const before = db.readDBStrict(), operatorId = req.currentUser?.id, at = now();
+      const after = appendAnswer(before, req.body, { now: at, operatorId });
       if (after !== before) db.writeDB(after);
       const id = answerId(operatorId, req.body.request_id), row = after.assistant_decision_answers.find(answer => answer.id === id);
-      res.json({ ok: true, answer: publicAnswer(row) });
+      res.json({ ok: true, now: at, answer: publicAnswer(row) });
     } catch (failure) { error(res, failure); }
   }, (failure, req, res, next) => {
     if (failure?.type === 'entity.too.large') return res.status(413).json({ ok: false, code: 'assistant_answer_payload_too_large' });

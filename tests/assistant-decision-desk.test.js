@@ -1,0 +1,15 @@
+'use strict';
+const assert=require('node:assert/strict'),{read,saved}=require('../dashboard/workspace/decision-desk');
+const view={receipt_id:'a'.repeat(64),imported_at:'2026-10-31T12:00:00Z',decision_desk:{item_ids:['item-1']}};
+const row={id:'b'.repeat(64),snapshot_id:view.receipt_id,item_id:'item-1',choice:'A',note:'Synthetic note',answered_at:'2026-10-31T12:01:00Z'};
+const response={ok:true,now:'2026-10-31T12:02:00Z',items:[row],next_after:null};
+assert.deepEqual(read(response,view),[row]);assert.notEqual(read(response,view)[0],row);
+assert.deepEqual(saved({ok:true,now:response.now,answer:row},view,row),row);
+for(const patch of [{snapshot_id:'c'.repeat(64)},{item_id:'unknown'},{choice:'SEND'},{note:'\u0000'},{answered_at:'2026-10-31T12:03:00Z'},{answered_at:'2026-10-31T11:59:00Z'},{operator_id:'forged'}])assert.throws(()=>read({...response,items:[{...row,...patch}]},view),/decision_answer_invalid/);
+assert.throws(()=>read({...response,items:[row,row]},view),/decision_answer_invalid/);
+assert.throws(()=>read({...response,items:Array(1)},view),/decision_answer_invalid/);
+assert.throws(()=>read({...response,next_after:row.id},view),/decision_answer_invalid/);
+assert.throws(()=>saved({ok:true,now:response.now,answer:row},view,{...row,choice:'B'}),/decision_answer_invalid/);
+let calls=0;const getter={...response};Object.defineProperty(getter,'items',{get(){calls++;return [row];}});assert.throws(()=>read(getter,view),/decision_answer_invalid/);
+const rows=[row];Object.defineProperty(rows,'0',{get(){calls++;return row;}});assert.throws(()=>read({...response,items:rows},view),/decision_answer_invalid/);assert.equal(calls,0);
+console.log('assistant-decision-desk: exact source/item/choice/note/clock readback,unknown/future/duplicate/sparse/accessor rejection passed');

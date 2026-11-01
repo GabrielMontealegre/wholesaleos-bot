@@ -1,6 +1,6 @@
 'use strict';
 (function(root){
-  var c=root.WOSComponents,model=root.WOSAssistantModel;
+  var c=root.WOSComponents,model=root.WOSAssistantModel,desk=root.WOSDecisionDesk;
   var stageNames={finding_buyer:'Finding buyer',offer_out:'Offer out',under_contract:'Under contract',buyer_assigned:'Buyer assigned',closed:'Closed',dead:'No longer active'};
   var rejection={version_invalid:'This file uses a different version. Ask for a version 1 assistant file.',schema_invalid:'Choose a version 1 assistant snapshot file.',generated_at_invalid:'The file needs a valid generation time that is not in the future.',duplicate_id:'The file contains repeated record identifiers. Ask for a corrected file.',source_file_invalid:'A source reference is not supported. Ask for a corrected file.',source_url_invalid:'A source link is not supported. Ask for a corrected file.',reference_invalid:'A related record reference is missing or invalid. Ask for a corrected file.',money_invalid:'A reported amount is invalid. Use a non-negative number or an unknown value.',date_invalid:'A reported date is invalid. Ask for a corrected file.',field_invalid:'A value has the wrong type or an unsupported category. Ask for a corrected file.',array_invalid:'A list is incomplete or too large. Ask for a corrected file.',rank_invalid:'A call or email priority is invalid. Ask for a corrected file.',file_too_large:'Choose an assistant file smaller than 1 MB.',filename_invalid:'Use a simple JSON filename without folders.',file_invalid:'This is not a readable UTF-8 JSON file.',fields_invalid:'The file has missing or unsupported fields. Ask for a corrected file.'};
   function stamp(value){if(!value)return 'Not reported';var date=new Date(value);if(!Number.isFinite(date.getTime()))return 'Not reported';return /^\d{4}-\d{2}-\d{2}$/.test(value)?new Intl.DateTimeFormat('en-US',{weekday:'short',month:'short',day:'numeric',timeZone:'UTC'}).format(date):new Intl.DateTimeFormat('en-US',{weekday:'short',hour:'numeric',minute:'2-digit'}).format(date);}
@@ -15,15 +15,18 @@
   function create(options){
     var host=options.host,active=true,ticket=0,view=null,selected=null,busy=false,uncertain=false,message='',canImport=false,loaded=false;
     var checks=new Set(),markVersions=new Map(),drawer=null,buyerDrawer=null,query='',reading=false,controllers=new Set(),viewerScope=null;
-    async function request(init){var controller=new AbortController();controllers.add(controller);var timer=setTimeout(function(){controller.abort();},30000);try{var response=await root.fetch('/api/dashboard/assistant-snapshots',Object.assign({credentials:'include',cache:'no-store'},init||{},{signal:controller.signal}));return {response:response,data:await response.json()};}finally{clearTimeout(timer);controllers.delete(controller);}}
+    var answerRows=new Map(),notes=new Map(),answerReady=false,answerBusy=false,answerUnknown=false,answerMessage='',deskTab='desk';
+    rejection.version_invalid='This file uses a different version. Ask for a version 1 or 2 assistant file.';
+    rejection.schema_invalid='Choose an assistant snapshot file.';
+    async function request(init,path){var controller=new AbortController();controllers.add(controller);var timer=setTimeout(function(){controller.abort();},30000);try{var response=await root.fetch(path||'/api/dashboard/assistant-snapshots',Object.assign({credentials:'include',cache:'no-store'},init||{},{signal:controller.signal}));return {response:response,data:await response.json()};}finally{clearTimeout(timer);controllers.delete(controller);}}
     function alive(t){return active&&t===ticket&&host.isConnected;}
     function status(text){message=text;var e=host.querySelector('[data-assistant-status]');if(e)e.textContent=text;}
-    function actionsDisabled(){var b=host.querySelector('[data-assistant-import]'),input=host.querySelector('input[type=file]'),choose=host.querySelector('#assistant-choose');if(b){b.disabled=!canImport||!selected||busy||uncertain;b.hidden=!selected;}if(input)input.disabled=!canImport||busy||uncertain;if(choose)choose.disabled=!canImport||busy||uncertain;}
+    function actionsDisabled(){var b=host.querySelector('[data-assistant-import]'),input=host.querySelector('input[type=file]'),choose=host.querySelector('#assistant-choose');if(b){b.disabled=!canImport||!selected||busy||uncertain||answerBusy;b.hidden=!selected;}if(input)input.disabled=!canImport||busy||uncertain||answerBusy;if(choose)choose.disabled=!canImport||busy||uncertain||answerBusy;var refreshButton=host.querySelector('#assistant-refresh');if(refreshButton)refreshButton.disabled=busy||answerBusy;}
     function draw(){
       if(!active||!host.isConnected)return;
       if(drawer){drawer.close();drawer=null;}
       if(buyerDrawer){buyerDrawer.close();buyerDrawer=null;}
-      host.innerHTML='<section class="ws-assistant" aria-label="Assistant sheet"><header class="ws-assistant-header"><div><h2>Your assistant sheet</h2>'+(view?'<p>Updated '+c.escape(stamp(view.generated_at))+' by the assistant</p>':'')+'</div><div class="ws-assistant-tools">'+c.button({label:'Open recorded work',icon:'list-checks',iconOnly:true,id:'assistant-recorded-open'})+c.button({label:'Refresh assistant sheet',icon:'refresh-cw',iconOnly:true,id:'assistant-refresh'})+'</div></header>'+
+      host.innerHTML='<section class="ws-assistant" aria-label="Assistant sheet"><header class="ws-assistant-header"><div><h2>'+(view&&view.decision_desk?'Decision Desk':'Your assistant sheet')+'</h2>'+(view?'<p>Updated '+c.escape(stamp(view.generated_at))+' by the assistant</p>':'')+'</div><div class="ws-assistant-tools">'+c.button({label:'Open recorded work',icon:'list-checks',iconOnly:true,id:'assistant-recorded-open'})+c.button({label:'Refresh assistant sheet',icon:'refresh-cw',iconOnly:true,id:'assistant-refresh'})+'</div></header>'+
         '<form class="ws-assistant-import"><input id="assistant-file" type="file" hidden accept=".json,application/json" aria-label="Assistant JSON file" aria-describedby="assistant-status">'+c.button({label:view?'Import a file instead':'Choose assistant file',icon:'folder',id:'assistant-choose'})+c.button({label:"Import today's assistant file",icon:'arrow-up-right',tone:'green',id:'assistant-import',disabled:true})+'</form><p id="assistant-status" data-assistant-status role="status">'+c.escape(message)+'</p>'+
         (reading?c.skeleton('Loading assistant sheet'):view?sheet():loaded?'<p class="ws-muted">No assistant file has been imported. Choose today\'s file to see your next moves.</p>':'')+'</section>'+c.drawer('assistant-detail','Assistant-reported deal')+c.drawer('assistant-buyers','Reported buyers');
       drawer=c.bindDialog(host.querySelector('#assistant-detail'));
@@ -43,9 +46,11 @@
       host.querySelectorAll('[data-assistant-check]').forEach(function(b){b.addEventListener('change',function(){mark(b);});});
       host.querySelectorAll('[data-assistant-copy]').forEach(function(b){b.addEventListener('click',function(){copyText(Number(b.dataset.assistantCopy));});});
       var search=host.querySelector('#assistant-buyer-search');if(search){search.value=query;search.addEventListener('input',function(){query=search.value.slice(0,200);buyers();});}
+      if(view&&view.decision_desk)bindDesk();
       actionsDisabled();if(view)buyers();
     }
     function sheet(){
+      if(view.decision_desk)return desk.markup(view,{answers:answerRows,notes:notes,ready:answerReady,busy:answerBusy,uncertain:answerUnknown,message:answerMessage,tab:deskTab},{c:c,stamp:stamp,dollars:dollars});
       var next=view.needs_next;
       var top=next?'<button class="ws-assistant-next" data-assistant-deal="'+c.escape(next.id)+'"><strong>'+c.escape(next.needs_gabriel)+'</strong><span>'+c.escape(next.name)+'</span>'+source(next.provenance)+'</button>':empty();
       var calls=view.calls.map(function(r){return '<li>'+person(r.name,r.role)+'<p>Why: '+c.escape(r.why)+'</p><p>'+c.escape(r.phone||'Phone not reported')+'</p><ul>'+r.questions.map(function(q){return '<li>'+c.escape(q)+'</li>';}).join('')+'</ul>'+source(r.provenance)+(r.href?'<a class="ws-button" href="'+c.escape(r.href)+'">Call '+c.escape(r.name)+'</a>':'<p class="ws-muted">Phone not reported or not usable.</p>')+'</li>';}).join('');
@@ -55,6 +60,33 @@
       var funds=view.buyers.filter(function(b){return b.reported_pof===true;}).length,unknown=view.buyers.filter(function(b){return b.reported_pof===null;}).length;
       var recent=view.recent_replies.length?'<h4>Top 10 buyers by most recent reply</h4><ul class="ws-list ws-assistant-rows" data-assistant-recent-buyers>'+view.recent_replies.map(function(b){return buyerRow(b,true);}).join('')+'</ul>':'<p class="ws-muted">No reply times reported in this assistant file.</p>';
       return section('Do this next',top)+section('Calls',calls?'<ul class="ws-list ws-assistant-rows">'+calls+'</ul>':empty())+section('Texts to send',texts?'<ul class="ws-list ws-assistant-rows">'+texts+'</ul>':empty())+section('Emails waiting on you',emails?'<ul class="ws-list ws-assistant-rows">'+emails+'</ul>':empty())+section('Deals by stage',deals)+section('Buyers','<p>'+view.reported_approved_buyers+' reported approved · Not independently verified</p>'+c.badge('Proof of funds reported: '+funds+' yes · '+unknown+' unknown','neutral')+source({generated_at:view.generated_at,source_file:view.filename})+recent+c.button({label:'All reported buyers',icon:'users',id:'assistant-buyers-open'}));
+    }
+    function bindDesk(){
+      var items=desk.items(view),tabs=['desk','agents','outreach'];
+      function selectTab(tab){deskTab=tab;draw();host.querySelector('#decision-tab-'+tab).focus();}
+      host.querySelectorAll('[data-decision-tab]').forEach(function(button){button.addEventListener('click',function(){selectTab(button.dataset.decisionTab);});button.addEventListener('keydown',function(event){var index=tabs.indexOf(deskTab),next=event.key==='ArrowRight'?tabs[(index+1)%3]:event.key==='ArrowLeft'?tabs[(index+2)%3]:event.key==='Home'?tabs[0]:event.key==='End'?tabs[2]:null;if(next){event.preventDefault();selectTab(next);}});});
+      host.querySelectorAll('[data-decision-note]').forEach(function(input){input.addEventListener('input',function(){var item=items[Number(input.dataset.decisionNote)];if(item&&!answerBusy)notes.set(item.id,input.value.slice(0,2000));});});
+      host.querySelectorAll('[data-decision-choice]').forEach(function(button){button.addEventListener('click',function(){var match=/^(\d+):([ABC])$/.exec(button.dataset.decisionChoice);if(match&&items[Number(match[1])])saveAnswer(items[Number(match[1])],match[2]);});});
+    }
+    async function loadAnswers(t){
+      var result=await request(null,'/api/dashboard/assistant-snapshot-answers?snapshot_id='+encodeURIComponent(view.receipt_id)+'&latest_only=1&limit=1000');
+      if(!alive(t))return;
+      if(result.response.status===401||result.response.status===403){view=null;answerRows.clear();notes.clear();options.onUnauthorized();return;}
+      if(!result.response.ok)throw Error();
+      answerRows=new Map(desk.read(result.data,view).map(function(row){return [row.item_id,row];}));answerReady=true;answerUnknown=false;answerMessage='';
+    }
+    async function saveAnswer(item,choice){
+      if(!active||!view||!answerReady||answerBusy||answerUnknown||busy)return;
+      var t=ticket,input={snapshot_id:view.receipt_id,item_id:item.id,choice:choice,note:notes.get(item.id)||'',request_id:root.crypto.randomUUID()};
+      answerBusy=true;answerMessage='Recording your answer...';draw();
+      try{
+        var result=await request({method:'POST',headers:{'Content-Type':'application/json','X-WOS-Assistant-Answer':'1'},body:JSON.stringify(input)},'/api/dashboard/assistant-snapshot-answers');
+        if(!alive(t))return;
+        if(result.response.status===401||result.response.status===403&&result.data.code!=='assistant_answer_origin_required'){view=null;answerRows.clear();notes.clear();options.onUnauthorized();return;}
+        if(!result.response.ok){answerUnknown=true;answerMessage=result.response.status===409?'This file or answer changed. Refresh before choosing again.':'The answer could not be verified. Refresh before choosing again.';return;}
+        var row=desk.saved(result.data,view,input);answerRows.set(row.item_id,row);answerMessage='Answer recorded.';
+      }catch(_){if(alive(t)){answerUnknown=true;answerMessage='The answer may be recorded. Refresh before choosing again.';}}
+      finally{if(alive(t)&&view){answerBusy=false;draw();var focus=host.querySelector('#decision-tab-'+deskTab);if(focus)focus.focus();}else answerBusy=false;}
     }
     async function copyText(index){var t=ticket,row=view&&view.texts[index];if(!row)return;try{if(!root.navigator.clipboard||typeof root.navigator.clipboard.writeText!=='function')throw Error();await root.navigator.clipboard.writeText(row.text);if(alive(t))status('Text copied. Nothing was sent.');}catch(_){if(alive(t))status('Text could not be copied. Nothing was sent.');}}
     function buyers(){
@@ -76,19 +108,21 @@
     }
     async function mark(box){var t=ticket,row=view&&view.texts[Number(box.dataset.assistantCheck)],checked=box.checked;if(!row)return;var version=(markVersions.get(row.device_key)||0)+1;markVersions.set(row.device_key,version);function owned(){return alive(t)&&markVersions.get(row.device_key)===version;}try{var key=await storageKey(row);if(!owned())return;if(checked)root.localStorage.setItem(key,'1');else root.localStorage.removeItem(key);if(checked)checks.add(row.device_key);else checks.delete(row.device_key);}catch(_){if(owned()){box.checked=checks.has(row.device_key);status('This device could not save the check. No message was sent.');}}}
     async function refresh(expected){
-      if(!active||busy&&!expected)return;var t=++ticket;reading=true;view=null;checks.clear();markVersions.clear();selected=null;draw();
+      if(!active||busy&&!expected||answerBusy)return;var previousSource=view&&view.receipt_id,t=++ticket;reading=true;view=null;answerRows.clear();answerReady=false;answerUnknown=false;answerMessage='';checks.clear();markVersions.clear();selected=null;draw();
       try{
         var result=await request(),response=result.response;
         if(!alive(t))return;if(response.status===401||response.status===403){options.onUnauthorized();return;}if(!response.ok)throw Error();
         var data=result.data;if(!alive(t))return;
         if(data.ok!==true||data.capabilities?.can_import!==true||data.capabilities.schema!=='wos-assistant-snapshot'||data.capabilities.version!==1||data.capabilities.max_bytes!==1048576||typeof data.viewer_scope!=='string'||!/^[a-f0-9]{64}$/.test(data.viewer_scope))throw Error();
-        var next=model.project(data.latest);if(expected&&(!next||next.receipt_id!==expected.id||next.file_sha256!==expected.sha||next.filename!==expected.filename))throw Error();
+        var next=model.project(data.latest,{today:typeof options.today==='function'?options.today():undefined});if(expected&&(!next||next.receipt_id!==expected.id||next.file_sha256!==expected.sha||next.filename!==expected.filename))throw Error();
         view=next;viewerScope=data.viewer_scope;canImport=true;loaded=true;uncertain=false;reading=false;message=expected?'Assistant file imported.':view?'':'No file imported yet.';
+        if(!view||view.receipt_id!==previousSource)notes.clear();
+        if(view&&view.decision_desk){draw();try{await loadAnswers(t);}catch(_){if(alive(t)){answerReady=false;answerMessage='Recorded answers are unavailable. Refresh to try again.';}}if(!alive(t)||!view)return;}
         await restoreChecks(t);if(alive(t)){draw();if(typeof options.onReady==='function')options.onReady();}
       }catch(_){if(!alive(t))return;reading=false;canImport=false;loaded=false;view=null;message=expected?'The import may be saved, but the sheet could not be verified. Refresh before importing again.':'Assistant data is unavailable. Refresh to try again.';draw();if(typeof options.onReady==='function')options.onReady();}
     }
     async function upload(){
-      if(!active||busy||uncertain||!selected||!canImport)return;
+      if(!active||busy||answerBusy||uncertain||!selected||!canImport)return;
       var file=selected,t=++ticket;busy=true;actionsDisabled();status('Importing assistant file...');
       try{
         if(!file.size||file.size>1048576){status('Choose an assistant JSON file smaller than 1 MB.');return;}
@@ -99,14 +133,14 @@
         if(!alive(t))return;if(response.status===401){options.onUnauthorized();return;}
         var data=result.data;if(!alive(t))return;
         if(response.status===403&&data.code!=='assistant_snapshot_origin_required'){options.onUnauthorized();return;}
-        if(!response.ok){if(response.status>=500)throw Error();uncertain=false;var code=typeof data.code==='string'?data.code.replace(/^assistant_snapshot_/,''):'';status(rejection[code]||'The file was rejected. Ask for a corrected version 1 assistant file.');return;}
+        if(!response.ok){if(response.status>=500)throw Error();uncertain=false;var code=typeof data.code==='string'?data.code.replace(/^assistant_snapshot_/,''):'';status(rejection[code]||'The file was rejected. Ask for a corrected version 1 or 2 assistant file.');return;}
         if(data.ok!==true||typeof data.id!=='string'||!/^[a-f0-9]{64}$/.test(data.id)||data.file_sha256!==expectedHash)throw Error();
         busy=false;selected=null;await refresh({id:data.id,sha:expectedHash,filename:file.name});
       }catch(_){if(alive(t)){uncertain=true;selected=null;status('The import outcome is unknown. Refresh before importing again.');}}
       finally{if(active){busy=false;actionsDisabled();}}
     }
     draw();
-    return {refresh:refresh,destroy:function(){active=false;++ticket;controllers.forEach(function(controller){controller.abort();});controllers.clear();view=null;viewerScope=null;selected=null;checks.clear();markVersions.clear();if(drawer)drawer.close();if(buyerDrawer)buyerDrawer.close();host.replaceChildren();}};
+    return {refresh:refresh,destroy:function(){active=false;++ticket;controllers.forEach(function(controller){controller.abort();});controllers.clear();view=null;viewerScope=null;selected=null;checks.clear();markVersions.clear();answerRows.clear();notes.clear();if(drawer)drawer.close();if(buyerDrawer)buyerDrawer.close();host.replaceChildren();}};
   }
   root.WOSAssistantSheet={create:create};
 })(window);

@@ -69,10 +69,13 @@ function appendAnswer(store, input, options = {}) {
 function publicAnswer(row) {
   return { id: row.id, snapshot_id: row.snapshot_id, item_id: row.item_id, choice: row.choice, note: row.note, answered_at: row.answered_at };
 }
-function readAnswers(store, { operatorId, now, after = null, limit = 100 } = {}) {
+function readAnswers(store, { operatorId, now, after = null, limit = 100, snapshotId = null, latestOnly = false } = {}) {
   const { rows } = context(store, { operatorId, now });
   if (!Number.isSafeInteger(limit) || limit < 1 || limit > 1000 || after !== null && (typeof after !== 'string' || !HASH.test(after))) fail('query_invalid');
-  const owned = rows.filter(row => row.operator_id === operatorId), index = after === null ? -1 : owned.findIndex(row => row.id === after);
+  if (snapshotId !== null && (typeof snapshotId !== 'string' || !HASH.test(snapshotId)) || typeof latestOnly !== 'boolean' || latestOnly && snapshotId === null) fail('query_invalid');
+  let owned = rows.filter(row => row.operator_id === operatorId && (snapshotId === null || row.snapshot_id === snapshotId));
+  if (latestOnly) { const seen = new Set(); owned = owned.slice().reverse().filter(row => { if (seen.has(row.item_id)) return false; seen.add(row.item_id); return true; }).reverse(); }
+  const index = after === null ? -1 : owned.findIndex(row => row.id === after);
   if (after !== null && index < 0) fail('query_invalid');
   const selected = owned.slice(index + 1, index + 1 + limit), more = index + 1 + selected.length < owned.length;
   return { items: selected.map(publicAnswer), next_after: more ? selected[selected.length - 1].id : null };

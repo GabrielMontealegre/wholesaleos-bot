@@ -1,5 +1,40 @@
 # Decision Desk v2
 
+## Local Desk UI Checkpoint
+
+Decision Desk now renders full tier 1-3 context, reported people/history/numbers,
+escaped multiline drafts, A/B/C consequences and optional notes. Tiers 4-5
+remain counts only. Agents and Outreach are read-only tabs. Their summary uses
+the validated Today-workspace day through an injected callback, never a browser
+clock or snapshot-generation date. No provider or canonical writes are added.
+
+An explicit answer click binds the current receipt/item/note to a fresh UUID.
+Controls lock during POST; uncertain or stale outcomes require GET refresh,
+never an automatic POST retry. Server readback is checked against receipt,
+item, choice, note and server clock. Source-filtered latest-per-item GET supports
+large answer histories while the default GET still exposes append-only history.
+Unauthorized or late responses cannot restore a destroyed signed view.
+
+Actual synthetic localhost UI tests pass at 1366/400/412: whole-file import,
+full-context tier visibility, escaped draft, unknown versus zero, answer append,
+double-click exclusion, GET readback, stale-source refusal, keyboard tabs,
+auth clearing and 44px/no-overflow checks. Nine synthetic Desk/Agents/Outreach
+screenshots were inspected and retained outside the repo under
+../.wholesaleos-release-proof/decision-desk-ui-first. They are local development
+proof, not a release. Pure response negatives, answer log/routes, v1/v2 import
+integration, v1 model and existing three-width v1 UI also pass. The v1 UI's
+unsupported-version example intentionally moves 2 to 3 under #487 support for 2.
+First new UI assertion incorrectly counted existing icon images; its corrected
+selector checks only injected img[src=x], preserving escaped-draft intent.
+One focused command used a nonexistent assistant-model.test.js path after four
+passing files; the actual assistant-sheet-model.test.js subsequently passed.
+
+Still required: pure follow-up engine with 20-row acceptance batch, remaining
+UI edge-case review and coordinated #487 acceptance. No full suite, CI, PR,
+push, merge, deployment or complete-v2 claim. Earlier unimplemented-UI notes
+below describe historical checkpoints only. Existing unrelated exports remain
+unstaged; pending PR486 merge approval is not retried or bypassed.
+
 ## Local Owner-Answer Log
 
 New pure assistant-decision-answers.js appends owner answers to a separate

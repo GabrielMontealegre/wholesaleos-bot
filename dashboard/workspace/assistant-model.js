@@ -95,7 +95,7 @@
       var reported = function(row){return Object.assign({},JSON.parse(JSON.stringify(row)),{provenance:provenance()});};
       var items = source.open_items.map(function(row){var value=reported(row);value.reported_pick=value.pick;delete value.pick;return value;});
       var today = options.today === undefined ? null : day(options.today);
-      extension = { decision_desk:{tiers:[1,2,3].map(function(tier){return {tier:tier,items:items.filter(function(item){return item.tier===tier;})};}),
+      extension = { decision_desk:{item_ids:items.map(function(item){return item.id;}),tiers:[1,2,3].map(function(tier){return {tier:tier,items:items.filter(function(item){return item.tier===tier;})};}),
         counts:[1,2,3,4,5].map(function(tier){return {tier:tier,count:items.filter(function(item){return item.tier===tier;}).length};}),
         lower_tier_count:items.filter(function(item){return item.tier>=4;}).length},
         agents:source.agents.map(reported),outreach:source.outreach.map(reported),
