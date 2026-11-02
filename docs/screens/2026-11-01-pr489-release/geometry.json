@@ -1,0 +1,118 @@
+{
+  "phase": "candidate",
+  "source_sha": "3eff9420fa04711da66d48dda84a5a921043dc66",
+  "authenticated": false,
+  "cookie_transfer": false,
+  "business_writes": false,
+  "cases": [
+    {
+      "case": "native-login",
+      "requested": {
+        "width": 1366,
+        "height": 768
+      },
+      "actual": {
+        "width": 1366,
+        "height": 768
+      },
+      "rect": {
+        "x": 483,
+        "y": 275.34375,
+        "width": 400,
+        "height": 44
+      },
+      "status": 200
+    },
+    {
+      "case": "classic-login",
+      "requested": {
+        "width": 1366,
+        "height": 768
+      },
+      "actual": {
+        "width": 1366,
+        "height": 768
+      },
+      "rect": {
+        "x": 483,
+        "y": 275.34375,
+        "width": 400,
+        "height": 44
+      },
+      "status": 200
+    },
+    {
+      "case": "native-login",
+      "requested": {
+        "width": 400,
+        "height": 915
+      },
+      "actual": {
+        "width": 400,
+        "height": 915
+      },
+      "rect": {
+        "x": 16,
+        "y": 292.984375,
+        "width": 368,
+        "height": 44
+      },
+      "status": 200
+    },
+    {
+      "case": "classic-login",
+      "requested": {
+        "width": 400,
+        "height": 915
+      },
+      "actual": {
+        "width": 400,
+        "height": 915
+      },
+      "rect": {
+        "x": 16,
+        "y": 292.984375,
+        "width": 368,
+        "height": 44
+      },
+      "status": 200
+    },
+    {
+      "case": "native-login",
+      "requested": {
+        "width": 412,
+        "height": 915
+      },
+      "actual": {
+        "width": 412,
+        "height": 915
+      },
+      "rect": {
+        "x": 16,
+        "y": 292.984375,
+        "width": 380,
+        "height": 44
+      },
+      "status": 200
+    },
+    {
+      "case": "classic-login",
+      "requested": {
+        "width": 412,
+        "height": 915
+      },
+      "actual": {
+        "width": 412,
+        "height": 915
+      },
+      "rect": {
+        "x": 16,
+        "y": 292.984375,
+        "width": 380,
+        "height": 44
+      },
+      "status": 200
+    }
+  ],
+  "exact_static_clock_source": true
+}

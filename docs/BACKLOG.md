@@ -1,5 +1,22 @@
 # Backlog
 
+2026-11-01 #471/455.4A ONE reintroduction RELEASED/VERIFIED as PR489,
+main3eff9420fa04711da66d48dda84a5a921043dc66 (tree identical tested5a0ed82).
+PR41376847538/job125058845841 and MAIN41378676766/job125064442889 each
+PASS299/0/0,600s/file;18m48/18m43 job walls, all598 timings retained, sums NOT
+wall. Automatic Railway0cd4550c-a285-425a-8359-f93f2da1fa55 exact statusSUCCESS.
+Single candidate public checkPASS: six native/classic1366/400/412, all Remember
+rects serialized,44px/inviewport unchanged; cache2/exactstaticclock/health200.
+Six unsigned images inspected; nine synthetic changed-screen images retained.
+Signed GLOBAL Todayready/cache2/assistant/enabled44pxrefresh/nooverflowPASS.
+Existing-tab timeout recovered with one fresh tab; no private observations or
+captures, auth transfer, real record/message opening or business writes. No
+unchanged candidate retry/Lighthouse/15-case audit. Original469 failure remains
+failed/causeUNKNOWN; current pass does not explain it.471 answer logged, close
+its architecture question.455.4B nonshared readers remain; whole455 stays6/9.
+Next487 answer472: explicit test flags/import+render/build guard only, no names
+or text censorship.477 stays open/failedCI; unrelated exports preserved unstaged.
+
 2026-11-01 #471 ONE reintroduction prepared from verified current main ebace1c9
 (486/488 released; owned prooff7d5462 preserved). Shared date label regression
 failed first, then changed-policy/strict negatives and synthetic Email/Today/

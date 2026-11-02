@@ -1,0 +1,16 @@
+{
+  "source_sha":"3eff9420fa04711da66d48dda84a5a921043dc66",
+  "private_content_read":false,
+  "private_capture":false,
+  "business_writes":false,
+  "observation":"GLOBAL booleans and static toolbar geometry only",
+  "settled_ready":"complete",
+  "main_ready":true,
+  "clock_cache2":true,
+  "assistant_present":true,
+  "refresh_enabled":true,
+  "refresh_target":{"width":44,"height":44},
+  "horizontal_overflow":false,
+  "existing_tab_binding":"Timed out before private observation; fresh-tab documented recovery succeeded",
+  "initial_observation":"main busy, not classified as failure before settled observation"
+}

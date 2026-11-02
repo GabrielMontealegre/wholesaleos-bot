@@ -1,5 +1,31 @@
 # One Plain-Date Reintroduction
 
+## Verified Outcome
+
+PR489 merged3eff9420fa04711da66d48dda84a5a921043dc66, whose whole tree is
+identical to tested5a0ed82. First PR41376847538 and main41378676766 each299/0/0,
+600s/file, natural terminal success; job walls18m48/18m43. All598 timing rows
+retained in docs/screens/2026-11-01-pr489-release; sums are NOT job wall time.
+Automatic Railway0cd4550c-a285-425a-8359-f93f2da1fa55 exact-commit statusSUCCESS.
+The SINGLE public candidate run passed native/classic at1366/400/412: every
+case and actual rectangle serialized BEFORE original44px/inviewport assertion;
+desktop400x44,phone400368x44,phone412380x44. Exact deployed clock matches source,
+both entries consume cache2 and health200. Six unsigned images inspected and
+preserved. No login submission or credential/cookie transfer.
+
+Signed GLOBAL Today settled/ready/cache2/assistant/enabled44x44refresh/nooverflow
+passes. Existing-tab binding timed out before observation; one documented fresh
+tab recovery worked. Initial main-busy observation was not misreported failure.
+No private page text/values/JSON/capture/AX/content locators or business writes.
+Temporary verification tab closed; user's original tab left untouched.
+Original469 live failure remains retained/unknown cause; these new passes do not
+explain or erase it. No geometry threshold change, second reintroduction, public
+candidate retry, Lighthouse or15-case audit. Architecture answer471 logged;
+closure is of that answered question, not whole455.4 or455. Whole455 remains6/9.
+Nonshared4B and independent472 still remain. Historical preparation below is
+preserved, not a current pending-release claim. Docs-only proof does not alter
+the tested/deployed runtime or create extra CI/deployment.
+
 Authority: #487 D-065 and #471 answer6551370094. First current-main attempt
 from verified ebace1c986b3702a84bfd245e37552df76c5851c; no unchanged469 merge.
 Owned469/470 and486/488 proof branches remain intact. Whole455.4 is not done.
