@@ -1,5 +1,15 @@
 # Decisions
 
+ASSUMED: D-065/#471 authorizes one new current-main reintroduction of only
+the shared timestamp display policy: rolling age<=7 days keeps weekday/time;
+older timestamps show month/day, adding year when different. Strict UTC-Z,
+real-calendar and future rejection, UTC-7 day arithmetic, deadlines, source
+records and all writers remain unchanged. Preserve current488/486 assets and
+owned469/470 evidence; do not replay their documentation/private screenshots.
+Serialize unsigned Remember-device case/rectangle before its unchanged44px/
+in-viewport assertion. If the reintroduction fails acceptance, defer; no third
+attempt. Nonshared455.4B timestamp readers remain separate. --487/471,2026-11-01.
+
 OWNER 2026-11-01: Explicitly approves merge and automatic deployment of PR486,
 PR477 and later codex-task PRs once AGENTS checks pass. This resolves the
 previous486 execution-approval hold, not failed tests or safety restrictions.
