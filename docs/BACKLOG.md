@@ -1,5 +1,21 @@
 # Backlog
 
+2026-11-01 authorized delivery:486 MERGED d081c438, exact PR289/0/0 and MAIN
+41371594905/job125043022308 PASS289/0/0 (18m09 job wall). Automatic Railway
+d4b317ad-a27f-4a48-8ad9-1fe8aa305543 exact-commit status SUCCESS. Public health,
+dashboard and stylesheet200; cache16 consumed; deployed stylesheet matches
+merged source exactly after line-ending normalization; unread stripe absent.
+Signed UI NOT verified: browser tab binding and one recovery both timed out.
+No private capture/probe fallback; reconnection requested once. Not full release
+acceptance yet.477 stays OPEN/DRAFT/conflicting/failed CI, not merged.
+487 continued as PR488, source52d182ee: first exact-head CI41371939898 /
+job125044071185 PASS298/0/0 (16m17 job wall), all298 timing rows retained.
+Candidate includes Walk runtime and486; prior b1 local296/1/0 remains failed,
+cause unknown, not erased/reclassified.488 stays open while signed verification
+is unavailable; no second production change over the unverified486 release.
+Docs-only proof branch preserves the tested488 head and both unrelated exports.
+Whole454/487/backlog incomplete; no real upload/answer/key/provider/business write.
+
 2026-11-01 owner explicitly approved merging/deploying486 and477, and later
 codex-task PRs when AGENTS gates pass; blocked PRs stay open while487 advances.
 486 merged d081c438 after exact-head CI289/0/0; automatic Railway reports

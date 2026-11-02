@@ -1,0 +1,25 @@
+{
+  "source_sha": "d081c438b155c8511f07e0427225792d920cdde6",
+  "checked_at": "2026-11-02T01:25:40.346Z",
+  "authenticated": false,
+  "private_data_read": false,
+  "business_writes": false,
+  "checks": [
+    {
+      "route": "/health",
+      "status": 200
+    },
+    {
+      "route": "/app",
+      "status": 200,
+      "cache16_consumed": true
+    },
+    {
+      "route": "/dashboard/workspace/design-system.css?v=16",
+      "status": 200,
+      "exact_normalized_static_source": true,
+      "unread_stripe_rule_absent": true
+    }
+  ],
+  "signed_ui_verified": false
+}

@@ -1,5 +1,26 @@
 # Decision Desk v2
 
+## First Exact-Head CI: Passed, Production Gate Pending
+
+PR488 source52d182ee1769190199b574a6a411ce73dbba16b0 was tested once by
+run41371939898/job125044071185:298 passed,0 failed,0 skipped,600s/file,
+natural successful completion,16m17 job wall. All298 timing rows are retained
+under docs/screens/2026-11-01-approved-release-checkpoint. The duration sum is
+not job wall time. This CI covers the Walk runtime plus current486 main merge;
+it does not rewrite the earlier b1 local296/1/0 failure or explain its cause.
+No unchanged local retry, CI rerun, cancellation, skip or assertion waiver.
+
+PR486 main CI41371594905 passed289/0/0 and automatic Railway reports success
+for exactd081c438. Public health/dashboard/static stylesheet checks pass.
+Signed production verification could not run: existing browser tab binding
+and its documented recovery timed out before any private page observation.
+Reconnection requested once; no private screenshots/AX/contents/length/hash,
+credential transfer or alternate private probe. PR488 remains open rather than
+deploying another change over an incompletely verified production release.
+PR477 remains open/conflicting/failed CI and is excluded. Owner authorization
+is resolved; only the stated technical verification gate remains unavailable.
+This documentation is on a separate proof branch; tested488 source unchanged.
+
 ## Authorized Release Preparation
 
 The owner explicitly approved486/477 and later codex-task releases after the
