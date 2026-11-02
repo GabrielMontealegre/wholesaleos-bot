@@ -17,4 +17,5 @@ helper.json.*
 **/*.p12
 **/*.pfx
 tests
+tests/.tmp
 docs/screens

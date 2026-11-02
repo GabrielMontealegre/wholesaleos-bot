@@ -1,6 +1,16 @@
 # Backlog
 
-2026-11-01 #472 LOCAL candidate from main3eff9420: explicit boolean test flags
+2026-11-01 PR490 first exact-head CI FAILED300/1/0 of301, run41382706484/
+job125076759547,19m04 job wall,600s/file. Failure is the unchanged tracked-secret
+test's required .dockerignore tests/.tmp entry: adding the broader tests entry
+had removed that explicit entry. No secret-value finding was emitted. Preserve
+all301 timings and the failed sourceb820b055. Keep490 OPEN/DRAFT/UNMERGED;
+no deploy/main CI, no rerun/cancel/skip/waiver under the one-PR-CI limit. Restore
+the explicit entry alongside tests LOCALLY; a targeted configuration check passes,
+but no new-head full gate exists. This local fix is not a green release.489/488/
+486 remain verified;477 stays failed/open. Whole487/455/backlog remain incomplete.
+
+HISTORICAL PRE-CI: 2026-11-01 #472 LOCAL candidate from main3eff9420: explicit boolean test flags
 only at typed import/JSON display boundaries, reviewed public-asset build/start
 guard and test-directory image exclusion. No name/text censorship, row removal,
 auth/provider or UI-layout rewrite. Focused existing import/snapshot/key checks

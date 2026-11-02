@@ -1,5 +1,23 @@
 # Explicit Test-Data Boundaries (#472 / #487)
 
+## First Full CI Failed
+
+PR490 source `b820b0550f010ecd6fb01d34a01aed9c27c5e85d`, run41382706484,
+job125076759547: **300 passed / 1 failed / 0 skipped of301**,600s/file,
+19m04 job wall. All301 timing rows retained; sums are not wall time.
+`no-secrets-in-tracked-files.test.js:70` failed its unchanged required
+`.dockerignore` entry assertion: this candidate replaced `tests/.tmp` with
+`tests`. The broader exclusion does not satisfy that literal safety check.
+There was no emitted secret-value finding; do not attribute this to Node,
+environment or flakiness. All other300 tests passed, including both new tests.
+
+Restore the explicit entry alongside the broad exclusion locally, retaining the
+original test unchanged. A targeted configuration assertion passes after the
+change, but the fix has no full-head CI. PR490 remains open/draft/unmerged,
+not deployed. The one-PR-CI allowance is consumed; no automatic second run,
+cancellation, skip, waiver or green claim. Preserve the remote failed source.
+No main CI or production probe was started. This is a failure record, not a release.
+
 ## Scope And Trace
 
 - Source: current main `3eff9420fa04711da66d48dda84a5a921043dc66`.
