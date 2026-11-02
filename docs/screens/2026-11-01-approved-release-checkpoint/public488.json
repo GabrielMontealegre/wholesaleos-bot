@@ -1,0 +1,64 @@
+{
+  "source_sha": "ebace1c986b3702a84bfd245e37552df76c5851c",
+  "checked_at": "2026-11-02T01:42:49.441Z",
+  "authenticated": false,
+  "private_data_read": false,
+  "business_writes": false,
+  "assets": [
+    {
+      "file": "assistant-v2-fields.js",
+      "version": 2,
+      "status": 200,
+      "entry_consumes": true,
+      "exact_normalized_static_source": true
+    },
+    {
+      "file": "assistant-model.js",
+      "version": 4,
+      "status": 200,
+      "entry_consumes": true,
+      "exact_normalized_static_source": true
+    },
+    {
+      "file": "decision-desk.js",
+      "version": 2,
+      "status": 200,
+      "entry_consumes": true,
+      "exact_normalized_static_source": true
+    },
+    {
+      "file": "assistant-sheet.js",
+      "version": 4,
+      "status": 200,
+      "entry_consumes": true,
+      "exact_normalized_static_source": true
+    },
+    {
+      "file": "design-system.css",
+      "version": 17,
+      "status": 200,
+      "entry_consumes": true,
+      "exact_normalized_static_source": true
+    }
+  ],
+  "checks": [
+    {
+      "route": "/health",
+      "status": 200
+    },
+    {
+      "route": "/app",
+      "status": 200
+    },
+    {
+      "route": "/api/dashboard/assistant-snapshots",
+      "unsigned_status": 401,
+      "no_store": true
+    },
+    {
+      "route": "/api/dashboard/assistant-snapshot-answers",
+      "unsigned_status": 401,
+      "no_store": true
+    }
+  ]
+}

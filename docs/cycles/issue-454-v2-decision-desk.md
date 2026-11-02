@@ -1,5 +1,31 @@
 # Decision Desk v2
 
+## Verified Core Release
+
+PR488 merged ebace1c986b3702a84bfd245e37552df76c5851c, whose complete tree
+matches tested52d182ee. First PR41371939898 and main41373769815 /
+job125049536401 both passed298/0/0,600s/file, natural terminal completion.
+Job walls16m17 and18m53; duration sums remain separate, not wall time.
+Automatic Railwaye59e3483-cd66-4159-8ef9-3054606fdd00 exact-commit status
+SUCCESS. Public health/dashboard200; five changed assets exactly match merged
+static source; unsigned snapshot/answer GETs401 and no-store. No real uploads
+or owner answers were used as technical verification.
+
+After the owner's browser reconnection, signed Today GLOBAL DOM booleans and
+toolbar geometry pass1366/400/412: settled/ready main, assistant slot, exact
+four script bindings, enabled44px refresh and no horizontal overflow. Temporary
+viewport reset. No private page text/JSON/capture/AX/content locators, real
+snapshot import or real A/B/C action. Positive v2/Agents/Outreach/Walk/answer
+screens and behavior are synthetic exact-head test evidence already committed.
+
+486 also verified after reconnect (PR+MAIN289/0/0, exact automatic deployment,
+public source match and signed Email structural readiness).477 remains open
+with conflicts/failed CI; excluded. All885 new timing rows/public and signed
+structural records are on the separate docs-only proof branch. Earlier
+UI-connection-blocked sections below are history now resolved, not current
+release blockers. Prior b1 local296/1/0 remains a failed result/cause unknown.
+No whole487/454/backlog/first-owner-upload completion or hidden automation claim.
+
 ## First Exact-Head CI: Passed, Production Gate Pending
 
 PR488 source52d182ee1769190199b574a6a411ce73dbba16b0 was tested once by

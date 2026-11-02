@@ -1,5 +1,22 @@
 # Approved Release Follow-Through
 
+## Final Verified Outcome
+
+486 and488 are merged, automatically deployed and bounded-read-only verified.
+486 PR/main289/0/0;488 PR/main298/0/0, no rerun or extra CI.488 main run
+41373769815/job125049536401 completed naturally,18m53 job wall. Automatic
+Railwaye59e3483-cd66-4159-8ef9-3054606fdd00 reports SUCCESS for exactebace1c9;
+tree is identical to tested52d182ee. Public health/dashboard200, five exact
+static assets, unsigned snapshot/answer401/no-store; signed Today GLOBAL
+ready/44px/nooverflow at1366/400/412. Owner reconnect resolved the initial
+browser timeout. Signed Email486 readiness also passed; no private observation
+or capture. Synthetic screens retained; no real import/answer/business action.
+All885 timing rows plus public/signed structural records retained.477 remains
+open/conflicting/failedCI as requested. Initial blocked observations below are
+preserved history, not the final outcome. Whole487/backlog remains incomplete.
+
+## Initial Observations (Historical)
+
 Owner instruction2026-11-01 approves486,477 and later codex-task releases
 when AGENTS checks pass. Blocked PRs stay open; continue487.
 

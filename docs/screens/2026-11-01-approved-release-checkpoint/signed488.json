@@ -1,0 +1,20 @@
+{
+  "source_sha": "ebace1c986b3702a84bfd245e37552df76c5851c",
+  "observation": "GLOBAL DOM structural booleans and static toolbar geometry only",
+  "private_content_read": false,
+  "private_capture": false,
+  "business_writes": false,
+  "real_snapshot_import": false,
+  "real_owner_answer": false,
+  "settled_ready": "complete",
+  "title_is_today": true,
+  "exact_script_bindings": {"validator": true, "model": true, "desk": true, "sheet": true},
+  "viewports": [
+    {"width":1366,"height":768,"main_ready":true,"assistant_slot_present":true,"refresh_enabled":true,"refresh_width":44,"refresh_height":44,"horizontal_overflow":false},
+    {"width":400,"height":915,"main_ready":true,"assistant_slot_present":true,"refresh_enabled":true,"refresh_width":44,"refresh_height":44,"horizontal_overflow":false},
+    {"width":412,"height":915,"main_ready":true,"assistant_slot_present":true,"refresh_enabled":true,"refresh_width":44,"refresh_height":44,"horizontal_overflow":false}
+  ],
+  "temporary_viewport_reset": true,
+  "initial_navigation_observation": "interactive; no failure inferred before settled observation",
+  "synthetic_feature_proof": "Committed Decision Desk/Agents/Outreach/Walk screenshots and exact-head CI acceptance, not a real production import"
+}

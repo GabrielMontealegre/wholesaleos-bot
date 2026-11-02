@@ -1,5 +1,20 @@
 # Backlog
 
+2026-11-01 VERIFIED authorized releases:486 d081c438, exact PR+MAIN289/0/0;
+488 (#487/#454 core v2+Walk) ebace1c9, exact PR+MAIN298/0/0. Only one CI per
+PR/main; no reruns/cancels. Automatic Railwayd4b317ad/e59e3483 exact-commit
+statuses SUCCESS. Public health/dashboard200 and changed assets match merged
+source. After owner reconnect, signed Email and Today GLOBAL structural checks
+pass; Today1366/400/412 ready/44px/nooverflow, viewport reset. No private content,
+capture/AX, real import/ABC/key/outreach/provider/paid/business writes. Existing
+inspected synthetic three-width screenshots retained; no Lighthouse/15-case
+reruns.885 main486/PR488/main488 timing rows and bounded proof retained on
+proof/486-release-488-ci-20261101.477 remains OPEN/DRAFT/conflicting/failedCI;
+no merge attempt or unchanged retry. Core487 release complete, not whole487/
+454/backlog or operational first-upload completion. Remaining487 answers471/472
+and owner/backlog ordering still apply;369 requires366 sign-off. Earlier local
+failures retained honestly. Two unrelated exports remain untouched/unstaged.
+
 2026-11-01 authorized delivery:486 MERGED d081c438, exact PR289/0/0 and MAIN
 41371594905/job125043022308 PASS289/0/0 (18m09 job wall). Automatic Railway
 d4b317ad-a27f-4a48-8ad9-1fe8aa305543 exact-commit status SUCCESS. Public health,

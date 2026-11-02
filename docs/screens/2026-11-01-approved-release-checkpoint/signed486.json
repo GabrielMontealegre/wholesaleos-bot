@@ -1,0 +1,19 @@
+{
+  "source_sha": "d081c438b155c8511f07e0427225792d920cdde6",
+  "owner_reconnected_browser": true,
+  "observation": "GLOBAL DOM structural booleans and static toolbar geometry only",
+  "main_ready": true,
+  "mail_refresh_present": true,
+  "mail_refresh_enabled": true,
+  "search_present": true,
+  "primary_selected": true,
+  "retry_control_present": false,
+  "horizontal_overflow": false,
+  "visible_refresh_targets": [{"width":44,"height":44},{"width":44,"height":44}],
+  "desktop_folder_opener": "present but hidden; not a visible target",
+  "private_content_read": false,
+  "private_capture": false,
+  "message_opened": false,
+  "business_writes": false,
+  "initial_browser_timeouts": "Preserved historical infrastructure failures, resolved after explicit owner reconnection"
+}
