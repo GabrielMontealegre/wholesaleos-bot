@@ -15,8 +15,8 @@ function run() {
     assert.equal(model.days_in_recorded_stage, 2); assert.match(model.last_action, /Added to WholesaleOS - recorded by fixture-admin/);
     assert.equal(JSON.stringify(row), frozen);
     assert.equal(clock.formatTime(now, now), 'Mon 12:18 PM');
-    assert.equal(clock.formatTime('2026-10-03T19:18:00Z', now), 'Oct 3, 12:18 PM');
-    assert.equal(clock.formatTime('2025-10-03T19:18:00Z', now), 'Oct 3, 2025, 12:18 PM');
+    assert.equal(clock.formatTime('2026-10-03T19:18:00Z', now), 'Oct 3');
+    assert.equal(clock.formatTime('2025-10-03T19:18:00Z', now), 'Oct 3, 2025');
     assert.equal(clock.formatTime('2026-10-12T06:30:00Z', now), 'Sun 11:30 PM');
     const midnight = clock.reviewed({ ...row, closing_date: '2026-10-11', evaluation: { ...row.evaluation, deadline: '2026-10-11' } }, { ...context, now: '2026-10-12T06:30:00Z' });
     assert.equal(midnight.days_left, 0, 'owner calendar day, not UTC midnight');

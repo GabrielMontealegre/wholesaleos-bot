@@ -1,0 +1,45 @@
+{
+  "phase": "baseline",
+  "source_sha": "ebace1c986b3702a84bfd245e37552df76c5851c",
+  "authenticated": false,
+  "cookie_transfer": false,
+  "business_writes": false,
+  "cases": [
+    {
+      "case": "native-login",
+      "requested": {
+        "width": 1366,
+        "height": 768
+      },
+      "actual": {
+        "width": 1366,
+        "height": 768
+      },
+      "rect": {
+        "x": 483,
+        "y": 275.34375,
+        "width": 400,
+        "height": 44
+      },
+      "status": 200
+    },
+    {
+      "case": "classic-login",
+      "requested": {
+        "width": 1366,
+        "height": 768
+      },
+      "actual": {
+        "width": 1366,
+        "height": 768
+      },
+      "rect": {
+        "x": 483,
+        "y": 275.34375,
+        "width": 400,
+        "height": 44
+      },
+      "status": 200
+    }
+  ]
+}

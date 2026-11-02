@@ -29,7 +29,7 @@ async function prove({ screenshots = false } = {}) {
       assert.ok(rect.left >= 0 && rect.right <= width && rect.scroll <= rect.width + 1, JSON.stringify(rect)); assert.ok(rect.children.every(child => child.scroll <= child.width + 1));
       assert.ok((await page.locator('.td-detail').innerText()).includes('Captured '));
       assert.equal(await detail.locator('button,input,a').count(), 0, 'clock is not an action control');
-      if (screenshots) { const dir = path.join(__dirname, '../docs/screens/2026-10-12-reviewed-deal-clocks'); fs.mkdirSync(dir, { recursive: true }); await detail.screenshot({ path: path.join(dir, 'synthetic-clock-' + width + '.png') }); }
+      if (screenshots) { const dir = process.env.WOS_CARD_CLOCK_PROOF_DIR || path.join(__dirname, '../docs/screens/2026-10-12-reviewed-deal-clocks'); fs.mkdirSync(dir, { recursive: true }); await detail.screenshot({ path: path.join(dir, 'synthetic-clock-' + width + '.png') }); }
       await page.locator('[data-deal-back]').click(); await page.locator('.td-summary .wos-card-clock').waitFor();
     }
     assert.deepEqual(errors, []); assert.deepEqual(external, []); assert.deepEqual(writes, []); fixture.assertUnchanged();

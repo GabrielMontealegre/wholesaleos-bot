@@ -16,9 +16,10 @@ async function prove({screenshots=false}={}) {
    if(new URL(url).pathname==='/helper/status')return route.fulfill({json:{paired:false}});
    if(url.startsWith(base+'/'))return route.continue();external.push(new URL(url).hostname);return route.abort();});
   const page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));
+  await page.addInitScript(value=>{const Original=Date;window.Date=class extends Original{constructor(...args){super(...(args.length?args:[value]));}static now(){return value;}};},Date.parse('2026-10-12T19:00:00Z'));
   for(const width of [1366,400,412]){await page.setViewportSize({width,height:915});await page.goto(base+'/dashboard/');await page.getByText('Conversation tools',{exact:true}).click();await page.locator('[data-conversation-id=overdue]').waitFor();
    assert.deepEqual(await page.locator('.cv-row').evaluateAll(els=>els.map(el=>el.dataset.conversationId)),['overdue','today','later']);
-   const text=await page.locator('#wos-conversations').innerText();assert.ok(text.includes('Oct 8, 12:27 PM'));assert.ok(!text.includes('2026-10-08'));assert.ok(!text.includes('Draft message not supplied'));assert.ok(!text.includes('Reported conversation'));
+   const text=await page.locator('#wos-conversations').innerText();assert.ok(text.includes('Thu 12:27 PM'));assert.ok(!text.includes('2026-10-08'));assert.ok(!text.includes('Draft message not supplied'));assert.ok(!text.includes('Reported conversation'));
    assert.equal(await page.locator('[data-conversation-id=overdue] .cv-primary').count(),1);assert.equal(await page.locator('[data-conversation-id=today] .cv-primary').count(),1);assert.equal(await page.locator('[data-conversation-id=later] .cv-primary').count(),0);
    assert.equal(await page.locator('[data-recorded-role=partner]').count(),1);assert.equal(await page.locator('[data-conversation-id=overdue]').evaluate(el=>getComputedStyle(el).borderLeftColor),'rgb(167, 139, 250)');
    const geometry=await page.locator('#wos-conversations').evaluate(el=>{const r=el.getBoundingClientRect();return {left:r.left,right:r.right,overflow:el.scrollWidth>el.clientWidth+1};});assert.ok(geometry.left>=0&&geometry.right<=width&&!geometry.overflow);

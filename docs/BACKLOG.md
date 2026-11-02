@@ -1,5 +1,20 @@
 # Backlog
 
+2026-11-01 #471 ONE reintroduction prepared from verified current main ebace1c9
+(486/488 released; owned prooff7d5462 preserved). Shared date label regression
+failed first, then changed-policy/strict negatives and synthetic Email/Today/
+reviewed-deal/Conversation focused checks pass. Nine synthetic images inspected.
+Pre-change unsigned native/classic desktop Remember-device rectangles both
+400x44 in viewport, serialized. Diagnostic stopped on a harness assertion about
+an already-blocked external GET; no geometry failure. Initial diagnostic could
+not launch the missing pinned1117 browser; installed that exact browser cache,
+no dependency/lock changes or attribution of older469/b1/486 failures. The
+candidate verifier preserves original44px/in-viewport and write guards, allows
+aborted externalGET attempts like the existing verifier, and records every
+case/rectangle before assertion. No baseline rerun or candidate acceptance yet.
+First PR/main CI and deployment gates pending; not released.477 remains open,
+472 independent next; unrelated exports unstaged and preserved.
+
 2026-11-01 owner explicitly approved merging/deploying486 and477, and later
 codex-task PRs when AGENTS gates pass; blocked PRs stay open while487 advances.
 486 merged d081c438 after exact-head CI289/0/0; automatic Railway reports
