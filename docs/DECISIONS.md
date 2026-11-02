@@ -1,5 +1,15 @@
 # Decisions
 
+ASSUMED: #472 uses own boolean test_data/synthetic/fixture:true only. Reject
+typed imports after existing authorization and reject whole successful JSON
+responses before display; never remove stored rows or silently filter totals.
+Exact-schema snapshot byte imports retain their existing rejection path. Do
+not parse names, filenames, CSV strings or source text as test identity. A
+reviewed dashboard asset allowlist plus build/startup checks and exclusion of
+tests from the image is the packaging guard; recorded-data Ask remains valid
+despite its historic demo filename. No auth/provider/UI rewrite. -- #472
+answer6551370318,D-065,AGENTS3/5,2026-11-01.
+
 ASSUMED: D-065/#471 authorizes one new current-main reintroduction of only
 the shared timestamp display policy: rolling age<=7 days keeps weekday/time;
 older timestamps show month/day, adding year when different. Strict UTC-Z,

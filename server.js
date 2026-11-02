@@ -3,6 +3,7 @@
 // Serves dashboard at /dashboard/ and API at /api/
 
 require('dotenv').config();
+require('./modules/security/production-assets').checkProductionAssets();
 const errorTracking = require('./modules/observability/error-tracking').createErrorTracking();
 const express = require('express');
 const path    = require('path');
@@ -41,6 +42,9 @@ const scraperApiClient = require('./modules/research/scraper-api-client');
 const multer = require('multer');
 const app  = express();
 app.use(errorTracking.http);
+const productionDataBoundary = require('./modules/security/production-data-boundary');
+app.use('/api', productionDataBoundary.protectRender());
+const rejectProductionImport = productionDataBoundary.rejectImport();
 // NOTE: Railway proxy requires trust proxy = 1
 app.set('trust proxy', 1);
 
@@ -2396,7 +2400,7 @@ app.post('/api/dashboard/free-public-deal-board/manual-evidence/upload', require
   });
 });
 
-app.post('/api/dashboard/free-public-deal-board/manual-evidence/proposal', requireAdminOrAgent('manual_evidence:write'), (req, res) => {
+app.post('/api/dashboard/free-public-deal-board/manual-evidence/proposal', requireAdminOrAgent('manual_evidence:write'), rejectProductionImport, (req, res) => {
   try {
     res.set('Cache-Control', 'no-store');
     res.json(manualEvidencePacketService.recordEvidenceProposal(Object.assign({}, req.body || {}, {
@@ -2955,7 +2959,7 @@ app.put('/api/settings', (req, res) => {
 });
 
 // Ã¢ÂÂÃ¢ÂÂ API: CSV Import Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
-app.post('/api/leads/import', (req, res) => {
+app.post('/api/leads/import', rejectProductionImport, (req, res) => {
   try {
     const { leads } = req.body;
     if (!leads || !Array.isArray(leads)) return res.status(400).json({ error: 'No leads array' });
@@ -5285,7 +5289,7 @@ app.post('/api/buyers/parse-paste', (req, res) => {
     res.json({ok:true,parsed:buyers.length,buyers:buyers,duplicates:buyers.filter(function(b){return b.duplicate;}).length});
   } catch(e) { res.status(500).json({error:e.message}); }
 });
-app.post('/api/buyers/bulk-import', async (req, res) => {
+app.post('/api/buyers/bulk-import', rejectProductionImport, async (req, res) => {
   try {
     const { buyers } = req.body;
     if (!buyers || !Array.isArray(buyers)) {

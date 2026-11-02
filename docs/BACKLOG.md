@@ -1,5 +1,14 @@
 # Backlog
 
+2026-11-01 #472 LOCAL candidate from main3eff9420: explicit boolean test flags
+only at typed import/JSON display boundaries, reviewed public-asset build/start
+guard and test-directory image exclusion. No name/text censorship, row removal,
+auth/provider or UI-layout rewrite. Focused existing import/snapshot/key checks
+pass; new boundary/assets/purity negatives pass, exact-head full CI pending.
+Initial new-test setup Express resolution and localhost EACCES retained; no
+historical failure attribution. Not merged/deployed/verified; whole455/backlog
+remain incomplete.477 stays open/failedCI; unrelated exports untouched/unstaged.
+
 2026-11-01 #471 ONE reintroduction prepared from verified current main ebace1c9
 (486/488 released; owned prooff7d5462 preserved). Shared date label regression
 failed first, then changed-policy/strict negatives and synthetic Email/Today/
