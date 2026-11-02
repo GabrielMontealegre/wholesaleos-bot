@@ -29,7 +29,7 @@ async function uploadLatest({ keyFile = path.join(__dirname, '../exports/assista
     if (!files.length) throw Error();
     filename = files[0].name; bytes = readBounded(path.join(snapshotDir, filename), MAX_BYTES);
     const value = json(bytes);
-    if (!value || value.schema !== 'wos-assistant-snapshot' || value.version !== 1) throw Error();
+    if (!value || value.schema !== 'wos-assistant-snapshot' || ![1, 2].includes(value.version)) throw Error();
     // Calendar/field/future validation remains authoritative in the server decoder.
   } catch (_) { key = ''; return { exitCode: 1, message: 'Assistant snapshot unavailable or invalid.' }; }
   const controller = new AbortController(), timer = setTimeout(() => controller.abort(), 30000);

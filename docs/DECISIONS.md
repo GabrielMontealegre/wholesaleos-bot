@@ -1,5 +1,42 @@
 # Decisions
 
+OWNER 2026-11-01: Explicitly approves merge and automatic deployment of PR486,
+PR477 and later codex-task PRs once AGENTS checks pass. This resolves the
+previous486 execution-approval hold, not failed tests or safety restrictions.
+If a merge remains blocked, leave its PR open, report the number, continue487.
+Prior issue360 comment denial and all private-data/business-action boundaries
+remain unchanged. Reconcile487's cache17 with486's stripe removal; do not
+replace it with the older cache16. -- direct owner instruction, AGENTS2/3/5.
+
+ASSUMED: #487 walk_plan remains optional/null and otherwise has exact rung,
+nullable bounded status and nullable UTC-ISO scheduled_at (future allowed).
+A signed_partner_buyer label alone cannot prove the required buyer agreement.
+Allow optional buyer_agreement {buyer_id,non_circumvention_signed,signed_at,
+reference} only for that rung: exact buyer ID must join this snapshot's buyers,
+the signed flag is true/false/null, signed_at is null or not after generated_at,
+and reference is nullable reported record reference. Display the buyer-walker
+rung/status/time only when the exact join, true flag, signed time and reference
+are all present. Otherwise retain the imported report but show only that buyer
+agreement confirmation is needed, never its free-form walker detail. This is
+an assistant-reported agreement record, NOT legal verification or canonical
+agreement authority. Do not reuse JV flags, buyer approval/POF or parse names
+as signing evidence. No new document reader, writer, booking or provider.
+-- AGENTS3/5,#487 comment6553264253 --2026-11-01.
+
+ASSUMED: #487 follow-up engine consumes an explicit recorded-interaction
+projection {id,ref,agent_id,kind,step,at,source_kind}; kind is questions,
+follow_up or reply, step is F1-F4 only for follow_up, at is a canonical UTC day,
+and source_kind is recorded_interaction. This is an internal input contract,
+not proof of provider authorship or permission to send. Exact outreach-agent
+joins, unique events and valid prior steps are required; missing questions or
+agent identity withhold a follow-up. Any reply (or reported answered=true)
+stops all properties for that agent. Daily cap includes questions and all
+follow-ups across properties. Several eligible properties yield one stable
+priority/ref recommendation, never drafts, prices, networking or automation.
+Same-day reply ordering is unknown at day precision and safely stops rather
+than rejecting a legitimate same-day reply. Historical sends after a reply on
+a later day refuse. No automatic sequence restart. -- AGENTS3/4/5,#487 --2026-11-01.
+
 ASSUMED: D-063B next bounded native consumer is existing WOS reports filtering
 from453 per-message IMAP name receipts, not raw labels or guessed REST custom
 names. Require complete valid receipts on every thread member and consistent
@@ -1270,3 +1307,14 @@ two-second email label is local, current-selection-bound and does not repaint or
 persist data. Existing auth/clock/source/draft authority remains unchanged; Deals
 uses the existing classic destination, not an unapproved native screen.
 --Owner455.6,AGENTS source truth/additive consistency--2026-10-29.
+
+ASSUMED: #487/#454 v2 uses value_fixed for reported value after repairs and a
+nullable numeric buyer_number in open-item numbers; existing v1 per-deal buyer
+object remains unchanged. Agent id is explicit for outreach.agent_id joins;
+null means unknown, never inferred. Open-item/agent IDs join the snapshot ID
+namespace, outreach refs are unique queue references. Future due/follow-up days
+are allowed; reported happened/last-touch dates cannot exceed generated_at.
+These are local validation contract choices, not provider facts or send
+authority. Full base/extension validation, exact-byte receipts and v1 reader
+compatibility must be wired before exposing v2 imports -- D-065/#487,AGENTS
+truth and conservative additive compatibility --2026-11-01.

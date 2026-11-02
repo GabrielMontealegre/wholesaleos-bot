@@ -143,6 +143,18 @@ h3 { font-size: var(--ws-type-base); line-height: 1.4; }
 .ws-assistant-stage h4 { margin: 0 0 8px; font-weight: 500; }
 #assistant-buyers input[type=search] { width: 100%; min-height: 44px; margin-block: 8px; padding: 8px; background: var(--ws-raised); border: 1px solid var(--ws-line); border-radius: 4px; }
 #assistant-detail h4 { margin-block: 16px 8px; }
+.ws-decision-card { min-width: 0; margin-block: 12px; padding: 12px; border: 1px solid var(--ws-line); border-radius: 4px; overflow-wrap: anywhere; background: var(--ws-surface); }
+.ws-decision-card h4 { margin: 0 0 8px; font-size: 16px; }
+.ws-decision-card h5 { margin: 12px 0 8px; font-size: 14px; }
+.ws-decision-card textarea { display: block; width: 100%; min-height: 64px; padding: 8px; resize: vertical; background: var(--ws-raised); color: var(--ws-text); border: 1px solid var(--ws-line); border-radius: 4px; }
+.ws-decision-draft { white-space: pre-wrap; overflow-wrap: anywhere; }
+.ws-decision-history { margin-block: 12px; }
+.ws-decision-numbers { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px 16px; }
+.ws-decision-numbers > div { min-width: 0; }
+.ws-decision-options { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 12px; margin-block: 12px; }
+.ws-decision-options .ws-button { width: 100%; min-width: 0; white-space: normal; overflow-wrap: anywhere; }
+[data-decision-desk] .ws-tab { flex: 1; min-width: 0; white-space: normal; }
+@media (max-width: 600px) { .ws-decision-options { grid-template-columns: 1fr; } }
 .ws-today-header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--ws-space-3); }
 .ws-today-header p { color: var(--ws-muted); font-size: var(--ws-type-xs); }
 .ws-today-stats { display: flex; flex-wrap: wrap; gap: var(--ws-space-2); }

@@ -37,7 +37,19 @@ async function run() {
     assert.equal(redirected, 0, 'Actual fetch never forwards the upload credential across a redirect');
     const malformed = await uploadLatest({ ...options, fetchImpl: async () => ({ ok: true, status: 200, json: async () => ({ key: made.key, private: 'PRIVATE_DETAILS' }) }) });
     assert.equal(malformed.exitCode, 1); assert(!malformed.message.includes(made.key)); assert(!malformed.message.includes('PRIVATE_'));
-    for (const invalid of [Buffer.from([0xc3, 0x28]), Buffer.from(JSON.stringify({ ...fixture(), version: 2 }))]) {
+    const v2 = require('./helpers/assistant-snapshot-v2-fixture').fixture();
+    v2.generated_at = fixture().generated_at;
+    v2.open_items.forEach(row => { row.happened[0].at = '2026-10-25'; });
+    const v2bytes = Buffer.from(JSON.stringify(v2));
+    fs.writeFileSync(path.join(dir, 'wos-assistant-new.json'), v2bytes);
+    const v2result = await uploadLatest({ ...options, fetchImpl(url, init) {
+      assert(Buffer.from(init.body).equals(v2bytes));
+      assert.equal(init.headers['X-WOS-Assistant-Request'], crypto.createHash('sha256').update(v2bytes).digest('hex'));
+      return fetch(base + new URL(url).pathname, init);
+    } });
+    assert.equal(v2result.exitCode, 0);
+    assert.equal(store.assistant_snapshots.at(-1).snapshot.version, 2);
+    for (const invalid of [Buffer.from([0xc3, 0x28]), Buffer.from(JSON.stringify({ ...fixture(), version: 3 }))]) {
       fs.writeFileSync(path.join(dir, 'wos-assistant-new.json'), invalid);
       assert.equal((await uploadLatest({ ...options, fetchImpl: () => { throw Error('MUST_NOT_FETCH'); } })).message, 'Assistant snapshot unavailable or invalid.');
     }

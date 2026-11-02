@@ -33,7 +33,7 @@ function registerAssistantSnapshotRoutes(app, { db, requireAdmin, now = () => ne
   app.get(route, noStore, requireAdmin, (req, res) => {
     try { const latest = latestSnapshot(db.readDBStrict(), { now: now(), operatorId: req.currentUser?.id }); res.json({ ok: true, latest,
       viewer_scope: crypto.createHash('sha256').update(JSON.stringify(['assistant-device-scope-v1', req.currentUser.id])).digest('hex'),
-      capabilities: { can_import: true, schema: 'wos-assistant-snapshot', version: 1, max_bytes: MAX_BYTES } }); }
+      capabilities: { can_import: true, schema: 'wos-assistant-snapshot', version: 1, supported_versions: [1, 2], max_bytes: MAX_BYTES } }); }
     catch (failure) { error(res, failure); }
   });
   app.post(route, noStore, requireAdmin, uploadGuard, express.raw({ type: 'application/octet-stream', limit: MAX_BYTES }), (req, res) => {

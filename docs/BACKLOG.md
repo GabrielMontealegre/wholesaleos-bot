@@ -1,5 +1,84 @@
 # Backlog
 
+2026-11-01 owner explicitly approved merging/deploying486 and477, and later
+codex-task PRs when AGENTS gates pass; blocked PRs stay open while487 advances.
+486 merged d081c438 after exact-head CI289/0/0; automatic Railway reports
+success, main CI/read-only verification pending.477 remains OPEN/DRAFT with
+conflicts and failed exact-head CI; no merge or unchanged retry attempted.
+487 candidate reconciles current main, preserving stripe removal and cache17.
+Its first PR CI remains pending; prior local296/1/0 is retained, not green.
+No production private contents or business writes; unrelated exports untouched.
+
+2026-11-01 #487 walk-plan addendum LOCAL implementation: optional reported
+plan/plain Walk line, exact same-snapshot buyer agreement evidence gate, no
+booking/contact/payment or canonical promotion. New20-row/negative/import and
+three-width UI checks pass; three synthetic screens inspected. Earlier full
+b1 gate remains296/1/0, unknown remembered-device cause, not retried/waived.
+New runtime full/CI/release gates pending; no PR/push/merge/deploy,486 denial
+honored and unrelated exports preserved.
+
+2026-11-01 #487/#454v2 FIRST FULL LOCAL gate FAILED on frozen b1b0f6f:
+296/1/0 of297, explicit Node22.22,600s/file, natural exit1. Failed file:
+remembered-device-ui.test.js (25.91s), cause UNKNOWN; raw values withheld.
+All297 timing rows retained; sum1214.04s is NOT wall time. No retry/waiver/
+assertion change; no exact-head CI exists, so no environment-skip/pass claim.
+Candidate stays LOCAL/UNPUSHED/UNRELEASED. Prior486 failures remain unchanged;
+execution approval is not retried. Two generated exports preserved unstaged.
+
+2026-11-01 #487/#454v2 coordinated LOCAL review passed acceptance checks and
+fixed two pre-release gaps: answer routes now authorize/limit/parse before
+generic server parsers; stored v2 schema/base accessors reject without reads.
+Both new regressions failed first, then focused auth/import/answer/UI tests
+passed. Twelve inspected byte-identical synthetic screens retained with hashes.
+Local preparation is not CI/production completion: no full suite/PR/push/merge/
+deploy; existing486 approval restriction remains untouched, exports preserved.
+
+2026-11-01 #487/#454v2 LOCAL answer UI edge cases verified: persisted notes,
+choice/Refresh focus, all A/B/C appends and lost-POST GET-only recovery at
+1366/400/412. Three visible answer-note readback screenshots inspected. Pure
+20-row follow-up engine remains non-sending and clock-free. Final coordinated
+acceptance/review pending, no release claim or merge-restriction bypass.
+
+2026-11-01 #487/#454v2 LOCAL pure follow-up scheduler added: F1+1/F2+2/F3+3/
+F4+7 then park, reply stop, cross-property agent daily cap, no drafts/prices/
+sender/clock/network. Synthetic20-row schedule and identity/date/sequence/
+purity negatives pass. UI/import/answer checkpoint remains local. Coordinated
+acceptance and final edge-case review still pending; no full suite/CI/PR/push/
+merge/deploy. Existing486 execution restriction unchanged and not retried.
+
+2026-11-01 #487/#454v2 LOCAL Decision Desk/Agents/Outreach views now wired;
+explicit A/B/C answers append with guarded readback, latest-source binding,
+no blind retry, and late-auth clearing. Synthetic 1366/400/412 UI, focused
+answer/import/model tests and unchanged-intent v1 UI pass; nine local synthetic
+screens inspected. Pure follow-up engine/remaining coordinated acceptance
+still required. No full suite/CI/PR/push/merge/deploy; 486 approval not retried.
+
+2026-11-01 #487/#454v2 LOCAL owner-answer log/API added: source-bound latest-v2
+item A/B/C choices append separately, actor-scoped idempotent UUID requests,
+server time and private paged GET. No imported/canonical/provider mutation.
+Pure/route negatives and existing snapshot integration/routes pass. UI buttons,
+Desk/Agents/Outreach views and follow-up engine remain; no full suite/CI/PR/
+push/merge/deploy. Pending486 merge approval is neither retried nor bypassed.
+
+2026-11-01 #487/#454v2 LOCAL integration advances: both base/extension validation
+now guard v2 append/read, exact hashes and v1 history retained; uploader and
+compatible API capability wired. Pure native projection adds tier counts,
+reported agents/outreach/provenance with unknown-day due count. Focused v2,
+v1, routes/model/uploader checks pass; no full suite/CI/PR/deploy. Actual Desk
+screens/answers/follow-up engine still required. No merge restriction bypass.
+Previous unused-validator checkpoint below is history, not current integration.
+
+2026-11-01 #487/#454v2 LOCAL preparation on item/454-v2-field-validation.
+New pure extension-field validator and synthetic20-row/negative tests pass;
+existingv1 snapshot tests pass unchanged. NOT wired into importer or UI yet;
+no full suite/CI/PR/merge/deployment or complete-v2 claim. See cycle trace
+issue-454-v2-decision-desk.md for field assumptions and required integration.
+PR486 remains DRAFT, exactgreen1c77; production-impacting merge attempt was
+auto-review denied, explicit approval requested once. Do not retry or bypass.
+Owned f098341 docs-only mailbox checkpoint and all previous proof branches
+preserved. Two generated exports remain unstaged, never bundled into v2 work.
+PR483/report-label work DEFERRED under487/D-065; no diagnostics/re-release.
+
 2026-10-30 #412/D-063B native report-label consumer LOCAL CANDIDATE, not released.
 Fresh origin/mainc972 and architect priority/answers checked;471/472/478 still
 unanswered. Current producer453 emits per-message receipts, but native Reports

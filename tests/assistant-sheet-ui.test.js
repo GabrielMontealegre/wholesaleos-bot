@@ -88,7 +88,7 @@ async function main(){
    await check.click();await check.click();await page.evaluate(()=>window.releaseFirstDigest());
    await page.evaluate(()=>{SubtleCrypto.prototype.digest=window.savedDigest;delete window.savedDigest;delete window.releaseFirstDigest;});
    assert(!(await check.isChecked()));assert.equal(await page.evaluate(()=>localStorage.length),1,'Stale first toggle cannot overwrite the latest unchecked intent for another actor');
-   const bad=fixture();bad.version=2;await choose(bad);await page.locator('#assistant-import').click();await page.getByText(/different version/).waitFor();assert.equal(writes,2);assert(await card.isVisible(),'A rejected file does not replace the previous accepted sheet');
+   const bad=fixture();bad.version=3;await choose(bad);await page.locator('#assistant-import').click();await page.getByText(/different version/).waitFor();assert.equal(writes,2);assert(await card.isVisible(),'A rejected file does not replace the previous accepted sheet');
    unknown=true;await choose(data);await page.locator('#assistant-import').click();
    try{await page.getByText('The import outcome is unknown. Refresh before importing again.',{exact:true}).waitFor();}catch(error){console.error(JSON.stringify({synthetic_only:true,writes,reads,status:await page.locator('#assistant-status').textContent()}));throw error;}
    assert.equal(writes,3,'Lost responses and Chromium transport replays still persist one explicit import');assert(await page.locator('#assistant-import').isDisabled());unknown=false;

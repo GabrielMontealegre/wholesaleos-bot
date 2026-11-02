@@ -1,0 +1,14 @@
+{
+  "synthetic_only": true,
+  "production_content": false,
+  "all_images_inspected": true,
+  "copied_source_byte_identity_verified": true,
+  "images": {
+    "synthetic-walk-1366.png": "1351e2f7b3ab93df7a7e4f8b269eacb4c87b648aba686d2abec04e43f82feced",
+    "synthetic-walk-400.png": "a294171919dbf7dbbba19c5c7e49d880e4b2417063fe76ffc9ad1514ee996dab",
+    "synthetic-walk-412.png": "414466583eb6c5eb48f8a287bbce9f8863d5b090f7c16fc6d9a07402d79e9a1b"
+  },
+  "prior_full_local_gate": "b1b0f6f: 296 passed, 1 failed, 0 skipped; retained, not replaced",
+  "new_runtime_full_suite_or_ci_run": false,
+  "deployed": false
+}
