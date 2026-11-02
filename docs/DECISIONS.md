@@ -1,5 +1,13 @@
 # Decisions
 
+OWNER 2026-11-01: Explicitly approves merge and automatic deployment of PR486,
+PR477 and later codex-task PRs once AGENTS checks pass. This resolves the
+previous486 execution-approval hold, not failed tests or safety restrictions.
+If a merge remains blocked, leave its PR open, report the number, continue487.
+Prior issue360 comment denial and all private-data/business-action boundaries
+remain unchanged. Reconcile487's cache17 with486's stripe removal; do not
+replace it with the older cache16. -- direct owner instruction, AGENTS2/3/5.
+
 ASSUMED: #487 walk_plan remains optional/null and otherwise has exact rung,
 nullable bounded status and nullable UTC-ISO scheduled_at (future allowed).
 A signed_partner_buyer label alone cannot prove the required buyer agreement.

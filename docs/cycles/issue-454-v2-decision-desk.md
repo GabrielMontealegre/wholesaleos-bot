@@ -1,5 +1,16 @@
 # Decision Desk v2
 
+## Authorized Release Preparation
+
+The owner explicitly approved486/477 and later codex-task releases after the
+AGENTS gates.486 merged d081c438;487 now incorporates that main source,
+preserving the unread stripe removal and newer stylesheet cache17. The only
+merge conflict was cache17 versus16; no runtime behavior was discarded.
+477 remains open with conflicts and failed CI; it is not bundled into487.
+The earlier b1 local296/1/0 and focused Walk evidence below remain historical
+results for their respective sources. First current-head PR CI and production
+acceptance are still pending; no green/full-release claim is made here.
+
 ## Walk-Plan Addendum: Local Only
 
 Issue487 comment6553264253 adds optional open_items[].walk_plan. The shared

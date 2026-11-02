@@ -1,5 +1,14 @@
 # Backlog
 
+2026-11-01 owner explicitly approved merging/deploying486 and477, and later
+codex-task PRs when AGENTS gates pass; blocked PRs stay open while487 advances.
+486 merged d081c438 after exact-head CI289/0/0; automatic Railway reports
+success, main CI/read-only verification pending.477 remains OPEN/DRAFT with
+conflicts and failed exact-head CI; no merge or unchanged retry attempted.
+487 candidate reconciles current main, preserving stripe removal and cache17.
+Its first PR CI remains pending; prior local296/1/0 is retained, not green.
+No production private contents or business writes; unrelated exports untouched.
+
 2026-11-01 #487 walk-plan addendum LOCAL implementation: optional reported
 plan/plain Walk line, exact same-snapshot buyer agreement evidence gate, no
 booking/contact/payment or canonical promotion. New20-row/negative/import and
