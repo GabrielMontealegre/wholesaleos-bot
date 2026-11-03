@@ -1,0 +1,14 @@
+{
+  "source_sha": "84da9841879baa7a80f2d8bf8bc57363b859807c",
+  "authenticated": false,
+  "business_writes": false,
+  "private_body_reads": false,
+  "checks": [
+    {
+      "route": "/health",
+      "status": 200
+    }
+  ],
+  "result": "FAIL",
+  "failure_kind": "Error"
+}

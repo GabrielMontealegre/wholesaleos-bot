@@ -1,5 +1,23 @@
 # Backlog
 
+2026-11-02 #472/PR490 RELEASED and bounded-read-only VERIFIED. Tested head
+849754f1fac40bb89cf78521a3128d4343ac736a, merge/main84da9841879baa7a80f2d8bf8bc57363b859807c,
+whole tree identical. Fixed-head PR41568932641/job125697054329 and MAIN
+41570456973/job125701864014 each301/0/0,600s/file,13m18/18m21 job walls.
+All602 successful timing rows retained plus original301 rows/300-1 failure;
+sums are not wall time. Automatic Railway1f32a4b8 exactsourceSUCCESS.
+Bounded fixedGET7 checksPASS: health200, exact classic/app/legitimateAsk static,
+unsigned lead/buyer/snapshot401, snapshot denialno-store. Signed GLOBAL Today
+ready/assistant/noRetry/enabled44x44refresh/nooverflowPASS; temp tabclosed.
+First public harness local source-comparison ENOBUFS retained; same local read
+reproduced the default1MB buffer limit on public index. External harness buffer
+fixed only, assertions/runtime unchanged, completed proofPASS. No old failure
+attribution or private content/value/JSON/AX/capture/authtransfer/businesswrite.
+No changed UI/screens, no private-fixture absence claim. Explicit flag/build
+boundary is done; close472 after logging. Whole487/455/backlog remain incomplete.
+Next D065c: rebase477/currentmain with owned fixture annotation correction,
+preserve old source/proof, resolve conflicts, one new-headCI; failed=>DEFERRED.
+
 2026-11-02 D065c/#487 comment6594135767 resolves the CI allowance hold:
 one run per changed head, no unchanged retry.490's tests/.tmp restoration is
 authorized for its first fixed-head CI, with original300/1/0 retained; no green

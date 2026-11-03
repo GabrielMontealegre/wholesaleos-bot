@@ -1,0 +1,20 @@
+{
+  "source_sha": "84da9841879baa7a80f2d8bf8bc57363b859807c",
+  "surface": "Today",
+  "observation": "GLOBAL booleans and public control geometry only",
+  "shell": true,
+  "ready": true,
+  "retry_control": false,
+  "assistant_present": true,
+  "refresh_enabled": true,
+  "refresh_geometry": { "width": 44, "height": 44 },
+  "no_horizontal_overflow": true,
+  "private_content_or_values_read": false,
+  "private_json_read": false,
+  "private_capture_or_ax": false,
+  "auth_transfer": false,
+  "business_writes": false,
+  "temporary_tab_closed": true,
+  "user_tabs_unchanged": true,
+  "result": "PASS"
+}

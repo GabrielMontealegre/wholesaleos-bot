@@ -1,5 +1,32 @@
 # Explicit Test-Data Boundaries (#472 / #487)
 
+## Released And Verified
+
+- PR490 tested head `849754f1fac40bb89cf78521a3128d4343ac736a`; merge/main
+  `84da9841879baa7a80f2d8bf8bc57363b859807c`, entire tree identical.
+- Fixed-head PR41568932641/job125697054329:301/0/0,13m18 job wall.
+  Main41570456973/job125701864014:301/0/0,18m21 job wall.600s/file, natural
+  completion; all602 successful timing rows plus original301 failed-head rows
+  preserved under `proof-490`. Duration sums are not job wall time.
+- Automatic Railway deployment `1f32a4b8-242c-4f57-ad28-9476dd96d13b` exact
+  merge source statusSUCCESS. No manual Railway action.
+- Public fixedGET7 checks pass: health200, exact classic/app/recordedAsk files,
+  unsigned lead/buyer/snapshot401, snapshot denialno-store. No private JSON/body
+  read or flagged production POST. The legitimate Ask runtime remains served.
+- First public verifier stopped after health200 because local git-show source
+  comparison exceeded its default1MB child buffer. A local-only identical read
+  reproduced ENOBUFS for the1,897,880-byte public index. Preserve first report;
+  enlarge only external source-comparison buffer to8MB, keep all assertions and
+  runtime unchanged. Completed fixedGET proof then passes. No screen audit or
+  15-case rerun; this does not explain any historical failure.
+- Existing signed Chrome session, fresh temporary tab: GLOBAL shell/ready,
+  noRetry, assistantpresent, enabled44x44refresh and nohorizontaloverflow pass.
+  No private text/values/JSON/AX/capture/content locator, auth transfer or writes.
+  Temporary tab closed; original user tabs untouched. No changed UI/screens.
+- Scope complete: explicit test flags at import/display plus packaging guard.
+  This does not prove absence of unmarked fixtures in private production data,
+  infer provenance from names/text, or complete the whole487/455/backlog.
+
 ## D-065c Fixed-Head Gate Authorized
 
 Architect #487 comment6594135767 (2026-11-02) clarifies one CI run per head,

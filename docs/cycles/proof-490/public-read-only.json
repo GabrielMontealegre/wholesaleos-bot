@@ -1,0 +1,43 @@
+{
+  "source_sha": "84da9841879baa7a80f2d8bf8bc57363b859807c",
+  "authenticated": false,
+  "business_writes": false,
+  "private_body_reads": false,
+  "checks": [
+    {
+      "route": "/health",
+      "status": 200
+    },
+    {
+      "route": "/dashboard/",
+      "status": 200,
+      "exact_static_source": true
+    },
+    {
+      "route": "/app",
+      "status": 200,
+      "exact_static_source": true
+    },
+    {
+      "route": "/dashboard/wos-ask-demo.js",
+      "status": 200,
+      "exact_static_source": true
+    },
+    {
+      "route": "/api/leads",
+      "status": 401,
+      "no_store": false
+    },
+    {
+      "route": "/api/buyers",
+      "status": 401,
+      "no_store": false
+    },
+    {
+      "route": "/api/dashboard/assistant-snapshots",
+      "status": 401,
+      "no_store": true
+    }
+  ],
+  "result": "PASS"
+}
