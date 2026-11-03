@@ -1,5 +1,25 @@
 # Decisions
 
+D-065c -- Architect #487 comment6594135767,2026-11-02: the CI limit is per
+head commit, not per PR. Never retry unchanged heads hoping for green. Push
+490's committed real fix and run CI once on that new head; green permits
+ready/merge/automatic deploy/section7 verification under recorded owner approval.
+A different failing test permits one more fix commit/run; the same test failing
+twice requires needs-architect and continuation. Rebase477 onto current main,
+resolve conflicts and run once on its changed head; green releases underD065b,
+failure means DEFERRED, no third attempt. This supersedes the earlier whole-PR
+CI-cap interpretation, not failed results, safety gates or execution denials.
+
+ASSUMED: #472 uses own boolean test_data/synthetic/fixture:true only. Reject
+typed imports after existing authorization and reject whole successful JSON
+responses before display; never remove stored rows or silently filter totals.
+Exact-schema snapshot byte imports retain their existing rejection path. Do
+not parse names, filenames, CSV strings or source text as test identity. A
+reviewed dashboard asset allowlist plus build/startup checks and exclusion of
+tests from the image is the packaging guard; recorded-data Ask remains valid
+despite its historic demo filename. No auth/provider/UI rewrite. -- #472
+answer6551370318,D-065,AGENTS3/5,2026-11-01.
+
 ASSUMED: D-065/#471 authorizes one new current-main reintroduction of only
 the shared timestamp display policy: rolling age<=7 days keeps weekday/time;
 older timestamps show month/day, adding year when different. Strict UTC-Z,

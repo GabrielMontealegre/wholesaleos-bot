@@ -8,6 +8,7 @@ const reviewedDeals = require('../deals/reviewed-deals');
 const REQUESTS_PER_HOUR = 12;
 
 function registerAssistantFindRoutes(app, { db, requireAdmin, pairingOptions = {}, now = () => new Date().toISOString(), onIncomingInteractions=()=>{} }) {
+  const rejectProductionImport = require('../security/production-data-boundary').rejectImport();
   const requests = new Map();
   const previews = new Map();
   function expirePreviews(at) {
@@ -36,7 +37,7 @@ function registerAssistantFindRoutes(app, { db, requireAdmin, pairingOptions = {
     const known = error && /^find_[a-z_]+$/.test(error.code || '');
     return res.status(known ? error.status || 400 : 503).json({ code: known ? error.code : 'find_store_unavailable' });
   }
-  app.post('/api/assistant/finds', agentOnly, (req, res) => {
+  app.post('/api/assistant/finds', agentOnly, rejectProductionImport, (req, res) => {
     try {
       const at = now();
       const items = imports.validateAgentItems(req.body, at);
@@ -57,7 +58,7 @@ function registerAssistantFindRoutes(app, { db, requireAdmin, pairingOptions = {
       res.json({ ...finds.listFinds(db.readDBStrict(), { now: now() }), capabilities: { can_import: true } });
     } catch (error) { failure(res, error); }
   });
-  app.post('/api/dashboard/buyers-found/import/preview', requireAdmin, (req, res) => {
+  app.post('/api/dashboard/buyers-found/import/preview', requireAdmin, rejectProductionImport, (req, res) => {
     try {
       const at = now();
       expirePreviews(Date.parse(at));
@@ -68,7 +69,7 @@ function registerAssistantFindRoutes(app, { db, requireAdmin, pairingOptions = {
       res.set('Cache-Control', 'no-store').json({ preview_id: id, ...plan.summary });
     } catch (error) { failure(res, error); }
   });
-  app.post('/api/dashboard/buyers-found/import/commit', requireAdmin, (req, res) => {
+  app.post('/api/dashboard/buyers-found/import/commit', requireAdmin, rejectProductionImport, (req, res) => {
     try {
       const body = req.body;
       if (!body || typeof body !== 'object' || Array.isArray(body) || typeof body.preview_id !== 'string' ||

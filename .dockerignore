@@ -16,5 +16,6 @@ helper.json.*
 **/*.key
 **/*.p12
 **/*.pfx
+tests
 tests/.tmp
 docs/screens
