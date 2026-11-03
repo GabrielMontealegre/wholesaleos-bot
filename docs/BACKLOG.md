@@ -1,5 +1,16 @@
 # Backlog
 
+2026-11-03 classic Email FIRST full gate on38be8b1 naturally FAILED299/4/0
+of303,600s/file; all303timings retained in proof-classic-email-reading-room.
+Owned inbox verifier still targeted the removed role button/always-open Reply:
+corrected to owner-requested controls, preserve source/grouping/link/no-send
+checks and add collapsed-history/no-composer assertions; focused1366/400/412
+PASS with identical runtime. Original full result stays FAILED, not299/3/0.
+Dashboard mount-order, notification UI and Today UI causes remain unproven;
+no unchanged rerun, unrelated repair or environment attribution. No fixed-head
+full/CI/current-main/release gate; no push/PR/deploy. Synthetic-only preview:
+http://127.0.0.1:32194/dashboard/?workspace=email. Fetch restriction unresolved.
+
 2026-11-03 direct owner classic Email readability request LOCAL candidate:
 full-width reader, compact top controls, explicit Reply, recorded status only.
 Targeted synthetic1366/400/412 UI, existing layout/read-error/local-voice and

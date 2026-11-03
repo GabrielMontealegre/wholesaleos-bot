@@ -39,7 +39,32 @@ Existing thread-view purity/identity/ambiguity negatives now cover all stored
 statuses and missing/unknown status. Inbox UI state and explicit link persistence
 tests pass. Existing actual inbox layout, read-error and local-voice checks pass;
 their setup now clicks Reply before inspecting its textarea/disabled Send.
-No safety assertion removed or weakened. Full-suite outcome is pending.
+No safety assertion removed or weakened.
+
+## First Full Gate And Owned Verifier Correction
+
+Frozen38be8b1d02e160799caceb20eba7805de677b59e completed naturally:
+299 passed,4 failed,0 skipped of303,600s/file. Every timing is retained in
+proof-classic-email-reading-room/first-local-full.json; sum is not wall time.
+Failures: dashboard-deal-mount-order, inbox-workspace-ui,
+notification-workspace-ui, today-workspace-ui. This remains a FAILED full gate.
+No environment/Node/flakiness attribution and no unchanged full retry.
+
+The inbox verifier failed at scripts/verify-inbox-workspace.js:27 because it
+still clicked the removed vertical role button. Corrected setup uses the new
+role select and clicks Reply before its textarea/disabled-Send checks. Its
+three-message chronological/plain-text/HTML-escape assertions now select all
+message bodies including collapsed history, and additionally require history
+initially closed and composer initially absent. The full-width reading check
+now covers desktop too. Existing exact grouping, no guessed identity, deal
+link, blank operator role, draft preservation, notes separation, local filters,
+missing-label clearing, zero writes/external/errors remain. This changed
+verifier passes1366/400/412; runtime is unchanged from38be8b1.
+
+The other three full failures have no proven cause in this slice. Two observed
+stacks wait on Today-screen elements; no unrelated runtime fix/test weakening
+or unchanged retry was attempted. No full green/CI/current-main/release gate
+exists for the corrected head. The local-only candidate remains unreleased.
 
 No live mailbox, private values/captures, real message/file, provider action,
 business write or send was used. No push/PR/merge/deployment. The standing
