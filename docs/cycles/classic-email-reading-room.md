@@ -1,5 +1,16 @@
 # Classic Email Reading Room
 
+## Authorized Publication
+
+Gabriel's direct2026-11-03 standing authorization supersedes the old no-fetch
+restriction. Fetch succeeded; current origin/main326ad472 is an ancestor of
+the candidate, so no history rewrite is required. The retained local failure
+is not reclassified. Under D065/D065c, the first exact corrected-head hosted
+CI is the next gate; no unchanged retry or cancel/skip/waiver. Merge/deploy
+approval is already granted, conditional on passing checks and bounded proof.
+Paid services, outreach, secrets and production business writes stay excluded.
+Historical local-only/hold statements below describe their earlier checkpoints.
+
 Direct owner request, 2026-11-03: make the classic Email screen readable,
 relocate its tabs, reply only after opening, and show conversation context.
 

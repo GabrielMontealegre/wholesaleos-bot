@@ -1,5 +1,14 @@
 # Backlog
 
+2026-11-03 standing fetch/reconcile/backlog-release authorization received
+directly from Gabriel, for this and every run until revoked. Authorized fetch
+succeeded; origin/main remains326ad472 and is an ancestor of the local Email
+candidate, so no rebase/content rewrite is needed. Prior no-fetch hold is
+superseded, not bypassed. Existing299/4/0 local full failure stays retained;
+the owned verifier correction has targeted proof but needs its FIRST hosted
+exact-head CI before any green release claim. No paid/outreach/secrets/private
+content or production business-write authorization. Two exports untouched.
+
 2026-11-03 classic Email FIRST full gate on38be8b1 naturally FAILED299/4/0
 of303,600s/file; all303timings retained in proof-classic-email-reading-room.
 Owned inbox verifier still targeted the removed role button/always-open Reply:

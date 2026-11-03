@@ -1,5 +1,14 @@
 # Decisions
 
+OWNER 2026-11-03: Gabriel explicitly authorizes git fetch origin and rebase or
+pull onto origin/main at the start of this and every future run until revoked.
+Continue unfinished BACKLOG top to bottom under AGENTS, merge only when all
+checks pass, allow automatic deployment and bounded read-only section7 proof.
+This supersedes the prior no-fetch hold and its execution rejection; the first
+authorized fetch succeeded and main remains326ad472. It does not authorize
+paid services, outreach, secrets, private-content probes or production business
+writes. Existing CI-per-changed-head rules and honest failure history remain.
+
 OWNER/ASSUMED 2026-11-03: Direct readability feedback targets the classic Email
 screen. Use full-width list-to-reader navigation, compact top folder/role
 controls, collapsed older messages and explicit reply, not a three-pane layout
