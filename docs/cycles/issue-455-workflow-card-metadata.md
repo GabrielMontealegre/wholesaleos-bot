@@ -1,5 +1,31 @@
 # 455.8B2 - Workflow Card Metadata
 
+## Current-Main Rebase Under D-065c
+
+2026-11-02: rebase the two owned item commits47170f6 and412ed2e onto verified
+main84da984 by scoped cherry-pick transplants. This preserves original local
+item/455-workflow-card-metadata at412ed2e and the failed remote47170f6 evidence,
+without stashing or staging unrelated dirty exports. Exclude obsolete parent
+30138e0's PR476 proof replay. Only BACKLOG/DECISIONS conflicted; retain both
+current decisions and explicitly historical item notes. Four display removals
+and their four cache versions are unchanged from the owned implementation;
+newer native/assistant/Email/clock2/auth/build-guard assets remain current.
+
+The existing four-screen synthetic functional test passes at1366/400/412.
+Its initial Conversation image remained belowfold and is NOT positive visual
+proof. Strengthen the test with a heading-in-viewport assertion; capture only
+the three Conversation views separately, preserving the other nine positive
+images without repeated audits. All12 selected images were inspected; runtime
+files are identical across these captures. No existing assertion weakened.
+
+D065b accepted the previously recorded baseline comparison as existing debt;
+add its single follow-up item at the backlog bottom. D065c specifically permits
+one first CI on this rebased head: green releases underD065b, failure defers
+with summary/no third attempt. Do not claim a new performance measurement or
+rerun Lighthouse/unchanged-screen audits. The historical278-test/old proof plan
+below is superseded by current-head full CI plus section7 maximum proof.
+Screens: `docs/screens/2026-11-02-pr477-rebase`; full/release gates pending.
+
 Bounded continuation after4758A and4768B1. Approvals, conversation cards,
 Pipeline and notification Work queue omit their standalone reference metadata.
 Buyer-match and legacy card faces remain later8B work;whole455.8 notcomplete.

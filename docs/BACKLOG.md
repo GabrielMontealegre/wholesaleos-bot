@@ -1,5 +1,26 @@
 # Backlog
 
+2026-11-02 PR490/#472 RELEASED/VERIFIED: main84da984 whole tree identical
+tested849754f. PR41568932641 and MAIN41570456973 each301/0/0; automaticRailway
+1f32a4b8 exactsourceSUCCESS, bounded fixedGET and signedGLOBAL proofPASS.
+All602 successful timings plus original301 failure timings retained; docs-only
+proof21d69b8 on proof/490-release-verification,472 CLOSED. No private data/writes.
+PR477 is now rebased onto that current main underD065c using the two owned
+item commits47170f6/412ed2e, preserving the old local branch and all proof.
+Only docs conflicted; kept current decisions and historical item notes. Runtime
+diff remains four display-node removals +four cache versions; no auth/backend/
+provider/canonical writer changes. Did not replay obsolete30138e0 PR476proof.
+No stash/staging/revert of the two unrelated dirty exports. Managed-worktree
+creation rejected nested sourceRoot, created nothing; reused current checkout
+with scoped patch transplants, not another worktree route or permission bypass.
+Four-screen synthetic functional checkPASS1366/400/412. First Conversation
+capture was belowfold/not positive proof; retain it, add heading viewport
+assertion, then capture ONLY three Conversation views with unchanged runtime.
+All12 selected positive synthetic images inspected and byte/hash checked.
+No repeated Lighthouse/performance/15-case audit; D065b's prior accepted
+baseline comparison remains historical, not a new speed claim. One new-head
+CI/main/automatic/section7 gates still required;477 NOT released yet.
+
 2026-11-02 D065c/#487 comment6594135767 resolves the CI allowance hold:
 one run per changed head, no unchanged retry.490's tests/.tmp restoration is
 authorized for its first fixed-head CI, with original300/1/0 retained; no green
@@ -4043,3 +4064,10 @@ Acceptance
   - The header shows "Admin · undefined".
   - Outreach Hub says "Run scrape to find real buyers", which is legacy wording.
   - Deal Matching stays on "Loading matches..." (replaced by B-19).
+
+## Deferred Follow-Up
+
+- Classic Today layout shift (CLS) on Conversations/Notifications. D065b/#487
+  records existing baseline debt, not a477 regression. Address separately at
+  the bottom of the queue; preserve current safety gates and report an actual
+  before/after comparison when that performance item is implemented.

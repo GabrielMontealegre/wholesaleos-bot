@@ -19,6 +19,7 @@ async function prove(){
     if(view==='conversations')await page.getByText('Conversation tools',{exact:true}).click();
     if(view==='notifications'){await page.getByRole('button',{name:'Notifications',exact:true}).click();await page.locator('[data-bell-view="work"]').click();}
     const selector={approvals:'.approval-card',pipeline:'.pipeline-row',conversations:'.cv-row',notifications:'#notif-panel li'}[view];await page.locator(selector).first().waitFor();
+    if(view==='conversations'){const heading=page.locator('.cv-row h3');await heading.scrollIntoViewIfNeeded();const rect=await heading.boundingBox();assert(rect&&rect.y>=0&&rect.y+rect.height<=(width===1366?768:915),'conversation title is in the captured viewport');}
     assert(!codes.test(await page.locator(selector).innerText()),'standalone metadata absent from '+view);
     if(view==='approvals'){assert.equal(await page.locator('.approval-card').getAttribute('data-approval-id'),'workflow-buyer');assert(await page.locator('[data-approval-reviewed]').isDisabled());assert.equal(await page.locator('[data-approval-reviewed]:checked').count(),0);}
     if(view==='pipeline')assert.equal(await page.locator('[data-pipe-open]').getAttribute('data-pipe-open'),'approval:buyer:workflow-buyer');

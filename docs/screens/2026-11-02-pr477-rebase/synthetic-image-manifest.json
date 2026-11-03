@@ -1,0 +1,54 @@
+{
+  "synthetic_only": true,
+  "runtime_source": "f297d04",
+  "images": [
+    {
+      "file": "approvals-1366.png",
+      "sha256": "98b00f9575cbdaabc8ef9a063d5d332486cd942fd85b741143e32484462a5327"
+    },
+    {
+      "file": "approvals-400.png",
+      "sha256": "5a64ec5e56df04ed779e3058bae002c3fdad37fe8b459ab8f6f925fb55d59b9a"
+    },
+    {
+      "file": "approvals-412.png",
+      "sha256": "f24fcde42221a5484eb219c56110c96e0f6061147951ae9d9327fa639425629b"
+    },
+    {
+      "file": "pipeline-1366.png",
+      "sha256": "a7e2773a2233935b2fc9d628b97f8bb2e0884ead828613fa45fe85c12ee2abd1"
+    },
+    {
+      "file": "pipeline-400.png",
+      "sha256": "121804349149f8f50aadd59be09be45ccb3ae940a67d88560062ef64940eb969"
+    },
+    {
+      "file": "pipeline-412.png",
+      "sha256": "086fc6f05ae664b5ea00bcdd43b3941ee9e4a619b0ce679c173810f9aa4080a4"
+    },
+    {
+      "file": "conversations-1366.png",
+      "sha256": "5b89bd088a387e8707efa48ade1f1751f11a0b0c7614e1496d3370ea41580760"
+    },
+    {
+      "file": "conversations-400.png",
+      "sha256": "499f207a00e0bc66c89969bb1ede522963956718539be0364e20cd55bb56b949"
+    },
+    {
+      "file": "conversations-412.png",
+      "sha256": "381b6f2238ed597e69dd98c3b1351ee49fa8c6c39587aca56dcb427656d1b033"
+    },
+    {
+      "file": "notifications-1366.png",
+      "sha256": "146fe0a31ca426ab2572b8c61603c75db4c2bbe1392f5570151e7f8e8e5b4f51"
+    },
+    {
+      "file": "notifications-400.png",
+      "sha256": "dc57c8a0166eb6d6457423c9a4b884a911fcccd603d191b1b1d6da848b46274b"
+    },
+    {
+      "file": "notifications-412.png",
+      "sha256": "12db641f195a2a71ee650c1410fdf0de4e0a4537c8b68b79319208681b24bd78"
+    }
+  ]
+}
