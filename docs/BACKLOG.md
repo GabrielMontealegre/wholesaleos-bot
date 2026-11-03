@@ -1,6 +1,15 @@
 # Backlog
 
-2026-11-01 PR490 first exact-head CI FAILED300/1/0 of301, run41382706484/
+2026-11-02 D065c/#487 comment6594135767 resolves the CI allowance hold:
+one run per changed head, no unchanged retry.490's tests/.tmp restoration is
+authorized for its first fixed-head CI, with original300/1/0 retained; no green
+release claim until exact-head gate/automatic deploy/main gate/read-only proof.
+After490, rebase477/currentmain, resolve conflicts, one changed-head CI; green
+releases underD065b, failure defers/no third attempt. Owner merge/deploy approval
+is already recorded. No private/business/provider scope expands. Two exports
+remain unrelated/unstaged. Whole487/455/backlog still incomplete.
+
+HISTORICAL HOLD: 2026-11-01 PR490 first exact-head CI FAILED300/1/0 of301, run41382706484/
 job125076759547,19m04 job wall,600s/file. Failure is the unchanged tracked-secret
 test's required .dockerignore tests/.tmp entry: adding the broader tests entry
 had removed that explicit entry. No secret-value finding was emitted. Preserve

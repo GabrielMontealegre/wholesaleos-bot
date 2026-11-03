@@ -1,5 +1,15 @@
 # Explicit Test-Data Boundaries (#472 / #487)
 
+## D-065c Fixed-Head Gate Authorized
+
+Architect #487 comment6594135767 (2026-11-02) clarifies one CI run per head,
+not per PR. The committed `tests/.tmp` restoration may now be pushed and receive
+one first run on the changed head. An unchanged retry is still prohibited.
+Keep the original failure and301 timings. A different-test failure permits
+one more fix commit/run; the same test failing twice goes to needs-architect.
+Owner merge/automatic-deploy approval is already recorded. The historical
+whole-PR cap interpretation below is superseded; no gate is waived or green yet.
+
 ## First Full CI Failed
 
 PR490 source `b820b0550f010ecd6fb01d34a01aed9c27c5e85d`, run41382706484,
