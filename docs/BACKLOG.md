@@ -1,5 +1,21 @@
 # Backlog
 
+2026-11-03 PR491 classic Email RELEASED/VERIFIED: source eb162fe3,
+merge/main42f8c591053a5259c85f123f69401ae5e2cbbf98, whole tree identical.
+FIRST PR41728685564/job126240043923 and sole MAIN41731846206/job126250937284
+each303/0/0 of303,600s/file; job walls19m30/18m35. All606 hosted timings
+retained in docs/cycles/proof-491; original299/4/0 local result/all303timings
+unchanged. Automatic Railway7d4d751b exactmergeSUCCESS; eight fixed public
+GET/static checks and signed GLOBAL shell/control/geometry proofPASS. No live
+mail opened, private content/JSON/AX/captures, provider action, auth transfer or
+business write. Six inspected synthetic1366/400/412 screenshots show changed
+Email screens; Send remains disabled/inert. Proof branch491-release-verification.
+This completes the direct Email reading-room request, not whole455/487/backlog.
+Standing fetch/backlog-release authority remains; next eligible ordered slice
+is455.4B nonshared timestamp readers. Two unrelated exports remain unstaged.
+PR: https://github.com/GabrielMontealegre/wholesaleos-bot/pull/491
+
+HISTORICAL PRE-RELEASE:
 2026-11-03 standing fetch/reconcile/backlog-release authorization received
 directly from Gabriel, for this and every run until revoked. Authorized fetch
 succeeded; origin/main remains326ad472 and is an ancestor of the local Email

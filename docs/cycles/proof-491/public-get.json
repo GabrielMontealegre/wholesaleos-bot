@@ -1,0 +1,47 @@
+{
+  "source_sha": "42f8c591053a5259c85f123f69401ae5e2cbbf98",
+  "authenticated": false,
+  "private_body_reads": false,
+  "provider_actions": false,
+  "business_writes": false,
+  "checks": [
+    {
+      "route": "/health",
+      "status": 200
+    },
+    {
+      "route": "/dashboard/",
+      "status": 200,
+      "exact_static_source": true
+    },
+    {
+      "route": "/dashboard/wos-email-reader.js?v=6",
+      "status": 200,
+      "exact_static_source": true
+    },
+    {
+      "route": "/dashboard/wos-inbox.css?v=3",
+      "status": 200,
+      "exact_static_source": true
+    },
+    {
+      "route": "/dashboard/workspace/vendor/lucide-1.60.0/chevron-left.svg",
+      "status": 200,
+      "exact_static_source": true
+    },
+    {
+      "route": "/dashboard/workspace/vendor/lucide-1.60.0/x.svg",
+      "status": 200,
+      "exact_static_source": true
+    },
+    {
+      "route": "/api/gmail/messages?folder=inbox&limit=30",
+      "status": 401
+    },
+    {
+      "route": "/api/dashboard/conversations",
+      "status": 401
+    }
+  ],
+  "result": "PASS"
+}
