@@ -1,5 +1,21 @@
 # Decisions
 
+ASSUMED 2026-11-03:455.4B reuses the shared UTC-7 timestamp display for
+assistant sheet/Decision Desk/Settings metadata only. Date-only reported days
+retain their literal UTC date and include year. Future reported walk appointments
+use a separate strict scheduled-time label with month/day/time and different
+year, never weaken recorded-activity future rejection. No importer/schema,
+deadline arithmetic, ranking, canonical state, provider or writer change.
+-- AGENTS3/4/5, owner455 dates, existing487 future walk allowance.
+
+Architect454 addendum6617488378 read once2026-11-03: visible deal board,
+velocity, reported numbers and reply-in-place are future bounded scope; D065
+order explicitly unchanged. It does not turn on send/paid drafting, authorize
+private reads or prove missing stage/message histories. Preserve snapshot
+compatibility and source truth; don't infer the requested eleven-stage history
+from existing six-stage values or free text. Record any genuine contract STOP
+when that slice is reached; current455.4B display work remains independent.
+
 OWNER 2026-11-03: Gabriel explicitly authorizes git fetch origin and rebase or
 pull onto origin/main at the start of this and every future run until revoked.
 Continue unfinished BACKLOG top to bottom under AGENTS, merge only when all

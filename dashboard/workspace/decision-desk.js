@@ -30,7 +30,7 @@
       var walk=item.walk_plan;if(!walk)return '';
       if(walk.rung==='signed_partner_buyer'&&item.walk_buyer_agreement_reported_signed!==true)return '<p data-decision-walk>Walk: buyer agreement confirmation needed.</p>';
       var labels={agent_video:'agent video call',contractor_bid:'contractor bid',signed_partner_buyer:'partner buyer (agreement reported signed)',paid_walker:'paid walker'};
-      return '<p data-decision-walk>Walk: '+esc(labels[walk.rung])+', '+esc(walk.status===null?'status not reported':walk.status)+(walk.scheduled_at===null?'':' · '+esc(stamp(walk.scheduled_at)))+'</p>';
+      return '<p data-decision-walk>Walk: '+esc(labels[walk.rung])+', '+esc(walk.status===null?'status not reported':walk.status)+(walk.scheduled_at===null?'':' · '+esc(stamp(walk.scheduled_at,true)))+'</p>';
     }
     var tabs='<div class="ws-tabs" role="tablist" aria-label="Assistant views">'+[['desk','Decision Desk'],['agents','Agents'],['outreach','Outreach']].map(function(pair){return '<button type="button" class="ws-tab" role="tab" id="decision-tab-'+pair[0]+'" aria-controls="decision-panel-'+pair[0]+'" aria-selected="'+String(state.tab===pair[0])+'" tabindex="'+(state.tab===pair[0]?'0':'-1')+'" data-decision-tab="'+pair[0]+'">'+pair[1]+'</button>';}).join('')+'</div>';
     var titles=['Money decisions','Next decisions','Other decisions'];

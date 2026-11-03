@@ -1,5 +1,15 @@
 # Backlog
 
+2026-11-03 next455.4B bounded assistant/Decision Desk/Settings timestamp display
+LOCAL candidate: shared recent/old/year UTC-7 policy, literal day/year labels,
+separate strict future walk formatter; no schema/writer/source/deadline change.
+New socket-free actual UI testPASS1366/400/412 with Tokyo browser timezone;
+nine synthetic screenshots inspected. Two initial new-test loopback transport
+failures retained in trace, not attributed to historical failures. Existing
+regressions/full/CI/release gates pending; not pushed/PR/deployed. New454
+board addendum6617488378 read once and recorded; D065 order unchanged, no
+send/paid/private permission. Metadata cutoff now2026-11-03T22:50:21Z for454.
+
 2026-11-03 PR491 classic Email RELEASED/VERIFIED: source eb162fe3,
 merge/main42f8c591053a5259c85f123f69401ae5e2cbbf98, whole tree identical.
 FIRST PR41728685564/job126240043923 and sole MAIN41731846206/job126250937284
