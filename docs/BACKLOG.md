@@ -1,5 +1,14 @@
 # Backlog
 
+2026-11-03 direct owner classic Email readability request LOCAL candidate:
+full-width reader, compact top controls, explicit Reply, recorded status only.
+Targeted synthetic1366/400/412 UI, existing layout/read-error/local-voice and
+pure identity/state/link checks PASS. First mobile chooser clipping corrected
+with a new geometry assertion; six final synthetic images inspected. Full-suite
+gate pending; NOT pushed/released. No live mailbox/private data/send or business
+write. Existing fetch prohibition/rejection remains; no retry/bypass. Trace:
+docs/cycles/classic-email-reading-room.md. Two unrelated exports remain unstaged.
+
 2026-11-02 PR477 RELEASED/VERIFIED under D065b/D065c: source b120fd3,
 merge/production/main326ad4721fe0c7bb400f31389a9bc3b20828a7b6, whole tree
 identical. First rebased PR41574089467/job125713472693 and sole MAIN41576120940/

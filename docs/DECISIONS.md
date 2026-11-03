@@ -1,5 +1,14 @@
 # Decisions
 
+OWNER/ASSUMED 2026-11-03: Direct readability feedback targets the classic Email
+screen. Use full-width list-to-reader navigation, compact top folder/role
+controls, collapsed older messages and explicit reply, not a three-pane layout
+or always-open composer. Show only exact-linked recorded conversation status
+with an explicit Recorded label; missing/ambiguous status is never guessed.
+No send activation, new provider request, workflow writer or native rewrite.
+Keep all prior private-data/release restrictions. -- direct owner UI request,
+AGENTS3/4/5, additive presentation and exact existing conversation projection.
+
 D-065c -- Architect #487 comment6594135767,2026-11-02: the CI limit is per
 head commit, not per PR. Never retry unchanged heads hoping for green. Push
 490's committed real fix and run CI once on that new head; green permits
