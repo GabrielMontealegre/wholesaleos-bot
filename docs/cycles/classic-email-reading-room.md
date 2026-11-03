@@ -77,7 +77,17 @@ stacks wait on Today-screen elements; no unrelated runtime fix/test weakening
 or unchanged retry was attempted. No full green/CI/current-main/release gate
 exists for the corrected head. The local-only candidate remains unreleased.
 
-No live mailbox, private values/captures, real message/file, provider action,
+Historical pre-release state: no live mailbox, private values/captures, real message/file, provider action,
 business write or send was used. No push/PR/merge/deployment. The standing
 branch-fetch restriction and rejected refresh are not bypassed. This local
 candidate does not claim production completion or whole-backlog completion.
+
+## Release
+
+Standing direct fetch/reconcile/backlog-release authorization superseded the
+earlier fetch hold. PR491 merged42f8c591 after FIRST hosted corrected-head CI
+303/0/0; sole MAIN303/0/0 and automatic exactmerge deployment succeeded.
+Bounded public/static and signed GLOBAL shell/control checks passed without
+opening live mail or reading private content. Full release proof and all606
+hosted timings: docs/cycles/proof-491/README.md. Original local failure stays
+unchanged; whole455/487/backlog is not complete.

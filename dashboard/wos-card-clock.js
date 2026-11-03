@@ -36,6 +36,16 @@
     var time = date(value);
     return time == null ? 'Unknown' : new Intl.DateTimeFormat('en-US', { timeZone: 'UTC', month: 'short', day: 'numeric', year: 'numeric' }).format(new Date(time));
   }
+  function formatScheduledTime(value, now) {
+    var time = instant(value), current = instant(now);
+    if (time == null || current == null) return 'Unknown';
+    if (time <= current) return formatTime(value, now);
+    // A reported appointment may be future-dated; it is not past activity.
+    var year = new Intl.DateTimeFormat('en-US', { timeZone: ZONE, year: 'numeric' });
+    var options = { timeZone: ZONE, month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' };
+    if (year.format(new Date(time)) !== year.format(new Date(current))) options.year = 'numeric';
+    return new Intl.DateTimeFormat('en-US', options).format(new Date(time));
+  }
   // This reads the reviewed-deal projection only. It is not a source-date resolver.
   function reviewed(deal, context) {
     var now = text(context && context.now), current = instant(now);
@@ -94,5 +104,5 @@
       field('Current stage', model.stage + (model.days_in_recorded_stage == null ? ' - time in stage unknown' : ' - ' + model.days_in_recorded_stage + ' days since its recorded start')) +
       field('Next step', model.next) + '</dl>';
   }
-  return { reviewed: reviewed, render: render, formatTime: formatTime, formatDate: formatDate };
+  return { reviewed: reviewed, render: render, formatTime: formatTime, formatDate: formatDate, formatScheduledTime: formatScheduledTime };
 });

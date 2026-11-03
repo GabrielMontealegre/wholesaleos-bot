@@ -16,7 +16,7 @@ function contract(){
  for(const badNow of [null,'10/28/2026','2026-02-30T12:00:00Z',{}])assert.equal(api.formatTime(recent,badNow),'Unknown');
  assert.equal(api.formatDate('2026-10-24'),'Oct 24, 2026','Date-only source meaning/year do not change');
  assert.equal(api.formatDate('10/24/2026'),'Unknown','No ambiguous source-date inference');
- for(const file of ['index.html','workspace/index.html'])assert(fs.readFileSync(path.join(__dirname,'../dashboard',file),'utf8').includes('/dashboard/wos-card-clock.js?v=2'));
+ for(const file of ['index.html','workspace/index.html'])assert(fs.readFileSync(path.join(__dirname,'../dashboard',file),'utf8').includes('/dashboard/wos-card-clock.js?v=3'));
 }
 async function ui(){
  const {browser}=await launchChromiumWithResolvedBrowser(require('playwright'),{headless:true});

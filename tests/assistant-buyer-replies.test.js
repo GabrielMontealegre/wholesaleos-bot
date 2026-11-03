@@ -49,6 +49,7 @@ async function main(){
   app.get('/app',(_,res)=>res.sendFile(path.join(__dirname,'../dashboard/workspace/index.html')));app.get('/favicon.ico',(_,res)=>res.status(204).end());app.use('/dashboard',express.static(path.join(__dirname,'../dashboard')));
   const server=await new Promise(resolve=>{const s=app.listen(0,'127.0.0.1',()=>resolve(s));}),baseUrl='http://127.0.0.1:'+server.address().port,height=width===1366?768:915;
   const context=await browser.newContext({viewport:{width,height}}),page=await context.newPage(),errors=[],external=[],posts=[];
+  await page.addInitScript(value=>{const Original=Date;window.Date=class extends Original{constructor(...args){super(...(args.length?args:[value]));}static now(){return value;}};},Date.parse(now));
   page.on('pageerror',e=>errors.push(e.message));await page.route('**/*',route=>{const r=route.request();if(new URL(r.url()).origin!==baseUrl){external.push('external');return route.abort();}if(r.method()!=='GET'){posts.push(r.method());return route.abort();}return route.continue();});
   try{
    await page.goto(baseUrl+'/app?preview=1');const rows=page.locator('[data-assistant-recent-buyers] > li');await rows.first().waitFor();assert.equal(await rows.count(),10);
