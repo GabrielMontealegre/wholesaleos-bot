@@ -1,5 +1,26 @@
 # Backlog
 
+2026-11-02 PR490/#472 RELEASED/VERIFIED: main84da984 whole tree identical
+tested849754f. PR41568932641 and MAIN41570456973 each301/0/0; automaticRailway
+1f32a4b8 exactsourceSUCCESS, bounded fixedGET and signedGLOBAL proofPASS.
+All602 successful timings plus original301 failure timings retained; docs-only
+proof21d69b8 on proof/490-release-verification,472 CLOSED. No private data/writes.
+PR477 is now rebased onto that current main underD065c using the two owned
+item commits47170f6/412ed2e, preserving the old local branch and all proof.
+Only docs conflicted; kept current decisions and historical item notes. Runtime
+diff remains four display-node removals +four cache versions; no auth/backend/
+provider/canonical writer changes. Did not replay obsolete30138e0 PR476proof.
+No stash/staging/revert of the two unrelated dirty exports. Managed-worktree
+creation rejected nested sourceRoot, created nothing; reused current checkout
+with scoped patch transplants, not another worktree route or permission bypass.
+Four-screen synthetic functional checkPASS1366/400/412. First Conversation
+capture was belowfold/not positive proof; retain it, add heading viewport
+assertion, then capture ONLY three Conversation views with unchanged runtime.
+All12 selected positive synthetic images inspected and byte/hash checked.
+No repeated Lighthouse/performance/15-case audit; D065b's prior accepted
+baseline comparison remains historical, not a new speed claim. One new-head
+CI/main/automatic/section7 gates still required;477 NOT released yet.
+
 2026-11-02 D065c/#487 comment6594135767 resolves the CI allowance hold:
 one run per changed head, no unchanged retry.490's tests/.tmp restoration is
 authorized for its first fixed-head CI, with original300/1/0 retained; no green
@@ -309,6 +330,31 @@ authoritywithoutlowering90+gates. OnlyB2blocked;wholebacklogcontinues. Main/live
 476f6d7f522unchanged. 4558NOTcomplete/overall5of9(56%),legacyfaces remainafterB3.
 Owned476proof deliberatelycarriedas98cb65c,no unrelatedloss. OWNER5%policy/no
 earlyweeklyhold;latest61%primary78%weeklyused,22%weeklyleft/no warningthreshold.
+HISTORICAL PR477 preparation (current-main D065c rebase supersedes its hold):
+HISTORICAL PR477 first CI and unpublished annotation correction:
+2026-10-29 PR477 455.8B2 BLOCKED needs-architect478,notmerged/deployed.
+CompleteUIgateFAILEDConversation76/76/Bell88/90performance(90required),
+access98/98+100/100/allFCP<2s/nooverflow. Baselinealsobelowtarget,NOTwaiver.
+Boundeddiagnostic identifies parentTodayCLS0.4994tools/0.2295publicdesk;478
+requests boundedlayoutrepair/proofauthority withoutloweringgates. Initialtwo
+incompleteharnessruns retained;current-DOM ownershipfix resolvedinitialization.
+Full40892998131 REAL277/1/0(all278),600sfile,17m09job,sum964.65sNOTwall,
+scannerflagsyntheticfixedworkflowkey. FIRSTlocalannotationcorrection passes
+offlinegate;no literal/assertion/policychange;NOTnewremote/fullgreen.
+PR477localcorrection+allfailedproof preserved,NOunchangedfullrerun/pushchurn.
+Main/live476f6d7f522 stillverified. OnlyB2blocked;independentbuyer-match/legacy
+metadata next. 4558NOTcomplete,overall5/9(56%). Usage61%primary78%weeklyused,
+weekly22%left/no under10warning;OWNER5%policyactive/no earlyweeklyhold.
+
+2026-10-29 LOCAL455.8B2 workflowcardmetadata IMPLEMENTED/focused9PASS;
+full278/fourviewaudit/releasePENDING. Approvals/conversation/Pipeline/bellWorkqueue
+standalone reference lines removed;exactIDs/keys/links/review/source text/data/
+history unchanged/no backend/auth/provider/clock/writer changes. Existingtests
+UNCHANGED;newactualfullindex4views3size metadata/source-escaping/no-write proof.
+Main/live476f6d7f522 unchanged. Remainingbuyer-match/legacyfaces afterthisslice;
+4558NOTcomplete,overall5/9(56%). Owned476proof fb81561 deliberatelycarriedonto
+actualmain as30138e0/no unrelatedloss. OWNER5%policy/no weeklyhold. Trace
+docs/cycles/issue-455-workflow-card-metadata.md.
 
 2026-10-29 PR476 RELEASED/VERIFIED 455.8B1TodaymetadataONLY. Actualmainf6d7f522
 complete tree42f41945 identicaltested9874671. AutomaticRailway23b82e52 exact
@@ -4018,3 +4064,10 @@ Acceptance
   - The header shows "Admin · undefined".
   - Outreach Hub says "Run scrape to find real buyers", which is legacy wording.
   - Deal Matching stays on "Loading matches..." (replaced by B-19).
+
+## Deferred Follow-Up
+
+- Classic Today layout shift (CLS) on Conversations/Notifications. D065b/#487
+  records existing baseline debt, not a477 regression. Address separately at
+  the bottom of the queue; preserve current safety gates and report an actual
+  before/after comparison when that performance item is implemented.

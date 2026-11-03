@@ -1,0 +1,16 @@
+{
+  "mode": "before",
+  "view": "conversations",
+  "error": "TimeoutError",
+  "errors": [],
+  "state": {
+    "ready": "complete",
+    "appPresent": true,
+    "unlocked": true,
+    "page": "dashboard",
+    "summary": 1,
+    "toolsOpen": false,
+    "conversationNodes": 1,
+    "auditScript": true
+  }
+}
