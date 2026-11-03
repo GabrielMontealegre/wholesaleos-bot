@@ -1,5 +1,13 @@
 # Backlog
 
+2026-11-03 455.4B1 FIRST LOCAL FULL71a7ae7 naturally303/1/0 of304,600s/file;
+all304timings retained proof-455-assistant-times/first-local-full.json. Owned
+buyer-reply test expects a recent weekday using an unpinned browser clock;
+pin browser Date to its existing fixture now, preserve every original rank/
+source/weekday/privacy/no-write assertion. Runtime unchanged after gate. This
+remains a failed local full result, not waived/retrospectively green. Corrected
+focused/first hosted gates pending; no unchanged full retry or release yet.
+
 2026-11-03 next455.4B bounded assistant/Decision Desk/Settings timestamp display
 LOCAL candidate: shared recent/old/year UTC-7 policy, literal day/year labels,
 separate strict future walk formatter; no schema/writer/source/deadline change.

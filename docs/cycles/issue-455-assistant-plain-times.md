@@ -60,3 +60,22 @@ Existing focused checks PASS on the final candidate: plain-card-times5.02s,
 assistant-sheet-ui9.32s, assistant-decision-desk-ui8.78s,
 assistant-upload-settings-ui7.22s, assistant-sheet-model0.54s and
 assistant-walk-plan0.55s. First full suite still pending. No unchanged retry.
+
+## First Full Gate And Fixture Clock Correction
+
+Frozen71a7ae7 full suite completed NATURALLY303/1/0 of304,600s/file. All304
+timing rows retained in proof-455-assistant-times/first-local-full.json; sum is
+not wall time. Failed assistant-buyer-replies.test.js:56 expected a Mon label
+for its2026-10-26 reply timestamps while the browser used the ambient date.
+After more than seven days the new intended label is Oct26, not a weekday.
+Keep this FAILED gate unchanged; no unchanged local full retry.
+
+The existing test intends to exercise recent reply labels and ranking. Pin
+its browser Date to its own existing fixture now2026-10-26T15:00:00Z, rather
+than weaken/delete its weekday assertion or change source dates. All13buyers,
+top10stable reply-only ordering, unknown contact-only row, reported POF,
+exact-byte receipts, future/forged/accessor/source negatives, real synthetic
+writer route, area search, old-file refresh,401clearing and zero writes remain.
+No runtime change after the frozen full gate. The first corrected hosted gate
+is still required; no environment/Node/flakiness attribution or green claim.
+The corrected buyer-reply focused test PASS at1366/400/412,7.75s, natural exit0.
