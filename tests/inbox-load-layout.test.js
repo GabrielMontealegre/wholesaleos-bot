@@ -48,6 +48,8 @@ async function prove(){
       assert.equal(await page.locator('.email-thread-scroll').evaluate(el=>el.scrollTop>0),true);
       const sender=page.locator('.email-sender').first();assert.equal(await sender.evaluate(el=>getComputedStyle(el).whiteSpace),'nowrap');
       await page.locator('.email-thread-row').first().click();await page.locator('[data-email-body]').waitFor();
+      assert.equal(await page.locator('[data-email-reply]').count(),0,'reading never reserves a reply box');
+      await page.locator('[data-email-compose-open]').click();
       assert.ok(await page.locator('[data-email-send]').isDisabled());
       assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
       await page.locator('[data-email-back]').click();await page.locator('.email-thread-row').first().waitFor();

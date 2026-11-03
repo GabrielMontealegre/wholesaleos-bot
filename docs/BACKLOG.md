@@ -1,5 +1,48 @@
 # Backlog
 
+2026-11-03 standing fetch/reconcile/backlog-release authorization received
+directly from Gabriel, for this and every run until revoked. Authorized fetch
+succeeded; origin/main remains326ad472 and is an ancestor of the local Email
+candidate, so no rebase/content rewrite is needed. Prior no-fetch hold is
+superseded, not bypassed. Existing299/4/0 local full failure stays retained;
+the owned verifier correction has targeted proof but needs its FIRST hosted
+exact-head CI before any green release claim. No paid/outreach/secrets/private
+content or production business-write authorization. Two exports untouched.
+
+2026-11-03 classic Email FIRST full gate on38be8b1 naturally FAILED299/4/0
+of303,600s/file; all303timings retained in proof-classic-email-reading-room.
+Owned inbox verifier still targeted the removed role button/always-open Reply:
+corrected to owner-requested controls, preserve source/grouping/link/no-send
+checks and add collapsed-history/no-composer assertions; focused1366/400/412
+PASS with identical runtime. Original full result stays FAILED, not299/3/0.
+Dashboard mount-order, notification UI and Today UI causes remain unproven;
+no unchanged rerun, unrelated repair or environment attribution. No fixed-head
+full/CI/current-main/release gate; no push/PR/deploy. Synthetic-only preview:
+http://127.0.0.1:32194/dashboard/?workspace=email. Fetch restriction unresolved.
+
+2026-11-03 direct owner classic Email readability request LOCAL candidate:
+full-width reader, compact top controls, explicit Reply, recorded status only.
+Targeted synthetic1366/400/412 UI, existing layout/read-error/local-voice and
+pure identity/state/link checks PASS. First mobile chooser clipping corrected
+with a new geometry assertion; six final synthetic images inspected. Full-suite
+gate pending; NOT pushed/released. No live mailbox/private data/send or business
+write. Existing fetch prohibition/rejection remains; no retry/bypass. Trace:
+docs/cycles/classic-email-reading-room.md. Two unrelated exports remain unstaged.
+
+2026-11-02 PR477 RELEASED/VERIFIED under D065b/D065c: source b120fd3,
+merge/production/main326ad4721fe0c7bb400f31389a9bc3b20828a7b6, whole tree
+identical. First rebased PR41574089467/job125713472693 and sole MAIN41576120940/
+job125719898875 each302/0/0 of302,600s/file; job walls19m09/19m04. All604
+successful timing rows retained in docs/cycles/proof-477; original277/1/0
+failed-head proof remains unchanged. AutomaticRailway99fe7103 exactmergeSUCCESS.
+Ten fixed public GET/static checksPASS; signedGLOBAL four-face shell/control/
+geometry/nooverflow checksPASS. No private content/JSON/AX/captures, writes,
+provider action or auth transfer. Twelve inspected synthetic screenshots at
+docs/screens/2026-11-02-pr477-rebase remain the three-width visual proof; no
+new performance claim/audit rerun. Watch71179 naturally terminalPASS. This
+finishes only the PR477 workflow-card slice; whole455/487/backlog INCOMPLETE.
+PR490/#472 already VERIFIED and472 CLOSED; no repeat release checks needed.
+
 2026-11-02 PR490/#472 RELEASED/VERIFIED: main84da984 whole tree identical
 tested849754f. PR41568932641 and MAIN41570456973 each301/0/0; automaticRailway
 1f32a4b8 exactsourceSUCCESS, bounded fixedGET and signedGLOBAL proofPASS.

@@ -1,0 +1,54 @@
+{
+  "source_sha": "326ad4721fe0c7bb400f31389a9bc3b20828a7b6",
+  "authenticated": false,
+  "private_body_reads": false,
+  "business_writes": false,
+  "checks": [
+    {
+      "route": "/health",
+      "status": 200
+    },
+    {
+      "route": "/dashboard/",
+      "status": 200,
+      "exact_static_source": true
+    },
+    {
+      "route": "/dashboard/wos-approvals.js?v=4",
+      "status": 200,
+      "exact_static_source": true
+    },
+    {
+      "route": "/dashboard/wos-conversation-cards.js?v=3",
+      "status": 200,
+      "exact_static_source": true
+    },
+    {
+      "route": "/dashboard/wos-pipeline-workspace.js?v=4",
+      "status": 200,
+      "exact_static_source": true
+    },
+    {
+      "route": "/dashboard/wos-notification-workspace.js?v=2",
+      "status": 200,
+      "exact_static_source": true
+    },
+    {
+      "route": "/api/dashboard/approvals",
+      "status": 401
+    },
+    {
+      "route": "/api/dashboard/pipeline-workspace",
+      "status": 401
+    },
+    {
+      "route": "/api/dashboard/conversations",
+      "status": 401
+    },
+    {
+      "route": "/api/notifications",
+      "status": 401
+    }
+  ],
+  "result": "PASS"
+}

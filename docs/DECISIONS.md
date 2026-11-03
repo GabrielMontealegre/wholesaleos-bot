@@ -1,5 +1,23 @@
 # Decisions
 
+OWNER 2026-11-03: Gabriel explicitly authorizes git fetch origin and rebase or
+pull onto origin/main at the start of this and every future run until revoked.
+Continue unfinished BACKLOG top to bottom under AGENTS, merge only when all
+checks pass, allow automatic deployment and bounded read-only section7 proof.
+This supersedes the prior no-fetch hold and its execution rejection; the first
+authorized fetch succeeded and main remains326ad472. It does not authorize
+paid services, outreach, secrets, private-content probes or production business
+writes. Existing CI-per-changed-head rules and honest failure history remain.
+
+OWNER/ASSUMED 2026-11-03: Direct readability feedback targets the classic Email
+screen. Use full-width list-to-reader navigation, compact top folder/role
+controls, collapsed older messages and explicit reply, not a three-pane layout
+or always-open composer. Show only exact-linked recorded conversation status
+with an explicit Recorded label; missing/ambiguous status is never guessed.
+No send activation, new provider request, workflow writer or native rewrite.
+Keep all prior private-data/release restrictions. -- direct owner UI request,
+AGENTS3/4/5, additive presentation and exact existing conversation projection.
+
 D-065c -- Architect #487 comment6594135767,2026-11-02: the CI limit is per
 head commit, not per PR. Never retry unchanged heads hoping for green. Push
 490's committed real fix and run CI once on that new head; green permits

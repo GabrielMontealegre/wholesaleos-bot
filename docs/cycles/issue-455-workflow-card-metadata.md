@@ -64,7 +64,27 @@ identity/provenance are unchanged. No backend/auth/provider/clock/value rewrite.
   sharedlogin1/auth3/keySettings2/components6/assistantmodel2/sheet3/reply1/
   todaymodel1/emailmodel2 remain. No native Deals,fixture filtering or date fix.
 
-## Tests And Release Gates
+## Current Verified Release
+
+2026-11-02: D065c rebased source b120fd35021dd52549a4157e533dc1bb9b873ac1
+merged as326ad4721fe0c7bb400f31389a9bc3b20828a7b6. Whole merge tree matches
+tested source. First PR41574089467/job125713472693 and MAIN41576120940/
+job125719898875 each PASS302/0/0,600s/file; job walls19m09 and19m04.
+All604 successful per-file timings are in proof-477; sums are not wall time.
+Automatic Railway99fe7103-23a3-4bd6-a756-281b4fdadb95 exactmergeSUCCESS.
+Ten bounded public fixedGET checks PASS: health200, exact classic index/four
+changedJS, four unsigned401 denials without private response bodies. Signed
+GLOBAL Approvals/Pipeline/Conversations/Notifications shell/control/geometry
+checks PASS; no content/value/JSON/AX/capture, business write, provider action
+or auth transfer. Temporary agent tab closed. Selection check uses source's
+aria-pressed; initial aria-selected probe was inapplicable, not a product defect.
+See proof-477/public-get.json and signed-global.json. Three-width synthetic
+visual proof is docs/screens/2026-11-02-pr477-rebase. Historical D065b accepted
+baseline performance debt remains separate; no new Lighthouse/speed claim.
+The original failed277/1/0 head and earlier audit failures below remain honest
+historical evidence. This slice is DONE; whole455/487 remain incomplete.
+
+## Historical Tests And Release Gates
 
 New workflow-card-metadata-ui.test.js uses actual full dashboard renderers at
 1366/400/412 for all four views. Checks metadata absence, exactapproval ID/
