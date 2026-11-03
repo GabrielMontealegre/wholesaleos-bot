@@ -1,5 +1,19 @@
 # Backlog
 
+2026-11-02 PR477 RELEASED/VERIFIED under D065b/D065c: source b120fd3,
+merge/production/main326ad4721fe0c7bb400f31389a9bc3b20828a7b6, whole tree
+identical. First rebased PR41574089467/job125713472693 and sole MAIN41576120940/
+job125719898875 each302/0/0 of302,600s/file; job walls19m09/19m04. All604
+successful timing rows retained in docs/cycles/proof-477; original277/1/0
+failed-head proof remains unchanged. AutomaticRailway99fe7103 exactmergeSUCCESS.
+Ten fixed public GET/static checksPASS; signedGLOBAL four-face shell/control/
+geometry/nooverflow checksPASS. No private content/JSON/AX/captures, writes,
+provider action or auth transfer. Twelve inspected synthetic screenshots at
+docs/screens/2026-11-02-pr477-rebase remain the three-width visual proof; no
+new performance claim/audit rerun. Watch71179 naturally terminalPASS. This
+finishes only the PR477 workflow-card slice; whole455/487/backlog INCOMPLETE.
+PR490/#472 already VERIFIED and472 CLOSED; no repeat release checks needed.
+
 2026-11-02 PR490/#472 RELEASED/VERIFIED: main84da984 whole tree identical
 tested849754f. PR41568932641 and MAIN41570456973 each301/0/0; automaticRailway
 1f32a4b8 exactsourceSUCCESS, bounded fixedGET and signedGLOBAL proofPASS.

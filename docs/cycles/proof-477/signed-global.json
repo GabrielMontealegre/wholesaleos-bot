@@ -1,0 +1,13 @@
+{
+  "source_sha": "326ad4721fe0c7bb400f31389a9bc3b20828a7b6",
+  "scope": "GLOBAL booleans, public control state and geometry only",
+  "approvals": {"shell":true,"loginVisible":false,"refreshPresent":true,"refreshEnabled":true,"refreshGeometry":{"width":80.66146087646484,"height":44},"noHorizontalOverflow":true},
+  "pipeline": {"shell":true,"refreshEnabled":true,"refreshGeometry":{"width":80.66146087646484,"height":44},"noHorizontalOverflow":true},
+  "conversations": {"shell":true,"previewControlPresent":true,"saveDisabled":true,"noHorizontalOverflow":true},
+  "notifications": {"open":true,"workSelected":true,"markAllDisabled":true,"noHorizontalOverflow":true},
+  "selection_attribute": "aria-pressed (initial aria-selected probe was inapplicable; no product change or repeated interaction)",
+  "private_content_values_json_ax_captures": false,
+  "business_writes_provider_actions_auth_transfer": false,
+  "temporary_tab_closed": true,
+  "synthetic_visual_proof": "docs/screens/2026-11-02-pr477-rebase"
+}
