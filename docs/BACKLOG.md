@@ -1,5 +1,23 @@
 # Backlog
 
+2026-11-03 PR492/455.4B1 RELEASED/VERIFIED: sourcec45de93, merge/main
+bca8fefc962b5cf17c6c981565b6df29a842675c whole tree identical. FIRST PR
+41739396760/job126276796820 and sole MAIN41741351625/job126283354607 each
+304/0/0 of304,600s/file; job walls13m29/18m49. All608 hosted timing rows
+retained proof-455-assistant-times, alongside original304 local303/1/0 rows;
+no retrospective pass or unchanged retry. AutomaticRailway4f1d9962 exactmerge
+SUCCESS; nine fixed public GET/static/401 checks and signed GLOBAL shell/
+control44x44/nooverflow proofPASS. Temporary tab closed, no private contents/
+JSON/AX/captures/mail/key records/provider/business writes/auth transfer.
+Nine inspected synthetic1366/400/412 images show actual sheet/Desk/Settings.
+This finishes assistant/Decision Desk/Settings dates only, NOT whole455.4/487.
+Next independent455.4B readers: recorded Ask/Activity, device expiry, templates,
+JV/profit metadata, then trace active legacy/source-day boundaries; don't edit
+shadowed paths or infer ambiguous source dates. Standing release authority
+continues. Unrelated exports/debug.log remain untouched/unstaged.
+PR: https://github.com/GabrielMontealegre/wholesaleos-bot/pull/492
+
+HISTORICAL PRE-RELEASE:
 2026-11-03 455.4B1 FIRST LOCAL FULL71a7ae7 naturally303/1/0 of304,600s/file;
 all304timings retained proof-455-assistant-times/first-local-full.json. Owned
 buyer-reply test expects a recent weekday using an unpinned browser clock;

@@ -79,3 +79,12 @@ writer route, area search, old-file refresh,401clearing and zero writes remain.
 No runtime change after the frozen full gate. The first corrected hosted gate
 is still required; no environment/Node/flakiness attribution or green claim.
 The corrected buyer-reply focused test PASS at1366/400/412,7.75s, natural exit0.
+
+## Release
+
+PR492 sourcec45de93 mergedbca8fefc, whole tree identical. FIRST PR304/0/0,
+sole MAIN304/0/0; all608 hosted timings retained beside the original local
+304-row failed result. Automatic exactmerge deployment and bounded public/
+static/GLOBAL proof PASS without private contents or business actions.
+Full proof: proof-455-assistant-times/README.md. Remaining4B readers and whole
+455/487/backlog remain incomplete; no broader timestamp/board completion claim.

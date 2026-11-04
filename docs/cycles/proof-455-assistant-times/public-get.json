@@ -1,0 +1,52 @@
+{
+  "source_sha": "bca8fefc962b5cf17c6c981565b6df29a842675c",
+  "authenticated": false,
+  "private_body_reads": false,
+  "provider_actions": false,
+  "business_writes": false,
+  "checks": [
+    {
+      "route": "/health",
+      "status": 200
+    },
+    {
+      "route": "/dashboard/",
+      "status": 200,
+      "exact_static_source": true
+    },
+    {
+      "route": "/app",
+      "status": 200,
+      "exact_static_source": true
+    },
+    {
+      "route": "/dashboard/wos-card-clock.js?v=3",
+      "status": 200,
+      "exact_static_source": true
+    },
+    {
+      "route": "/dashboard/workspace/assistant-sheet.js?v=5",
+      "status": 200,
+      "exact_static_source": true
+    },
+    {
+      "route": "/dashboard/workspace/decision-desk.js?v=3",
+      "status": 200,
+      "exact_static_source": true
+    },
+    {
+      "route": "/dashboard/wos-assistant-upload-settings.js?v=3",
+      "status": 200,
+      "exact_static_source": true
+    },
+    {
+      "route": "/api/dashboard/assistant-snapshots",
+      "status": 401
+    },
+    {
+      "route": "/api/dashboard/assistant-upload-keys",
+      "status": 401
+    }
+  ],
+  "result": "PASS"
+}
