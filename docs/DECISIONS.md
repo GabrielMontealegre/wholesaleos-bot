@@ -1,5 +1,28 @@
 # Decisions
 
+ASSUMED 2026-11-03: active-notice-address-origin and after-sale-frozen-chain
+use existing fixed-clock helper at their existing frozen corpus reference
+2026-10-02T12:00:00Z, restored in finally. Their fixed May-past/November-future
+2026 cases must not change intent with the ambient date. Source dates,
+addresses, provenance/negative/network/immutability assertions and all backend
+code stay unchanged. Original302/3/0 full result is retained; unrelated shared
+login cause unproven, no retry/weakening. -- AGENTS4 incidental date scaffolding,
+existing historical clock-helper convention; first exact-head hosted gate required.
+
+ASSUMED 2026-11-03:455.4B2 applies shared strict timestamp display only to
+recorded Ask/Activity labels. Ask uses its explicit snapshot now; Activity
+uses the display clock. Strict date-only history/due values keep their literal
+day/year, no invented midnight or numeric-slash parsing. Unconfirmed future
+instants show Time not confirmed while preserving the entire source row and
+prose. Existing interaction import five-minute tolerance, event/source/JV gates,
+server filtering, sorting and writers remain unchanged. Activity's explicit
+From/To query bounds must match the fixed UTC-7 display day, not browser-local
+midnight. A Tokyo-browser regression proved the mismatch (Nov2T15Z versus
+Nov3T07Z). Correct only front-end from_ts/to_ts construction, reject invalid
+ranges without fetching or showing stale/false-zero rows; measured zero stays
+visible. No source-event inference or deadline math change.
+-- AGENTS3/4/5, owner455 dates and truthful read-only filtering.
+
 ASSUMED 2026-11-03:455.4B reuses the shared UTC-7 timestamp display for
 assistant sheet/Decision Desk/Settings metadata only. Date-only reported days
 retain their literal UTC date and include year. Future reported walk appointments

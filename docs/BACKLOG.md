@@ -1,5 +1,50 @@
 # Backlog
 
+USAGE WARNING 2026-11-03: primary43% USED, secondary93% USED. Secondary
+remaining is below10%; architect should review the live app/backlog status.
+No agent reset/purchase/model escalation. Continue the authorized work loop;
+reserve the final5% primary window for rollback/redeploy only.
+
+2026-11-03 455.4B2 FIRST LOCAL FULL8fe2d5f naturally FAILED302/3/0 of305,
+600s/file; all305timings retained proof-455-recorded-context-times. Fixed
+May/Nov2026 notice tests omitted a reference clock: existing historical helper
+now pins their existing Oct2 corpus date, restores afterward, keeps all original
+source/address/date/negative assertions. Both corrected focus checksPASS;
+NO backend change. Shared-login failure cause remains UNPROVEN/untouched.
+No unchanged full retry, environment attribution or retrospective pass.
+First corrected-head hosted gate/PR/release still pending; no push yet.
+
+HISTORICAL PRE-GATE:
+2026-11-03 455.4B2 LOCAL recorded Ask/Activity candidate: shared strict owner
+time/day/year labels, no ambiguous date inference or row/source-prose loss.
+Activity From/To now matches UTC-7 labels; Tokyo mismatch reproduced first,
+corrected boundary/invalid range/no-stale/unknown-vs-real-zero checksPASS.
+Actual synthetic1366/400/412 labels/source/escaping/tolerance/no-write proof
+PASS; six positive timestamp images inspected. Initial case/route/capture
+driver gaps retained in trace; no weakened safety assertion or runtime workaround.
+Existing Ask/native/privacy/Activity/metadata/routes focusPASS; final Activity
+verifier alsoPASS after query correction. No backend/schema/writer/filterengine/
+deadline arithmetic changes. FIRST full305 gate pending; no push/PR/CI/release.
+Unrelated exports/debug.log excluded; prior492releaseproof deliberately retained.
+
+2026-11-03 PR492/455.4B1 RELEASED/VERIFIED: sourcec45de93, merge/main
+bca8fefc962b5cf17c6c981565b6df29a842675c whole tree identical. FIRST PR
+41739396760/job126276796820 and sole MAIN41741351625/job126283354607 each
+304/0/0 of304,600s/file; job walls13m29/18m49. All608 hosted timing rows
+retained proof-455-assistant-times, alongside original304 local303/1/0 rows;
+no retrospective pass or unchanged retry. AutomaticRailway4f1d9962 exactmerge
+SUCCESS; nine fixed public GET/static/401 checks and signed GLOBAL shell/
+control44x44/nooverflow proofPASS. Temporary tab closed, no private contents/
+JSON/AX/captures/mail/key records/provider/business writes/auth transfer.
+Nine inspected synthetic1366/400/412 images show actual sheet/Desk/Settings.
+This finishes assistant/Decision Desk/Settings dates only, NOT whole455.4/487.
+Next independent455.4B readers: recorded Ask/Activity, device expiry, templates,
+JV/profit metadata, then trace active legacy/source-day boundaries; don't edit
+shadowed paths or infer ambiguous source dates. Standing release authority
+continues. Unrelated exports/debug.log remain untouched/unstaged.
+PR: https://github.com/GabrielMontealegre/wholesaleos-bot/pull/492
+
+HISTORICAL PRE-RELEASE:
 2026-11-03 455.4B1 FIRST LOCAL FULL71a7ae7 naturally303/1/0 of304,600s/file;
 all304timings retained proof-455-assistant-times/first-local-full.json. Owned
 buyer-reply test expects a recent weekday using an unpinned browser clock;
