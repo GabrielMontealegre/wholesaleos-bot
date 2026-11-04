@@ -1,5 +1,22 @@
 # Backlog
 
+USAGE WARNING 2026-11-03: primary43% USED, secondary93% USED. Secondary
+remaining is below10%; architect should review the live app/backlog status.
+No agent reset/purchase/model escalation. Continue the authorized work loop;
+reserve the final5% primary window for rollback/redeploy only.
+
+2026-11-03 455.4B2 LOCAL recorded Ask/Activity candidate: shared strict owner
+time/day/year labels, no ambiguous date inference or row/source-prose loss.
+Activity From/To now matches UTC-7 labels; Tokyo mismatch reproduced first,
+corrected boundary/invalid range/no-stale/unknown-vs-real-zero checksPASS.
+Actual synthetic1366/400/412 labels/source/escaping/tolerance/no-write proof
+PASS; six positive timestamp images inspected. Initial case/route/capture
+driver gaps retained in trace; no weakened safety assertion or runtime workaround.
+Existing Ask/native/privacy/Activity/metadata/routes focusPASS; final Activity
+verifier alsoPASS after query correction. No backend/schema/writer/filterengine/
+deadline arithmetic changes. FIRST full305 gate pending; no push/PR/CI/release.
+Unrelated exports/debug.log excluded; prior492releaseproof deliberately retained.
+
 2026-11-03 PR492/455.4B1 RELEASED/VERIFIED: sourcec45de93, merge/main
 bca8fefc962b5cf17c6c981565b6df29a842675c whole tree identical. FIRST PR
 41739396760/job126276796820 and sole MAIN41741351625/job126283354607 each

@@ -6,8 +6,8 @@
   const icon=name=>root.WOSComponents.icon(name);
   const money=v=>typeof v==='number'&&Number.isFinite(v)?new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',maximumFractionDigits:0}).format(v):'Not recorded';
   const range=v=>v?money(v.low)+' to '+money(v.high):'Not established';
-  const time=v=>v&&Number.isFinite(Date.parse(v))?new Intl.DateTimeFormat('en-US',{timeZone:'America/Mazatlan',weekday:'short',hour:'numeric',minute:'2-digit'}).format(new Date(v)):'Not recorded';
-  const day=v=>typeof v==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(v)&&Number.isFinite(Date.parse(v+'T12:00:00Z'))?new Intl.DateTimeFormat('en-US',{timeZone:'UTC',month:'short',day:'numeric',year:'numeric'}).format(new Date(v+'T12:00:00Z')):'Not recorded';
+  const time=v=>{const label=root.wosCardClock?root.wosCardClock.formatTime(v,data&&data.now):'Unknown';return label==='Unknown'?'Time not confirmed':label;};
+  const day=v=>{const label=root.wosCardClock?root.wosCardClock.formatDate(v):'Unknown';return label==='Unknown'?'Time not confirmed':label;};
   function clear(){++sequence;controller?.abort();controller=null;data=null;response=null;question='';message='';busy=false;root.wosLocalVoice?.cancel();document.getElementById('wos-ask-panel')?.remove();}
   function context(row){
     if(!row)return '';
