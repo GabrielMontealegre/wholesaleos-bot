@@ -1,9 +1,22 @@
 # Backlog
 
-USAGE WARNING 2026-11-03: primary43% USED, secondary93% USED. Secondary
+USAGE WARNING 2026-11-03: primary80% USED, secondary99% USED. Secondary
 remaining is below10%; architect should review the live app/backlog status.
 No agent reset/purchase/model escalation. Continue the authorized work loop;
 reserve the final5% primary window for rollback/redeploy only.
+
+2026-11-03 PR493 RELEASED/VERIFIED f2294a7500629e7a3edf2718ce981342a1d0802a,
+whole tree identical to tested364d6d8. FIRST PR41749594884/job126311094871
+305/0/0 of305,600s/file,19m13 job wall; sole MAIN41752093784/job126319375219
+also305/0/0,18m34 wall. All610 hosted timings retained alongside original
+local302/3/0/all305 timings, total915 rows. AutomaticRailway210b84b0 exactmerge
+SUCCESS; eight fixed public GET/static/401 and settled signed GLOBAL shell/
+control44x44/nooverflow proofPASS. Temporary tab closed; no private content,
+JSON/AX/captures, provider/business writes or auth transfer. Six inspected
+synthetic1366/400/412 screenshots retain actual Ask/Activity timestamp proof.
+This completes recorded-context dates/filter consistency only, NOT whole455/487.
+Next ordered independent reader: remembered-device creation/expiry dates.
+PR: https://github.com/GabrielMontealegre/wholesaleos-bot/pull/493
 
 2026-11-03 455.4B2 FIRST LOCAL FULL8fe2d5f naturally FAILED302/3/0 of305,
 600s/file; all305timings retained proof-455-recorded-context-times. Fixed
