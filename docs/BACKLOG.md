@@ -5,6 +5,13 @@ remaining is below10%; architect should review the live app/backlog status.
 No agent reset/purchase/model escalation. Continue the authorized work loop;
 reserve the final5% primary window for rollback/redeploy only.
 
+2026-11-03 455.4B3 LOCAL device labels candidate: shared UTC-7 history and
+future expiry label, server state/auth/TTL/writers unchanged. New synthetic
+actual component3width/Tokyo testPASS, three images inspected. Original signed
+server device UI focused check FIRST FAILED startup52:5 before browser requests;
+cause UNPROVEN, no retry or environment attribution. First full gate pending;
+no push/PR/CI/release. Own prior493 proof carried, unrelated exports/debug untouched.
+
 2026-11-03 PR493 RELEASED/VERIFIED f2294a7500629e7a3edf2718ce981342a1d0802a,
 whole tree identical to tested364d6d8. FIRST PR41749594884/job126311094871
 305/0/0 of305,600s/file,19m13 job wall; sole MAIN41752093784/job126319375219

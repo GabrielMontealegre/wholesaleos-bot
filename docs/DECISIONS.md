@@ -1,5 +1,12 @@
 # Decisions
 
+ASSUMED 2026-11-03:455.4B3 remembered-device labels reuse shared strict UTC-7
+clock3; future expiry uses scheduled formatter, recorded creation/revocation
+and expired metadata use recorded formatter. Server active/current/revoked
+state stays authoritative; no token/TTL/session/revoke/schema/writer change.
+Unavailable formatter shows Time not confirmed, never browser-local parsing.
+-- AGENTS3/4/5, owner455 dates and additive presentation consistency.
+
 ASSUMED 2026-11-03: active-notice-address-origin and after-sale-frozen-chain
 use existing fixed-clock helper at their existing frozen corpus reference
 2026-10-02T12:00:00Z, restored in finally. Their fixed May-past/November-future
