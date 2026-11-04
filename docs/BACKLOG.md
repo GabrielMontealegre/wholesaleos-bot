@@ -5,6 +5,16 @@ remaining is below10%; architect should review the live app/backlog status.
 No agent reset/purchase/model escalation. Continue the authorized work loop;
 reserve the final5% primary window for rollback/redeploy only.
 
+2026-11-03 455.4B2 FIRST LOCAL FULL8fe2d5f naturally FAILED302/3/0 of305,
+600s/file; all305timings retained proof-455-recorded-context-times. Fixed
+May/Nov2026 notice tests omitted a reference clock: existing historical helper
+now pins their existing Oct2 corpus date, restores afterward, keeps all original
+source/address/date/negative assertions. Both corrected focus checksPASS;
+NO backend change. Shared-login failure cause remains UNPROVEN/untouched.
+No unchanged full retry, environment attribution or retrospective pass.
+First corrected-head hosted gate/PR/release still pending; no push yet.
+
+HISTORICAL PRE-GATE:
 2026-11-03 455.4B2 LOCAL recorded Ask/Activity candidate: shared strict owner
 time/day/year labels, no ambiguous date inference or row/source-prose loss.
 Activity From/To now matches UTC-7 labels; Tokyo mismatch reproduced first,

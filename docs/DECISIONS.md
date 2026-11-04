@@ -1,5 +1,14 @@
 # Decisions
 
+ASSUMED 2026-11-03: active-notice-address-origin and after-sale-frozen-chain
+use existing fixed-clock helper at their existing frozen corpus reference
+2026-10-02T12:00:00Z, restored in finally. Their fixed May-past/November-future
+2026 cases must not change intent with the ambient date. Source dates,
+addresses, provenance/negative/network/immutability assertions and all backend
+code stay unchanged. Original302/3/0 full result is retained; unrelated shared
+login cause unproven, no retry/weakening. -- AGENTS4 incidental date scaffolding,
+existing historical clock-helper convention; first exact-head hosted gate required.
+
 ASSUMED 2026-11-03:455.4B2 applies shared strict timestamp display only to
 recorded Ask/Activity labels. Ask uses its explicit snapshot now; Activity
 uses the display clock. Strict date-only history/due values keep their literal

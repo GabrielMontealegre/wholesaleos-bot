@@ -68,4 +68,27 @@ The corrected boundary/invalid-range/real-zero check PASS at1366/400/412,
 Ask/Activity proof; the filter correction does not change their visible state.
 Existing Activity UI verifier also PASS after the boundary correction, with
 all original timeline/reference/search/import-parser/no-write assertions.
-No existing assertions changed. First305-file full gate still required.
+No existing assertions changed. Historical pre-full checkpoint: first305-file
+full gate was still required.
+
+## First Full Gate And Historical Fixture Clocks
+
+Frozen8fe2d5f completed NATURALLY302/3/0 of305,600s/file. Every row is retained
+in proof-455-recorded-context-times/first-local-full.json; sum is not wall time.
+Failures: active-notice-address-origin, after-sale-frozen-chain and
+shared-dashboard-login. This remains a FAILED full gate, not302/1 or passed.
+
+The first two tests assert fixed May2026 past/November2026 future cases while
+omitting a fixed reference clock. The frozen after-sale corpus already uses
+Oct2 capture metadata, but the orchestrator supplies ambient startedAt to the
+adapter; direct notice calls also default to the ambient reference. Reuse the
+existing historical-fixture helper tests/helpers/fixed-clock.js with
+2026-10-02T12:00:00Z in these TWO test files, restore in finally. This matches
+the existing cycle45/48/50/52 test convention. Keep every original assertion,
+notice/date/address value, origin/source/rejection/purity and immutable-history
+guard. No source-adapter/resolver/backend runtime change. Both corrected
+focused tests PASS naturally. No unchanged full retry.
+
+The shared-login cause remains UNPROVEN; no assertion/auth/runtime change or
+unchanged retry. No environment/Node/flakiness attribution. First corrected-head
+hosted CI must be observed before a green release claim under D065c.

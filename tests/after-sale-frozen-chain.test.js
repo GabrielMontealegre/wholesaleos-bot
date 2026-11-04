@@ -1,5 +1,7 @@
 'use strict';
 
+const restoreClock = require('./helpers/fixed-clock').installFixedClock('2026-10-02T12:00:00Z');
+
 const assert = require('assert');
 const fs = require('fs');
 const os = require('os');
@@ -89,6 +91,7 @@ global.fetch = http.get = http.request = https.get = https.request = rejectNetwo
     console.log(`after-sale frozen chain passed: ${JSON.stringify({ ...counts,
       accepted: batch.post_sale_candidate_total, invalidated: batch.post_sale_invalidated })}`);
   } finally {
+    restoreClock();
     global.fetch = original.fetch;
     http.get = original.httpGet;
     http.request = original.httpRequest;
