@@ -1,0 +1,34 @@
+{
+  "kind": "diagnostic_only_not_acceptance_test",
+  "source_sha": "40c447b1aaaa08cf95089c5b8ba18d59289baf55",
+  "now": "2026-11-03T19:18:00Z",
+  "rows": [
+    {
+      "case_id": "same_owner_day",
+      "active_today_match": true
+    },
+    {
+      "case_id": "previous_owner_day_less_than_24h",
+      "active_today_match": true
+    },
+    {
+      "case_id": "future_instant",
+      "active_today_match": true
+    },
+    {
+      "case_id": "update_only_not_creation",
+      "active_today_match": true
+    },
+    {
+      "case_id": "ambiguous_numeric",
+      "active_today_match": true
+    },
+    {
+      "case_id": "date_only_creation",
+      "active_today_match": true
+    }
+  ],
+  "source_unchanged": true,
+  "production_reads": 0,
+  "writes": 0
+}
