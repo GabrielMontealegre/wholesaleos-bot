@@ -1,0 +1,12 @@
+{
+  "kind": "synthetic_source_contract_diagnostic_not_release_acceptance",
+  "reported_deal_id_can_equal_canonical_id_without_identity_binding": true,
+  "snapshot_stage_remains_reported": true,
+  "canonical_status_unchanged": true,
+  "imported_email_sent_retains_imported_report_attribution": true,
+  "imported_email_sent_has_no_smtp_receipt": true,
+  "ambiguous_cross_collection_reference_rejected": true,
+  "canonical_jv_without_events_remains_found": true,
+  "input_store_immutable": true,
+  "ambient_clock_network_and_filesystem_effects": 0
+}

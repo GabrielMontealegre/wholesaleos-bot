@@ -1,9 +1,226 @@
 # Backlog
 
-USAGE WARNING 2026-11-03: primary43% USED, secondary93% USED. Secondary
-remaining is below10%; architect should review the live app/backlog status.
-No agent reset/purchase/model escalation. Continue the authorized work loop;
-reserve the final5% primary window for rollback/redeploy only.
+2026-11-08 454/487 source+proof acceptance reconciliation retained; purefollowup
+engine is onmain with test callers only, not an automatic workflow. Independent
+per-card note voice allowlist slice LOCAL/BLOCKED after existing local-voice-ui
+repeated ERR_NETWORK_ACCESS_DENIED navigation15:112, naturalexit1 wall2.9361919s,
+causeUNPROVEN. New actualsynthetic sheet1366/400/412Tokyo PASS; threefinalimages
+inspected, firstbadfixtureimages retained; localvoiceunitPASS. Onlyselectors+
+twoassetversions4->5, no controller/route/auth/writer/provider changes. No full/
+CI/push/release or waiver. See issue-454-decision-note-voice.md and
+issue-454-487-acceptance-reconciliation.md. Preserveallblockedbranches. Next
+independent494 disabledregistry/switch contractinventory, no paidactivation or
+owneridentity inference. Whole454/455/487/backlog incomplete.
+
+2026-11-08 454 board identity/event boundary inventory complete for the traced
+paths; stage projection BLOCKED503 pending explicit source-to-canonical binding
+and stage/evidence policy. Eight synthetic diagnostic observations hold, input
+immutable and zero ambientclock/network/filesystem effects; not acceptance/full/
+browser/production proof. Snapshot reported stage, operator workflow event,
+connected incoming and SMTP acceptance are distinct. An imported email_sent is
+not independently verified send evidence. No runtime/tests/dependencies changed.
+Batch handoff resolved502(open,zero comments03:52:21Z), no duplicatecreation.
+Fetchedmainf2294a7 unchanged; no completedrelease repoll or blockedcode carried.
+Whole454/455/487 remain incomplete;503 affects board projection only. Continue
+remaining independent ordered contract work; no stage guessing or batchretry.
+
+2026-11-08 LOCAL454 board-stage preliminary source inventory: actual imported
+six-stage schema -> actor latest receipt -> assistant-model reported projection
+-> assistant-sheet grouping/detail. Not a safe label-only map to requested event-
+backed stages; typed event/identity authority still needs trace. Docs-only branch
+from fetchedmainf2294a7+ownedproof/docs, no blockedbatch/455 runtime/tests carried.
+See issue-454-board-stage-contract.md. No tests/CI/push/release; whole454/455/487
+incomplete. Usage92%primary/14%secondaryUSED runstart; reserve>=95 respected.
+
+2026-11-08 LOCAL454 batch model BLOCKED after FIRST306-file full gate naturally
+exit1:209/97/0,600s/file,all306 timings retained in proof-454-decision-batches.
+Frozen runtime77608f7; newmodelPASS0.93/oldpureanswersPASS0.94 do not waive full.
+Same97 failednames as prior gates does NOT prove common cause; answer-route
+fetch failure causeUNPROVEN. No unchangedretry/fullrerun/push/PR/CI/release.
+GitHub connector acknowledged handoff creation but returned no issue number;
+question retained in proofREADME, avoid duplicate creation until metadata resolves.
+Preserve branch; no candidate runtime/tests carried into independent work. Next:
+remaining independent454 board/stage contract inventory underD065, not batch
+route/UI integration or unsafe canonical inference. Fresh usage90%primary/14%
+secondaryUSED after full; >=95 rollback/redeployonly. All sessions terminal.
+
+2026-11-08 LOCAL454 pure batch model candidate: separate append/read collection,
+exact actor/receipt/option binding, UUID recovery, revision conflicts, atomic
+validation and detached owned reads. Note-only/overall-only bounded policy,
+from_voice:false only until evidence contract. No route/UI/provider/canonical
+writer change. Initial focused new model and existing single-answer tests PASS;
+additional hostile-store/effect tests included for first full gate. Not released;
+full/CI/release pending, whole454/455/487 incomplete. No blocked455 code carried.
+
+2026-11-08 status reconciliation COMPLETE, not product completion: retained
+proofs show455 categories1/2/3/5/6/7/9 released (7/9 categories, not effort).
+Dates4 and words8 remain partial/BLOCKED under495-501. No completed release was
+repolled or reverified; no blocked runtime/tests carried. Source-only454 batch
+decision inventory now records exact schema -> UI -> route -> append/read chain,
+immediate per-choice POST vs requested explicit batch Submit, missing round/
+draft/voice/revision contracts, and additive pure-model next scope. No runtime,
+test/dependency change, test run, full gate, CI, push/PR/release or production
+write. Whole455/454/487/backlog remain incomplete;483 deferred,369 needs366.
+See docs/cycles/issue-455-status-reconciliation.md and
+docs/cycles/issue-454-batch-decision-contract.md. Fresh run-start usage71%primary/
+11%secondaryUSED. Historical notes below retain failures and release evidence.
+
+2026-11-08 compact source-card status words LOCAL/BLOCKED: canonical field-
+scoped captions plus expandable raw source-status details; reasons/identity/
+controls/readiness/dates/backend unchanged. New unit and actual-renderer checks
+PASS1366/400/412; six final images inspected, initial badge-wrap images retained.
+Existing queue test failed twice on duplicate cache57 guards (874 then931) after
+owned cache57->58 change. Only first guard updated to58; second remains unchanged
+under D065c stop. Misleading second message says helper workbench but assertion
+also checks public-deals script, no helper/auth change. Both raw failure logs
+retained; no further retry/full/CI/PR/push/release or waiver. Whole455.8 remains
+partial: value/freshness/action codes and other source sections not repaired.
+Remaining value/freshness/action wording inventory is read-only until this source
+card slice is unblocked; no further edits/runs to evade the two-failure stop.
+Next independent step: reconcile remaining455 statuses from existing proof, then
+the next unblocked D065 item; do not claim whole455 complete or repoll releases.
+Fresh run-start usage56%primary/9%secondaryUSED; whole455/487/backlog incomplete.
+Handoff: https://github.com/GabrielMontealegre/wholesaleos-bot/issues/501
+
+HISTORICAL2026-11-08 active source-day inventory LOCAL/docs-only: public-deals source
+panel has real dashboard/Deal Finder callers. Same saleDateInfo drives labels,
+upcoming/urgent eligibility and sorting using browser-local day; backend snapshot
+repair separately uses server-local currentDateIso for passed-sale risk flags.
+Synthetic fixed VM Nov3 sale is upcoming0days inUTC7 but not Tokyo. Malformed
+Nov31 DTO also gets upcoming, but backend emission is NOT claimed. Writer/raw-
+origin/resolver trace retained; no runtime edit, source inference or private read.
+Implementation BLOCKED pending owner-display vs source/legal-calendar boundary;
+do not change flags/readiness/sorting through a cosmetic helper replacement.
+Next independent scope: remaining455 compact card-face wording inventory under
+D065, exact active callers only; keep all blocked runtime/tests separate.
+Fresh run-start usage48%primary/7%secondaryUSED. Whole455/487 remains incomplete.
+Contract handoff: https://github.com/GabrielMontealegre/wholesaleos-bot/issues/500
+
+HISTORICAL2026-11-08 Email timestamp trace complete LOCAL/test-only: all four actual mail
+read routes annotate RFC/ISO to canonical ISO before browser display; no OAuth
+rewrite needed. New injected-reader10case contract testPASS, no provider/auth/
+ambientclock/write effects. Native screen already strict; WOS note metadata is
+a separate recorded-data boundary. Actual synthetic invalid30Feb RFC header is
+normalized to March2 by receivedTime/annotation; diagnostic retained, not a test
+enshrining bad behavior or a claimed production occurrence. Frontend follow-on
+BLOCKED pending bounded upstream calendar/provenance decision; no runtime/PR/
+push/full/CI/release. Next independent work follows D065 ordered backlog, keeping
+all prior blocked runtimes separate. Usage38%primary/6%secondaryUSED atstart.
+Calendar contract handoff: https://github.com/GabrielMontealegre/wholesaleos-bot/issues/499
+
+HISTORICAL2026-11-08 active455 creation-date candidate frozenf36c5c3 LOCAL/BLOCKED:
+FIRST307-file full naturally exited1,210 passed/97 failed/0 skipped,600s/file;
+all307 timing rows retained proof-455-lead-age/first-local-full.json. Same97
+failed filenames as prior devicefull; comparison does NOT prove sharedcause.
+Architect handoff: https://github.com/GabrielMontealegre/wholesaleos-bot/issues/498
+New age unit/UI tests passed0.90/3.43s, actual Tokyo1366/400/412 checks and six
+inspected images retained; positives do not waive failedfull or old phone layout
+limitations. No unchanged retry/bypass/skip/waiver, no push/PR/CI/release.
+Next independent work: finish genuinely active date/source-day reader inventory;
+trace Email reader normalization and its writers before any strictness edit.
+Initial source trace: IMAP metadata and parsed MIME body emit ISO timestamps,
+but OAuth list metadata exposes the raw Date header (legitimate RFC mail format).
+Do not blanket-reject this format or change OAuth/provider behavior. Read source
+contracts/tests only; no production mailbox/private content reads.
+Fresh usage after gate35%primary/6%secondaryUSED, no reset/purchase/escalation.
+Whole455/487/backlog incomplete; preserve all four local blocked candidates.
+
+HISTORICAL2026-11-08 active Today predicate LOCAL candidate: precise own creation fields
+before legacy aliases, strict UTC-Z/integer epoch metadata, no update-only or
+future/ambiguous/day-only inferred instant. Today uses UTC-7 day, multi-day
+rolling windows retained, Any Time keeps all rows. No writer/backend/source/
+paging/sort change. Unit and actual full-dashboard route-fulfilled Tokyo checks
+PASS1366/400/412, real filter/API loader selects1 of6 and restores6 under Any
+Time. Six images inspected; existing phone toast/table clipping retained, not
+claimed fixed by overflow/visibility checks. Edge review added falsy primary/
+inherited metadata negatives; stronger invalid fields cannot use weaker aliases.
+First frozen307-file full suite pending, no push/PR/CI/release yet. Whole455/487
+incomplete; original blocked runtime branches remain separate and excluded.
+
+HISTORICAL2026-11-08 active legacy date trace: independent item/455-lead-age-calendar
+from currentmainf2294a7 plus493proof and earlier proof/docs only; no blocked
+runtime/test carried. Active leadMatchesAge path confirmed after final API load;
+shadowed wos-features fallback left untouched. Synthetic fixed-clock probe
+shows Today admits previous-owner-day, future, update-only and numeric-slash
+records; created day-only takes precedence over precise created_at. Writer trace
+and six diagnostic booleans retained in docs/cycles/issue-455-active-lead-age.md
+and455-active-lead-age-diagnostic.json. No runtime edit or release; next bounded
+work is precise creation/UTC-7 Today predicate with explicit unknown handling.
+Preserve multi-day intent and source truth; paging/count changes separate.
+Legacy detail panel reachability still unproven, do not edit blindly.
+Fresh run-start usage18%primary/3%secondaryUSED; previous blockers495/496/497
+unchanged. Whole455/487/backlog incomplete.
+
+HISTORICAL2026-11-08 independent455.4B5 JV/profit metadata LOCAL/BLOCKED: new branch
+from currentmainf2294a7+493proof396c199 and prior blocked evidence/docs only.
+No device/template runtime carried. Two display helpers/cache versions only;
+writers/stage/signing/money/source/auth/input conversion unchanged. New synthetic
+11case1366/400/412 Tokyo renderer testPASS, six metadata images inspected.
+Existing match-profit UI repeated navigation ERR_NETWORK_ACCESS_DENIED and
+signing-review UI repeated firstfetch TypeError fetch failed. Both naturally
+exit1; causeUNPROVEN, no bypass/retry/waiver. Full suite for this candidate
+NOT RUN after repeated focused failures blocked the slice. No push/PR/CI/release.
+Architect handoff: https://github.com/GabrielMontealegre/wholesaleos-bot/issues/497
+Next independent trace: genuinely active legacy/source-day readers, especially
+wos-leads-detail creation metadata and wos-features date comparison; establish current
+callers/writers before any edit. No blanket Date.parse or shadowed index changes.
+Fresh run-start usage12%primary/2%secondaryUSED. Whole455/487 remains incomplete.
+
+HISTORICAL2026-11-08 independent455.4B4 template labels LOCAL/BLOCKED: branch from
+fresh origin/main f2294a7 plus prior493 proof/docs only; blocked device runtime
+NOT carried. Shared strict clock helper/cache3 only, template writers/text/
+approvals/send policy unchanged. New synthetic component1366/400/412 Tokyo
+testPASS; three positive label images inspected. Existing routes/UI focused
+check FAILED TypeError fetch failed at verifier14:31, same failure as original
+device-head full gate. Cause UNPROVEN, no unchanged retry/waiver; full suite
+for template head NOT RUN after repeated focused failure blocked this slice.
+No push/PR/CI/release. Next independent scope: JV/profit metadata reader trace.
+Template handoff: https://github.com/GabrielMontealegre/wholesaleos-bot/issues/496
+Device handoff: https://github.com/GabrielMontealegre/wholesaleos-bot/issues/495
+Original failed device gate/all306 timings retained.
+Fresh usage at run start6%primary/1%secondaryUSED, no escalation/reset/purchase.
+
+New architect requests read once:494 paid skip-trace (disabled provider/switch,
+owner enablement required);454 comments6625407540/6632655933/6660041703
+batch choices, voice/owner cards and evidence-backed board;375comment6636513026
+loss timing;401comment6632657694 measurable read-only performance. D065
+priority unchanged; none grants private reads, paid activation, send or source
+inference. Metadata cutoff454 now2026-11-05T14:07:36Z;375 Nov4 16:49:47Z;
+401 Nov4 14:03:37Z;494 Nov4 14:03:35Z; others remainNov3 02:46:22Z.
+
+HISTORICAL2026-11-08 run summary: fresh usage primary3% USED, secondary0% USED.
+Fetch origin succeeded; origin/main is ancestor of HEAD (0 behind,2 ahead).
+455.4B3 device labels BLOCKED / needs-architect: first full gate completed
+209 passed,97 failed,0 skipped of306,600s/file; all306 timings retained in
+docs/cycles/proof-455-device-times/first-local-full.json. Existing device UI
+failed again at startup52:5 before requests, matching the focused failure.
+Cause UNPROVEN; no unchanged retry, waiver, push, PR, CI or release.
+New device component test passed in the full gate (2.22s), not a release pass.
+Next independent scope: Email template timestamp reader trace, then JV/profit
+metadata and active legacy source-day readers. Whole455/487 remains incomplete.
+Unrelated exports/debug and newly observed synthetic-failure.png preserved.
+Standing autopilot authority continues until STOP AUTOPILOT; reserve the final
+5% primary window for rollback/redeploy only, no reset/purchase/model escalation.
+
+HISTORICAL PRE-GATE 2026-11-03 455.4B3 LOCAL device labels candidate: shared UTC-7 history and
+future expiry label, server state/auth/TTL/writers unchanged. New synthetic
+actual component3width/Tokyo testPASS, three images inspected. Original signed
+server device UI focused check FIRST FAILED startup52:5 before browser requests;
+cause UNPROVEN, no retry or environment attribution. First full gate pending;
+no push/PR/CI/release. Own prior493 proof carried, unrelated exports/debug untouched.
+
+2026-11-03 PR493 RELEASED/VERIFIED f2294a7500629e7a3edf2718ce981342a1d0802a,
+whole tree identical to tested364d6d8. FIRST PR41749594884/job126311094871
+305/0/0 of305,600s/file,19m13 job wall; sole MAIN41752093784/job126319375219
+also305/0/0,18m34 wall. All610 hosted timings retained alongside original
+local302/3/0/all305 timings, total915 rows. AutomaticRailway210b84b0 exactmerge
+SUCCESS; eight fixed public GET/static/401 and settled signed GLOBAL shell/
+control44x44/nooverflow proofPASS. Temporary tab closed; no private content,
+JSON/AX/captures, provider/business writes or auth transfer. Six inspected
+synthetic1366/400/412 screenshots retain actual Ask/Activity timestamp proof.
+This completes recorded-context dates/filter consistency only, NOT whole455/487.
+Next ordered independent reader: remembered-device creation/expiry dates.
+PR: https://github.com/GabrielMontealegre/wholesaleos-bot/pull/493
 
 2026-11-03 455.4B2 FIRST LOCAL FULL8fe2d5f naturally FAILED302/3/0 of305,
 600s/file; all305timings retained proof-455-recorded-context-times. Fixed
