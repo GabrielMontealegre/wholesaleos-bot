@@ -1,5 +1,109 @@
 # Decisions
 
+ASSUMED2026-11-08:455.8 compact source status captions map only exact canonical
+field-scoped enums and known quality buckets. No labels inferred from source
+prose; unknown/wrong-field values remain unconfirmed. Raw status codes/reason
+stay behind a native44px source-details disclosure; identity/controls/readiness/
+calendars/money/source evidence unchanged. Badge wrapping is presentation only.
+Existing assertion874 cache57->58 updated under AGENTS4 incidental scaffolding;
+the same file failed again at duplicate931 cache57 guard, despite its misleading
+helper-workbench message. D065c blocks further edits/retry for this slice pending
+architect review. These two stale-cache causes are proven in source; prior97
+full failures still have unproven causes. No full/CI/release waiver or auth change.
+
+ASSUMED2026-11-08: public-deals source-day helper is not cosmetic: it drives
+upcoming/urgent eligibility and sorting as well as labels. Backend separately
+rederives source dates and sets passed-sale risk flags using server-local day.
+Do not replace either calendar blindly with owner UTC-7 or loosen a source/legal
+gate. Record owner-display vs canonical source-calendar contract for architect;
+preserve literal source days, raw origins/resolver authority and all risk flags.
+Synthetic timezone and malformed-DTO diagnostics are not production claims or
+passing defect assertions. No runtime/write action. -- AGENTS3/4/5,455 display
+scope cannot invent source/legal event status or rewrite its authority.
+
+ASSUMED2026-11-08: all four classic mailbox read routes annotate raw provider
+dates before JSON. Valid RFC headers remain accepted upstream; classic display
+can consume canonical ISO, while notes use their separate recorded metadata.
+No OAuth/provider/auth rewrite is justified by the partial raw-Date trace.
+Synthetic nonexistent30Feb RFC date normalizes to March2 at receivedTime/
+annotation, also used for reply/thread evidence; record a needs-architect
+contract handoff rather than invent source truth in a UI formatter. No runtime
+change, provider action or private read; original diagnostic retained. Broader
+failed-gate causes remain unproven and independent. -- AGENTS3/4/5 source truth.
+
+ASSUMED2026-11-08: active age candidatef36c5c3 first full gate210/97/0 of307
+is a failed gate, not an environment waiver. All307timings retained; both new
+tests passed but same97filenames failed as prior device gate. Comparison does
+not establish a common cause. Block this slice under D065c/AGENTS10 and continue
+independent active-reader inventory; no unchanged retries/bypass/skip or release.
+
+ASSUMED2026-11-08: active lead age filter uses created_at, then createdAt,
+inserted_at, created; updated_at never proves creation. Canonical UTC-Z instants
+and finite positive integer epoch milliseconds are supported metadata writer
+contracts; date-only/numeric-slash/offset/invalid/future values cannot prove an
+exact time window. Stronger invalid metadata is not rescued by a weaker alias.
+Today means owner UTC-7 calendar day; other positive whole-day filters retain
+their rolling-window intent. Unknown/day-only/future records remain under Any
+Time; no fabricated midnight, migration, source-date inference or backend change.
+-- AGENTS3/4/5,455 date consistency, traced addLead/server/ArcGIS metadata types.
+
+ASSUMED2026-11-08:455.4B5 reuses shared strict recorded-time display for JV
+event happened_at/recorded_at, review happened_at and match-profit source
+captured_at only. Missing clock/invalid/future => Time not confirmed. Match
+asset loads before clock but lookup occurs at render-time, proven in synthetic
+test; no order change or startup dependency. No backend/stage/signing/dates/
+money/writer/source/input conversion change. Independent current-main branch
+excludes both blocked runtimes. Component testPASS but existing match-profit
+and signing-review UI failures repeated; block under D065c, no bypass/unchanged
+retry/waiver/full suite/CI/release. Causes remain unproven; architect should
+examine release blockers spanning slices, not infer a common root cause.
+
+ASSUMED2026-11-08:455.4B4 template recorded_at reuses existing shared clock3
+formatTime; strict UTC-Z/recent weekday/old month-day/different year policy,
+invalid/future/missing formatter => Time not confirmed. This is presentation
+only: no template body/subject/operator/policy/history/digest/writer/auth change.
+Branch from current origin/main, carry failed device evidence as docs only;
+never carry blocked device runtime into this independent candidate. New test
+uses synthetic route-fulfilled actual component, not a signed full dashboard.
+Existing routes/UI failed again at verifier14:31 first fetch, cause UNPROVEN.
+Under D065c block this slice, no unchanged retry or full/CI/release waiver;
+continue JV/profit metadata trace. Full suite for template head NOT RUN.
+
+Architect updates read once2026-11-08:494 skip trace behind disabled provider
+registry/switch, owner enables paid use;454 new batch choice/voice/board specs,
+375 lost-deal timing,401 performance budgets are future bounded scope. Current
+D065 order unchanged. No private board inspection, paid call, secret, new send
+authorization or address-only cross-source merge is assumed. Evidence/source
+gates win over unsupported stage, contact, comp, price or motivation inference.
+Device startup handoff filed as issue495; earlier connection failure retained.
+Template first-fetch handoff filed as issue496. Neither slice is release-ready.
+
+OWNER standing order, recorded2026-11-08: continue autopilot until explicit
+STOP AUTOPILOT. Fetch/reconcile origin, implement backlog under AGENTS, commit/
+push/PR, one CI run per new head with no per-PR limit, green merge, automatic
+deployment and bounded read-only proof are authorized. Decide routine questions
+under AGENTS3, log ASSUMED, continue. Sandbox/approval denial: record and skip,
+never bypass or repeatedly retry. Same failure twice: needs-architect/BLOCKED
+for that slice, then independent work; never retry an unchanged head for green.
+Usage limits wait/resume naturally. Paid services, secrets, outreach/messages,
+stored-data deletion and production batch writes remain owner-only. Existing
+privacy, no-manual-Railway and safety restrictions remain unchanged.
+
+ASSUMED2026-11-08:455.4B3 is BLOCKED after remembered-device-ui.test.js
+failed at startup52:5 both focused and in first full suite. All306 full timing
+rows and209/97/0 result retained. No cause attribution, assertion change or
+unchanged retry; no release. Continue independent template reader trace under
+D065c, AGENTS3/10 and standing order; do not carry blocked device runtime into
+an independent release. Open question: architect must bound a real fix for the
+repeated device fixture startup failure without weakening auth or assertions.
+
+ASSUMED 2026-11-03:455.4B3 remembered-device labels reuse shared strict UTC-7
+clock3; future expiry uses scheduled formatter, recorded creation/revocation
+and expired metadata use recorded formatter. Server active/current/revoked
+state stays authoritative; no token/TTL/session/revoke/schema/writer change.
+Unavailable formatter shows Time not confirmed, never browser-local parsing.
+-- AGENTS3/4/5, owner455 dates and additive presentation consistency.
+
 ASSUMED 2026-11-03: active-notice-address-origin and after-sale-frozen-chain
 use existing fixed-clock helper at their existing frozen corpus reference
 2026-10-02T12:00:00Z, restored in finally. Their fixed May-past/November-future
