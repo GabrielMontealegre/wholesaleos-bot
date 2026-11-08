@@ -84,6 +84,18 @@ stage transition, signed agreement, or fact about a property.
 
 ## Verification Status
 
-Inventory complete; runtime/tests/dependencies unchanged from main. No new test,
-full suite, hosted CI, PR, push, deployment, or production verification occurred.
+Follow-on local implementation2026-11-08: assistant-decision-batches.js adds an
+unregistered pure append/read model; no existing route/service/UI edited. Limits
+and conservative policies are logged in DECISIONS. A separate collection retains
+actor-scoped UUIDs, immutable round binding and server revisions. Atomic input
+validation rejects forged options, stale round/revision, invalid times, inferred
+voice provenance, duplicate IDs, accessors and prototype-bearing records. Public
+read results are detached and actor scoped. Existing single-answer records are
+unchanged. New synthetic model test first PASS; existing pure single-answer test
+PASS. Further hostile-store/effect negatives added before the first full gate.
+First full gate still required; these focused passes are not release acceptance.
+
+Original inventory checkpoint e3ea30e: runtime/tests/dependencies unchanged from
+main, with no tests or release actions then. The follow-on module and test above
+are local only; no hosted CI, PR, push, deployment or production verification.
 Remaining #454/#487 acceptance work stays open. No failed 455 gate is waived.

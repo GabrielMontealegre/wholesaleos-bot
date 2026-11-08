@@ -1,5 +1,16 @@
 # Decisions
 
+ASSUMED2026-11-08:454 first batch model is pure and UNREGISTERED. Round equals
+immutable snapshot receipt; expected revision is per actor/round, server advances
+it atomically. Exact UUID replay is readback even after newer import; conflicting
+payload/stale revision rejects. Up to100 unique choices, notes2000/overall4000;
+note-only uses null choice/label and nonblank note; overall-only allowed when
+nonblank, empty batch rejected. Accept only from_voice:false until actual voice
+evidence exists, not client assertion. Submitted time must fall between import
+and injected acceptance clock. Separate capped10000-record collection preserves
+single-answer history and business collections; reads return at most100 owned
+detached batches. No route registration/UI/send/stage/canonical writes added.
+
 ASSUMED2026-11-08 under AGENTS3/D065: reconcile455 using retained proofs only,
 not repeated release polling. Seven categories released; remaining4/8 partial
 and495-501 blocked. Continue independent454 with source-only batch contract

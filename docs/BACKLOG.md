@@ -1,5 +1,13 @@
 # Backlog
 
+2026-11-08 LOCAL454 pure batch model candidate: separate append/read collection,
+exact actor/receipt/option binding, UUID recovery, revision conflicts, atomic
+validation and detached owned reads. Note-only/overall-only bounded policy,
+from_voice:false only until evidence contract. No route/UI/provider/canonical
+writer change. Initial focused new model and existing single-answer tests PASS;
+additional hostile-store/effect tests included for first full gate. Not released;
+full/CI/release pending, whole454/455/487 incomplete. No blocked455 code carried.
+
 2026-11-08 status reconciliation COMPLETE, not product completion: retained
 proofs show455 categories1/2/3/5/6/7/9 released (7/9 categories, not effort).
 Dates4 and words8 remain partial/BLOCKED under495-501. No completed release was
