@@ -3,13 +3,18 @@
 2026-11-08 active455 creation-date candidate frozenf36c5c3 LOCAL/BLOCKED:
 FIRST307-file full naturally exited1,210 passed/97 failed/0 skipped,600s/file;
 all307 timing rows retained proof-455-lead-age/first-local-full.json. Same97
-Architect handoff: https://github.com/GabrielMontealegre/wholesaleos-bot/issues/498
 failed filenames as prior devicefull; comparison does NOT prove sharedcause.
+Architect handoff: https://github.com/GabrielMontealegre/wholesaleos-bot/issues/498
 New age unit/UI tests passed0.90/3.43s, actual Tokyo1366/400/412 checks and six
 inspected images retained; positives do not waive failedfull or old phone layout
 limitations. No unchanged retry/bypass/skip/waiver, no push/PR/CI/release.
 Next independent work: finish genuinely active date/source-day reader inventory;
 trace Email reader normalization and its writers before any strictness edit.
+Initial source trace: IMAP metadata and parsed MIME body emit ISO timestamps,
+but OAuth list metadata exposes the raw Date header (legitimate RFC mail format).
+Do not blanket-reject this format or change OAuth/provider behavior. Read source
+contracts/tests only; no production mailbox/private content reads.
+Fresh usage after gate35%primary/6%secondaryUSED, no reset/purchase/escalation.
 Whole455/487/backlog incomplete; preserve all four local blocked candidates.
 
 HISTORICAL2026-11-08 active Today predicate LOCAL candidate: precise own creation fields
