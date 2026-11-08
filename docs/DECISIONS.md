@@ -1,5 +1,12 @@
 # Decisions
 
+ASSUMED2026-11-08:D065c blocks494 preflightfcc78b0 after firstfull209/97/0
+repeated requiredfailures. New/registrypure passes do not waivefull; all306
+timings retained, same97namesNOTcausalproof. No unchangedretry/skip/cancel/
+bypass/environmentattribution/CI/release. Next independent scope401 read-only
+performance-budget inventory only; no Postgres/accounts/jobs rewrite or private
+production inspection. Keep494disabled, no blockedcodecarried to nextrelease.
+
 ASSUMED2026-11-08:494 first preflight is unregistered, pure and always execution-
 disabled. Integer micro-USD with BigInt intermediates prevents rounding/overflow;
 all projected/request/reserved spend counts against supplied cap. Units1-100;

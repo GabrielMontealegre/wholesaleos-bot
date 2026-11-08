@@ -55,6 +55,11 @@ change env/Railway settings, replace legacy routes or rewrite ingestion.
 
 ## Local Pure Preflight Slice
 
+BLOCKED on frozenfcc78b0 after FIRST306-file full209/97/0, naturalexit1,
+600s/file. All timings and exact handoff question in proof-494-skip-trace-preflight.
+NewtestPASS0.88/registrytestPASS0.89 do not waive full. No unchangedretry/fullrerun/
+CI/push/PR/release. Prior matching failed names do not establish common cause.
+
 modules/research/paid-skip-trace-preflight.js is an UNREGISTERED additive reader;
 no existing provider, guard, execute, route, env or legacy worker is changed.
 It snapshots only known registry identifiers, never calls provider methods or

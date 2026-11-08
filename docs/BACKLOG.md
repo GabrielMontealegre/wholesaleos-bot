@@ -1,5 +1,18 @@
 # Backlog
 
+494 preflight architecthandoff505 created2026-11-08T06:56:37Z; exact frozen
+candidate/fulltimings/question retained, no retry or release authorization.
+
+2026-11-08 LOCAL494 preflight BLOCKED frozenfcc78b0 after FIRST306-file full
+NATURALexit1 209/97/0,600s/file; all306timings retained proof-494-skip-trace-
+preflight/first-local-full.json, sum1573.62sNOTwall. NewtestPASS0.88/registryPASS
+0.89 doNOTwaivefull. Same97failednames aspriorgates NOTcommoncauseproof. No
+unchangedretry/cancel/skip/waive/push/PR/CI/release. Session45276/cells244-249
+terminal. Preservebranch; do not carry module/test into independent release.
+Next independent401 read-only performance-budget contract inventory under
+already-read request, not Postgres/accounts/jobs migration or production reads.
+Whole494/454/455/487/backlog incomplete; no paid/provider/ownerlookup action.
+
 2026-11-08 LOCAL494 unregistered pure preflight candidate: exact integer microUSD
 reserved/projected budget math, strict hostile-input validation, always-disabled
 capability with quote/subject/owner-authorization/adapter blockers. New generated-
