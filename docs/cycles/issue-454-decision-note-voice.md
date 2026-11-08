@@ -1,5 +1,8 @@
 # 454 Per-Card Note Voice - Local / Blocked
 
+Handoff: https://github.com/GabrielMontealegre/wholesaleos-bot/issues/504
+Frozen runtime/proof candidate37c36f29630adf09a36d6c293dc3eb919cead0d5.
+
 ## Independent Scope and Trace
 
 From fetched origin/main f2294a7, with owned proof/docs only. No blocked batch

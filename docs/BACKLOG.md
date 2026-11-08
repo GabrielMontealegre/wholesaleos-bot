@@ -1,5 +1,8 @@
 # Backlog
 
+454 per-card note voice handoff504 created2026-11-08T06:18:21Z; frozenruntime
+37c36f2 preserved. No further edits/testretry/full/CI/release for this slice.
+
 2026-11-08 454/487 source+proof acceptance reconciliation retained; purefollowup
 engine is onmain with test callers only, not an automatic workflow. Independent
 per-card note voice allowlist slice LOCAL/BLOCKED after existing local-voice-ui
