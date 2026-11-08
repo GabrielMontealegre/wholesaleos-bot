@@ -1,11 +1,20 @@
 # Backlog
 
-USAGE WARNING 2026-11-03: primary80% USED, secondary99% USED. Secondary
-remaining is below10%; architect should review the live app/backlog status.
-No agent reset/purchase/model escalation. Continue the authorized work loop;
-reserve the final5% primary window for rollback/redeploy only.
+2026-11-08 run summary: fresh usage primary3% USED, secondary0% USED.
+Fetch origin succeeded; origin/main is ancestor of HEAD (0 behind,2 ahead).
+455.4B3 device labels BLOCKED / needs-architect: first full gate completed
+209 passed,97 failed,0 skipped of306,600s/file; all306 timings retained in
+docs/cycles/proof-455-device-times/first-local-full.json. Existing device UI
+failed again at startup52:5 before requests, matching the focused failure.
+Cause UNPROVEN; no unchanged retry, waiver, push, PR, CI or release.
+New device component test passed in the full gate (2.22s), not a release pass.
+Next independent scope: Email template timestamp reader trace, then JV/profit
+metadata and active legacy source-day readers. Whole455/487 remains incomplete.
+Unrelated exports/debug and newly observed synthetic-failure.png preserved.
+Standing autopilot authority continues until STOP AUTOPILOT; reserve the final
+5% primary window for rollback/redeploy only, no reset/purchase/model escalation.
 
-2026-11-03 455.4B3 LOCAL device labels candidate: shared UTC-7 history and
+HISTORICAL PRE-GATE 2026-11-03 455.4B3 LOCAL device labels candidate: shared UTC-7 history and
 future expiry label, server state/auth/TTL/writers unchanged. New synthetic
 actual component3width/Tokyo testPASS, three images inspected. Original signed
 server device UI focused check FIRST FAILED startup52:5 before browser requests;

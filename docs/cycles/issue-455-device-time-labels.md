@@ -24,4 +24,11 @@ without false zero tested, no external/nonGET/errors or source mutation.
 Unchanged signed-server remembered-device-ui focused check FIRST FAILED at
 startup line52:5, routed0/completed0/no mainStatus. Cause UNPROVEN; no auth/
 fixture/assertion change or unchanged focused retry. No environment attribution.
-First full gate pending, not green; nothing pushed or released for this slice.
+First full gate completed:209 passed,97 failed,0 skipped of306,600s/file.
+All306 timings retained in proof-455-device-times/first-local-full.json.
+New component test passed2.22s. Existing remembered-device-ui failed61.08s
+at the same startup52:5, routed0/completed0/mainStatus null as focused failure.
+Cause UNPROVEN. BLOCKED / needs-architect under D065c; no unchanged retry,
+assertion weakening, environment attribution, waiver, push, PR, CI or release.
+The prior exec session is no longer available; terminal SUMMARY and complete
+306-row timing coverage establish completion, not an invented process exit code.
