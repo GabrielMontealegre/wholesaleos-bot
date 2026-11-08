@@ -1,6 +1,18 @@
 # Backlog
 
-2026-11-08 active Today predicate LOCAL candidate: precise own creation fields
+2026-11-08 active455 creation-date candidate frozenf36c5c3 LOCAL/BLOCKED:
+FIRST307-file full naturally exited1,210 passed/97 failed/0 skipped,600s/file;
+all307 timing rows retained proof-455-lead-age/first-local-full.json. Same97
+Architect handoff: https://github.com/GabrielMontealegre/wholesaleos-bot/issues/498
+failed filenames as prior devicefull; comparison does NOT prove sharedcause.
+New age unit/UI tests passed0.90/3.43s, actual Tokyo1366/400/412 checks and six
+inspected images retained; positives do not waive failedfull or old phone layout
+limitations. No unchanged retry/bypass/skip/waiver, no push/PR/CI/release.
+Next independent work: finish genuinely active date/source-day reader inventory;
+trace Email reader normalization and its writers before any strictness edit.
+Whole455/487/backlog incomplete; preserve all four local blocked candidates.
+
+HISTORICAL2026-11-08 active Today predicate LOCAL candidate: precise own creation fields
 before legacy aliases, strict UTC-Z/integer epoch metadata, no update-only or
 future/ambiguous/day-only inferred instant. Today uses UTC-7 day, multi-day
 rolling windows retained, Any Time keeps all rows. No writer/backend/source/

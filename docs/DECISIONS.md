@@ -1,5 +1,11 @@
 # Decisions
 
+ASSUMED2026-11-08: active age candidatef36c5c3 first full gate210/97/0 of307
+is a failed gate, not an environment waiver. All307timings retained; both new
+tests passed but same97filenames failed as prior device gate. Comparison does
+not establish a common cause. Block this slice under D065c/AGENTS10 and continue
+independent active-reader inventory; no unchanged retries/bypass/skip or release.
+
 ASSUMED2026-11-08: active lead age filter uses created_at, then createdAt,
 inserted_at, created; updated_at never proves creation. Canonical UTC-Z instants
 and finite positive integer epoch milliseconds are supported metadata writer

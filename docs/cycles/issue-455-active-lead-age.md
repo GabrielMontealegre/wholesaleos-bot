@@ -69,7 +69,12 @@ changed checks also passed, no failed run or unchanged retry. Initial viewport
 images retained externally before image refinement. Six final images inspected
 under docs/screens/2026-11-07-lead-age-calendar. Phone toast overlap and legacy
 table clipping are visible existing limitations, not repaired or waived here.
-Full suite for first frozen307-file candidate pending; no hosted gate/release.
+First frozen307-file full gate naturally FAILED210/97/0,exit1,600s/file.
+All307timings retained in proof-455-lead-age/first-local-full.json; both new
+testsPASS0.90/3.43s. Same97failedfilenames as previous devicefull, not a proven
+common cause. LOCAL/BLOCKED under D065c; no unchanged retry/bypass/waiver,
+hosted gate/push/PR/merge/deploy/production verification. Phone layout caveats
+and original six diagnostic booleans remain honest historical evidence.
 
 ## Separate Unproven Legacy Panel
 
