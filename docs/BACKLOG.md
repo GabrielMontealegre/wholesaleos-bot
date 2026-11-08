@@ -1,9 +1,76 @@
 # Backlog
 
-USAGE WARNING 2026-11-03: primary80% USED, secondary99% USED. Secondary
-remaining is below10%; architect should review the live app/backlog status.
-No agent reset/purchase/model escalation. Continue the authorized work loop;
-reserve the final5% primary window for rollback/redeploy only.
+2026-11-08 active legacy date trace: independent item/455-lead-age-calendar
+from currentmainf2294a7 plus493proof and earlier proof/docs only; no blocked
+runtime/test carried. Active leadMatchesAge path confirmed after final API load;
+shadowed wos-features fallback left untouched. Synthetic fixed-clock probe
+shows Today admits previous-owner-day, future, update-only and numeric-slash
+records; created day-only takes precedence over precise created_at. Writer trace
+and six diagnostic booleans retained in docs/cycles/issue-455-active-lead-age.md
+and455-active-lead-age-diagnostic.json. No runtime edit or release; next bounded
+work is precise creation/UTC-7 Today predicate with explicit unknown handling.
+Preserve multi-day intent and source truth; paging/count changes separate.
+Legacy detail panel reachability still unproven, do not edit blindly.
+Fresh run-start usage18%primary/3%secondaryUSED; previous blockers495/496/497
+unchanged. Whole455/487/backlog incomplete.
+
+HISTORICAL2026-11-08 independent455.4B5 JV/profit metadata LOCAL/BLOCKED: new branch
+from currentmainf2294a7+493proof396c199 and prior blocked evidence/docs only.
+No device/template runtime carried. Two display helpers/cache versions only;
+writers/stage/signing/money/source/auth/input conversion unchanged. New synthetic
+11case1366/400/412 Tokyo renderer testPASS, six metadata images inspected.
+Existing match-profit UI repeated navigation ERR_NETWORK_ACCESS_DENIED and
+signing-review UI repeated firstfetch TypeError fetch failed. Both naturally
+exit1; causeUNPROVEN, no bypass/retry/waiver. Full suite for this candidate
+NOT RUN after repeated focused failures blocked the slice. No push/PR/CI/release.
+Architect handoff: https://github.com/GabrielMontealegre/wholesaleos-bot/issues/497
+Next independent trace: genuinely active legacy/source-day readers, especially
+wos-leads-detail creation metadata and wos-features date comparison; establish current
+callers/writers before any edit. No blanket Date.parse or shadowed index changes.
+Fresh run-start usage12%primary/2%secondaryUSED. Whole455/487 remains incomplete.
+
+HISTORICAL2026-11-08 independent455.4B4 template labels LOCAL/BLOCKED: branch from
+fresh origin/main f2294a7 plus prior493 proof/docs only; blocked device runtime
+NOT carried. Shared strict clock helper/cache3 only, template writers/text/
+approvals/send policy unchanged. New synthetic component1366/400/412 Tokyo
+testPASS; three positive label images inspected. Existing routes/UI focused
+check FAILED TypeError fetch failed at verifier14:31, same failure as original
+device-head full gate. Cause UNPROVEN, no unchanged retry/waiver; full suite
+for template head NOT RUN after repeated focused failure blocked this slice.
+No push/PR/CI/release. Next independent scope: JV/profit metadata reader trace.
+Template handoff: https://github.com/GabrielMontealegre/wholesaleos-bot/issues/496
+Device handoff: https://github.com/GabrielMontealegre/wholesaleos-bot/issues/495
+Original failed device gate/all306 timings retained.
+Fresh usage at run start6%primary/1%secondaryUSED, no escalation/reset/purchase.
+
+New architect requests read once:494 paid skip-trace (disabled provider/switch,
+owner enablement required);454 comments6625407540/6632655933/6660041703
+batch choices, voice/owner cards and evidence-backed board;375comment6636513026
+loss timing;401comment6632657694 measurable read-only performance. D065
+priority unchanged; none grants private reads, paid activation, send or source
+inference. Metadata cutoff454 now2026-11-05T14:07:36Z;375 Nov4 16:49:47Z;
+401 Nov4 14:03:37Z;494 Nov4 14:03:35Z; others remainNov3 02:46:22Z.
+
+HISTORICAL2026-11-08 run summary: fresh usage primary3% USED, secondary0% USED.
+Fetch origin succeeded; origin/main is ancestor of HEAD (0 behind,2 ahead).
+455.4B3 device labels BLOCKED / needs-architect: first full gate completed
+209 passed,97 failed,0 skipped of306,600s/file; all306 timings retained in
+docs/cycles/proof-455-device-times/first-local-full.json. Existing device UI
+failed again at startup52:5 before requests, matching the focused failure.
+Cause UNPROVEN; no unchanged retry, waiver, push, PR, CI or release.
+New device component test passed in the full gate (2.22s), not a release pass.
+Next independent scope: Email template timestamp reader trace, then JV/profit
+metadata and active legacy source-day readers. Whole455/487 remains incomplete.
+Unrelated exports/debug and newly observed synthetic-failure.png preserved.
+Standing autopilot authority continues until STOP AUTOPILOT; reserve the final
+5% primary window for rollback/redeploy only, no reset/purchase/model escalation.
+
+HISTORICAL PRE-GATE 2026-11-03 455.4B3 LOCAL device labels candidate: shared UTC-7 history and
+future expiry label, server state/auth/TTL/writers unchanged. New synthetic
+actual component3width/Tokyo testPASS, three images inspected. Original signed
+server device UI focused check FIRST FAILED startup52:5 before browser requests;
+cause UNPROVEN, no retry or environment attribution. First full gate pending;
+no push/PR/CI/release. Own prior493 proof carried, unrelated exports/debug untouched.
 
 2026-11-03 PR493 RELEASED/VERIFIED f2294a7500629e7a3edf2718ce981342a1d0802a,
 whole tree identical to tested364d6d8. FIRST PR41749594884/job126311094871
