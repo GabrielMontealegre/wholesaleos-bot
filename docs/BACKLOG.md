@@ -11,7 +11,7 @@ exit1; causeUNPROVEN, no bypass/retry/waiver. Full suite for this candidate
 NOT RUN after repeated focused failures blocked the slice. No push/PR/CI/release.
 Architect handoff: https://github.com/GabrielMontealegre/wholesaleos-bot/issues/497
 Next independent trace: genuinely active legacy/source-day readers, especially
-wos-leads-detail posted day and wos-features date comparison; establish current
+wos-leads-detail creation metadata and wos-features date comparison; establish current
 callers/writers before any edit. No blanket Date.parse or shadowed index changes.
 Fresh run-start usage12%primary/2%secondaryUSED. Whole455/487 remains incomplete.
 
