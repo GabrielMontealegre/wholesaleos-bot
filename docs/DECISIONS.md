@@ -1,5 +1,14 @@
 # Decisions
 
+ASSUMED2026-11-08:D065c blocks454 batch candidate77608f7 after first306-file
+full209/97/0 repeated requiredgate failures. All306 timing rows retained; pure
+new/legacy passes do not waive full. Matching failednames across device/age/
+batch gates is not causal proof. No unchangedretry/skip/cancel/bypass/environment
+attribution/push/CI/release. Architect question retained in proofREADME; connector
+acknowledged creation but no issue number returned, so do not invent one or
+duplicate it. Preserve blocked model branch; next independent scope frommain
+with owned docs/proof only, never this model/test. No route/UI integration.
+
 ASSUMED2026-11-08:454 first batch model is pure and UNREGISTERED. Round equals
 immutable snapshot receipt; expected revision is per actor/round, server advances
 it atomically. Exact UUID replay is readback even after newer import; conflicting

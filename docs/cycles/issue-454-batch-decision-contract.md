@@ -84,6 +84,13 @@ stage transition, signed agreement, or fact about a property.
 
 ## Verification Status
 
+FIRST full gate on77608f7 NATURALexit1:209/97/0,all306 timings retained in
+proof-454-decision-batches/first-local-full.json. NewtestPASS0.93s and existing
+pureanswersPASS0.94s do not waive full. Repeated required failures block this
+candidate underD065c; no unchangedretry/push/CI/PR/release. Causes remain unproven.
+Architect handoff acknowledgement/number limitation and exact question recorded
+in proofREADME. Preserve branch; do not carry model/test into independent work.
+
 Follow-on local implementation2026-11-08: assistant-decision-batches.js adds an
 unregistered pure append/read model; no existing route/service/UI edited. Limits
 and conservative policies are logged in DECISIONS. A separate collection retains

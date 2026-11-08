@@ -1,5 +1,17 @@
 # Backlog
 
+2026-11-08 LOCAL454 batch model BLOCKED after FIRST306-file full gate naturally
+exit1:209/97/0,600s/file,all306 timings retained in proof-454-decision-batches.
+Frozen runtime77608f7; newmodelPASS0.93/oldpureanswersPASS0.94 do not waive full.
+Same97 failednames as prior gates does NOT prove common cause; answer-route
+fetch failure causeUNPROVEN. No unchangedretry/fullrerun/push/PR/CI/release.
+GitHub connector acknowledged handoff creation but returned no issue number;
+question retained in proofREADME, avoid duplicate creation until metadata resolves.
+Preserve branch; no candidate runtime/tests carried into independent work. Next:
+remaining independent454 board/stage contract inventory underD065, not batch
+route/UI integration or unsafe canonical inference. Fresh usage90%primary/14%
+secondaryUSED after full; >=95 rollback/redeployonly. All sessions terminal.
+
 2026-11-08 LOCAL454 pure batch model candidate: separate append/read collection,
 exact actor/receipt/option binding, UUID recovery, revision conflicts, atomic
 validation and detached owned reads. Note-only/overall-only bounded policy,
