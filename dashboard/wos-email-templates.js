@@ -3,7 +3,7 @@
   var data=null,busy=false,error='',status='',chosen='holder_jv_reply',sequence=0;
   function actor(){return root.APP?.unlocked&&root.APP?.currentUser?.id;}
   function esc(value){return String(value==null?'':value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
-  function time(value){return value&&Number.isFinite(Date.parse(value))?new Intl.DateTimeFormat('en-US',{timeZone:'Etc/GMT+7',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}).format(new Date(value)):'Unknown';}
+  function time(value){var clock=root.wosCardClock,label=typeof clock?.formatTime==='function'?clock.formatTime(value,new Date().toISOString()):'Unknown';return label==='Unknown'?'Time not confirmed':label;}
   function markup(){
     var items=data&&data.items||[];var current=items.find(row=>row.kind===chosen);
     return '<section id="email-template-library"><h3>Message templates</h3><p data-template-status role="status">'+esc(error||status)+'</p>'+

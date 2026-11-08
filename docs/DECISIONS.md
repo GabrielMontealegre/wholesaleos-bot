@@ -1,5 +1,51 @@
 # Decisions
 
+ASSUMED2026-11-08:455.4B4 template recorded_at reuses existing shared clock3
+formatTime; strict UTC-Z/recent weekday/old month-day/different year policy,
+invalid/future/missing formatter => Time not confirmed. This is presentation
+only: no template body/subject/operator/policy/history/digest/writer/auth change.
+Branch from current origin/main, carry failed device evidence as docs only;
+never carry blocked device runtime into this independent candidate. New test
+uses synthetic route-fulfilled actual component, not a signed full dashboard.
+Existing routes/UI failed again at verifier14:31 first fetch, cause UNPROVEN.
+Under D065c block this slice, no unchanged retry or full/CI/release waiver;
+continue JV/profit metadata trace. Full suite for template head NOT RUN.
+
+Architect updates read once2026-11-08:494 skip trace behind disabled provider
+registry/switch, owner enables paid use;454 new batch choice/voice/board specs,
+375 lost-deal timing,401 performance budgets are future bounded scope. Current
+D065 order unchanged. No private board inspection, paid call, secret, new send
+authorization or address-only cross-source merge is assumed. Evidence/source
+gates win over unsupported stage, contact, comp, price or motivation inference.
+Device startup handoff filed as issue495; earlier connection failure retained.
+Template first-fetch handoff filed as issue496. Neither slice is release-ready.
+
+OWNER standing order, recorded2026-11-08: continue autopilot until explicit
+STOP AUTOPILOT. Fetch/reconcile origin, implement backlog under AGENTS, commit/
+push/PR, one CI run per new head with no per-PR limit, green merge, automatic
+deployment and bounded read-only proof are authorized. Decide routine questions
+under AGENTS3, log ASSUMED, continue. Sandbox/approval denial: record and skip,
+never bypass or repeatedly retry. Same failure twice: needs-architect/BLOCKED
+for that slice, then independent work; never retry an unchanged head for green.
+Usage limits wait/resume naturally. Paid services, secrets, outreach/messages,
+stored-data deletion and production batch writes remain owner-only. Existing
+privacy, no-manual-Railway and safety restrictions remain unchanged.
+
+ASSUMED2026-11-08:455.4B3 is BLOCKED after remembered-device-ui.test.js
+failed at startup52:5 both focused and in first full suite. All306 full timing
+rows and209/97/0 result retained. No cause attribution, assertion change or
+unchanged retry; no release. Continue independent template reader trace under
+D065c, AGENTS3/10 and standing order; do not carry blocked device runtime into
+an independent release. Open question: architect must bound a real fix for the
+repeated device fixture startup failure without weakening auth or assertions.
+
+ASSUMED 2026-11-03:455.4B3 remembered-device labels reuse shared strict UTC-7
+clock3; future expiry uses scheduled formatter, recorded creation/revocation
+and expired metadata use recorded formatter. Server active/current/revoked
+state stays authoritative; no token/TTL/session/revoke/schema/writer change.
+Unavailable formatter shows Time not confirmed, never browser-local parsing.
+-- AGENTS3/4/5, owner455 dates and additive presentation consistency.
+
 ASSUMED 2026-11-03: active-notice-address-origin and after-sale-frozen-chain
 use existing fixed-clock helper at their existing frozen corpus reference
 2026-10-02T12:00:00Z, restored in finally. Their fixed May-past/November-future
