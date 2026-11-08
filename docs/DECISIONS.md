@@ -1,5 +1,15 @@
 # Decisions
 
+ASSUMED2026-11-08: active lead age filter uses created_at, then createdAt,
+inserted_at, created; updated_at never proves creation. Canonical UTC-Z instants
+and finite positive integer epoch milliseconds are supported metadata writer
+contracts; date-only/numeric-slash/offset/invalid/future values cannot prove an
+exact time window. Stronger invalid metadata is not rescued by a weaker alias.
+Today means owner UTC-7 calendar day; other positive whole-day filters retain
+their rolling-window intent. Unknown/day-only/future records remain under Any
+Time; no fabricated midnight, migration, source-date inference or backend change.
+-- AGENTS3/4/5,455 date consistency, traced addLead/server/ArcGIS metadata types.
+
 ASSUMED2026-11-08:455.4B5 reuses shared strict recorded-time display for JV
 event happened_at/recorded_at, review happened_at and match-profit source
 captured_at only. Missing clock/invalid/future => Time not confirmed. Match

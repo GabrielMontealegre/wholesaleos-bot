@@ -1,8 +1,8 @@
 # 455 Active Legacy Date Reader Trace
 
-This is a diagnostic trace, not a passing acceptance test or a release.
-No application runtime changed. Earlier blocked device/template/JV candidates
-remain on their own branches; this branch carries their proof/docs only.
+The original diagnostic remains failed-behavior evidence, not an acceptance
+test. A bounded local predicate fix now follows this trace; no release yet.
+Earlier blocked device/template/JV runtime remains excluded on separate branches.
 
 ## Active Filter, Not Shadowed Fallback
 
@@ -41,7 +41,7 @@ Today. Same-owner-day and date-only controls are included; all six match today.
 Source fixtures unchanged, no production/network/write actions. The diagnostic
 reports observed booleans; it does not assert defective behavior as acceptance.
 
-## Next Bounded Implementation
+## Bounded Implementation
 
 Use precise canonical creation metadata before the day-only alias. Today must
 mean the owner UTC-7 calendar day, never rolling24h; future/invalid/ambiguous/
@@ -51,6 +51,25 @@ an explicit conservative policy for legacy day-only metadata without inventing
 an instant. Do not alter source-date resolvers, ingestion, sorting, paging,
 stored records or shadowed browser-local fallback merely to fix this predicate.
 Add negative cases and an actual current-path integration check before release.
+
+Implemented precise own-field precedence created_at/createdAt/inserted_at/created,
+strict real-calendar UTC-Z or positive integer epoch milliseconds; update-only,
+inherited/falsy-invalid primary, future, day-only, offset and slash values cannot
+prove an exact creation window. Missing precision remains visible under Any Time.
+Today compares UTC-7 calendar days; other whole-day choices keep rolling windows.
+No ingestion, stored-data, source-date, sorting, paging or fallback changes.
+No existing assertion changed. Shared clock/cache assets unchanged.
+
+New lead-age-calendar.test.js and lead-age-calendar-ui.test.js PASS. Actual
+dashboard/API-loader integration at1366/400/412 in Tokyo selects1 of6 after
+Today selection and restores6 for Any Time; source fixtures immutable, no writes/
+external/error. Unit boundary/alias/unknown/forged cases include multi-day edges.
+Review strengthened falsy/inherited primary handling and DOM result assertions;
+changed checks also passed, no failed run or unchanged retry. Initial viewport
+images retained externally before image refinement. Six final images inspected
+under docs/screens/2026-11-07-lead-age-calendar. Phone toast overlap and legacy
+table clipping are visible existing limitations, not repaired or waived here.
+Full suite for first frozen307-file candidate pending; no hosted gate/release.
 
 ## Separate Unproven Legacy Panel
 

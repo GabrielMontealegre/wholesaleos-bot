@@ -1,6 +1,18 @@
 # Backlog
 
-2026-11-08 active legacy date trace: independent item/455-lead-age-calendar
+2026-11-08 active Today predicate LOCAL candidate: precise own creation fields
+before legacy aliases, strict UTC-Z/integer epoch metadata, no update-only or
+future/ambiguous/day-only inferred instant. Today uses UTC-7 day, multi-day
+rolling windows retained, Any Time keeps all rows. No writer/backend/source/
+paging/sort change. Unit and actual full-dashboard route-fulfilled Tokyo checks
+PASS1366/400/412, real filter/API loader selects1 of6 and restores6 under Any
+Time. Six images inspected; existing phone toast/table clipping retained, not
+claimed fixed by overflow/visibility checks. Edge review added falsy primary/
+inherited metadata negatives; stronger invalid fields cannot use weaker aliases.
+First frozen307-file full suite pending, no push/PR/CI/release yet. Whole455/487
+incomplete; original blocked runtime branches remain separate and excluded.
+
+HISTORICAL2026-11-08 active legacy date trace: independent item/455-lead-age-calendar
 from currentmainf2294a7 plus493proof and earlier proof/docs only; no blocked
 runtime/test carried. Active leadMatchesAge path confirmed after final API load;
 shadowed wos-features fallback left untouched. Synthetic fixed-clock probe
