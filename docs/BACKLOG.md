@@ -1,5 +1,12 @@
 # Backlog
 
+2026-11-08 LOCAL494 unregistered pure preflight candidate: exact integer microUSD
+reserved/projected budget math, strict hostile-input validation, always-disabled
+capability with quote/subject/owner-authorization/adapter blockers. New generated-
+input focused test FIRSTPASS; no provider/legacy method/env/credential/business
+read/write or route/UI integration. Freeze for first full gate, not released.
+No existing provider or execute change; whole494/454/455/487 incomplete.
+
 2026-11-08 independent494 source contract inventory onmain+owneddocs/proofONLY:
 paid skip-trace module is disabled preview/throwing execute; legacy browser/DB
 worker/routes are a DIFFERENT path, never reuse for new owner-card action.

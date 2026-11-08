@@ -53,4 +53,34 @@ identity;503 may govern that binding. Owner-only activation/budget/provider
 selection remains separate. Do not weaken auth, introduce generic retries,
 change env/Railway settings, replace legacy routes or rewrite ingestion.
 
-No new test/full gate/CI/push/PR/release. Whole494 and parent backlog incomplete.
+## Local Pure Preflight Slice
+
+modules/research/paid-skip-trace-preflight.js is an UNREGISTERED additive reader;
+no existing provider, guard, execute, route, env or legacy worker is changed.
+It snapshots only known registry identifiers, never calls provider methods or
+reads actual env, owner data, authorization or spend records.
+
+forecastBudget accepts exact own data fields daily_cap_microusd, spent_microusd,
+reserved_microusd, max_unit_cost_microusd and units. All amounts are nonnegative
+safe integers, cap/unit cost positive, units1-100. BigInt intermediate arithmetic
+prevents silent rounding; unsafe result magnitudes reject. Reservations and
+entire projected request count against the cap, exact cap is allowed, prior
+over-cap commitment remains unavailable. Unknown values reject, never become0.
+This is arithmetic on supplied numbers, not a vendor quote or financial record.
+
+describeCapability accepts provider_id, strict boolean switch_on and nullable
+budget. Unknown identifiers are not echoed. Results ALWAYS enabled:false and
+execution_available:false, with stable blockers for disabled/unknown provider,
+switch/budget, unverified quote/subject/owner authorization and disabled adapter.
+Affordable arithmetic plus switch:true never authorizes paid execution. Output
+is detached. No fictitious approval reference or ready-to-spend state is invented.
+Future verified identity/quote/authorization adapters require separate scoped
+implementation; this model deliberately cannot stand in for them.
+
+New paid-skip-trace-preflight.test.js FIRSTPASS on generated inputs: cap edges,
+reserved/projected amounts, overflow/fractions/strings/NaN/negative/null, exact
+keys, accessors/prototypes/symbols, unknown identifiers, detached results, input/
+registry preservation and zero provider/network/filesystem/ambient-clock calls.
+No actual provider method, legacy module, production record or credential used.
+First full gate still required; no hosted CI/push/PR/release acceptance claim.
+Whole494 and parent backlog incomplete; owner-card UI/activation not implemented.

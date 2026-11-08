@@ -1,5 +1,14 @@
 # Decisions
 
+ASSUMED2026-11-08:494 first preflight is unregistered, pure and always execution-
+disabled. Integer micro-USD with BigInt intermediates prevents rounding/overflow;
+all projected/request/reserved spend counts against supplied cap. Units1-100;
+unknown/negative/nonfinite/fractional values reject, no defaultzero. Arithmetic
+is not verified quote/spend/owner approval. Strict capability input accepts no
+asserted subject/authorization flags, always reports those contracts unverified
+and adapter disabled even for known provider/switchtrue/affordablebudget. Existing
+execute, guards, routes/env/legacy worker unchanged. No enabling or paid action.
+
 ASSUMED2026-11-08:494 registry/switch inventory does not authorize paid provider
 execution. Keep execute disabled; pure future capability checks must failclosed
 on unverified quote/authorization/subject/projectedbudget. Existing metadata and
