@@ -36,6 +36,9 @@
     "playwright": "1.44.0",
     "tesseract.js": "^5.1.0"
   },
+  "overrides": {
+    "wasm-feature-detect": "1.9.0"
+  },
   "engines": {
     "node": ">=20.0.0"
   }
