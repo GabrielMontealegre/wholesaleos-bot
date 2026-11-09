@@ -265,6 +265,27 @@ until the later writer slice. Existing8field envelopes/history/actors unchanged.
 No migration,deletion,contact-to-reply inference or new operator gate.
 --AGENTS safety/data truth and D064/457--2026-10-27.
 
+## D-066 - Deal-closing features first: public distress lists and a paid data provider (Gabriel, 2026-11-09)
+
+Gabriel, 2026-11-09: "I want the software to do exactly the same" (pull public distress lists like the
+Dallas foreclosure notices and Charlotte code cases), and "we need to pay for the best one to get those
+comps and to also be able to do skip tracing", with an API the app can call.
+
+1. **Order.** After the open needs-architect items are answered, the next feature work is B-23 (public
+   distress lists importer), then B-24 (paid data provider adapter, off until enabled), then comps
+   (B-07, B-21) and the match engine (B-19). This supersedes the P0 pause on new source and comps work
+   for these items. UI work already in flight may finish; no new UI polish slices start before B-23.
+2. **D-012 amended.** A paid data provider may be enabled once Gabriel picks one and signs up himself.
+   Research (private, 2026-11-09) recommends PropertyRadar Team (about $249/month: comps, 500
+   skip-trace lookups, distress lists, API) or RealEstateAPI plus Tracerfy (about $640/month). The
+   adapter ships off: registry entry plus environment switch, key only in Railway, monthly cost cap.
+3. **Texas comps.** No vendor found sells real Texas closed prices by API to a non-licensee. Provider
+   values in Texas are estimates: labeled, never comps, never ARV (AGENTS.md section 5). Texas comps stay
+   in the operator lane (agent partner, local helper).
+4. **Texting skip-traced numbers** keeps every D-054 rule (Send button or approved batch of 20 or fewer,
+   DNC and do-not-contact check, quiet hours, carrier registration). Skip-traced numbers are "Possible
+   number, not confirmed" with their source (D-006).
+
 ## D-064 - Assistant Today Follow-Through (Architect, 2026-10-27)
 
 Authoritative answers:454 architect comment at2026-10-27T01:35:37Z and457
@@ -1103,7 +1124,7 @@ ASSUMED: #283's first-panel requirement is a release gate; the old public panel'
 | D-008 | 2026-09-30 | **One CRM timeline per lead**: every interaction logged with date, time and who (Gabriel or which VA): acquired, opened, closed, reopened, calls, texts, notes. Plus lead clocks: sale/event date, stale date, last touch. |
 | D-009 | 2026-09-30 | **Passed sale dates are not dead leads.** They move to an "After the sale" lane (postponed, still-owner, bank-owned, sold to investor, redemption) — never discarded. |
 | D-010 | 2026-09-30 | **Loan interest rate matters** (low rate → subject-to). It is a call question; a typical-rate clue from the loan date is allowed, labeled. |
-| D-012 | 2026-09-30 | **No paid services yet.** Everything must work free first. |
+| D-012 | 2026-09-30 | **No paid services yet.** Everything must work free first. Amended 2026-11-09 by D-066: a paid data provider may be enabled once Gabriel picks and signs up. |
 | D-013 | 2026-10-01 | **Generic adapters for every state.** No county-specific naming in new code; Dallas, Ellis, etc. are profiles. |
 | D-014 | 2026-09-26 | **VA materials** exclude MAO, spreads, buy boxes and title companies. |
 | D-015 | 2026-09-26 | **Offer math**: MAO = ARV × band% − repairs − fee. Band: 70% under $120k ARV; above that, the course chart up to 80–83%. Repairs before condition is known: $20/sq ft light to $50/sq ft heavy, labeled estimate. |

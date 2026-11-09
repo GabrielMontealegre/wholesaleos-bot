@@ -2363,6 +2363,11 @@ Mark the status here as part of each item's PR.
 
 ## Current Owner Order (D-056, GitHub 2026-10-13)
 
+Owner update 2026-11-09 (D-066) supersedes the pause below for source and comps work: after the
+open needs-architect items are answered, do B-23 (public distress lists importer), then B-24 (paid data
+provider adapter, switch off), then comps (B-07, B-21) and the match engine (B-19). No new UI polish
+slices before B-23.
+
 Owner update2026-10-15 supersedes the slice order below: #366 D -> A -> G -> C
 -> F -> B -> E -> I -> H -> J, one PR per letter, live click-through1366/412.
 Notify Gabriel when C and B are live for his #341 sign-off. County ranking
@@ -4186,6 +4191,58 @@ Acceptance
   - The header shows "Admin · undefined".
   - Outreach Hub says "Run scrape to find real buyers", which is legacy wording.
   - Deal Matching stays on "Loading matches..." (replaced by B-19).
+
+## B-23 · Public distress lists importer (D-066) · TODO
+
+Goal: the app pulls free public distress lists every day, like the operator did by hand on 2026-11-09:
+foreclosure notices, trustee sales, tax sales, tax-delinquent lists, lis pendens, probate, code cases and
+land bank inventories.
+
+Source list: `docs/knowledge/county-source-specs-2026-11-09.json` (207 sources in 46 counties; 153 open,
+54 blocked or gated, each with url, format, fields, cadence, allowlisted host and access).
+
+Acceptance
+- Generic source kinds `foreclosure_notice`, `trustee_sale`, `tax_sale`, `tax_delinquent`, `lis_pendens`,
+  `probate`, `code_case`, `land_bank` in the source-kind registry (D-053 `trustee_sale_list` maps to
+  `trustee_sale`). One county source profile per source; no county or state names in generic code (D-013).
+- Readers by format: HTML search results, PDF lists, CSV/XLSX, ArcGIS REST layers, Socrata/JSON. One
+  generic reader per format, configured by the profile.
+- First 15 profiles, in order: Mecklenburg tax-foreclosure map layer; Dallas and Tarrant clerk notices
+  (publicsearch.us); publicsearch.us lis pendens for Dallas, Tarrant, Collin, Denton and Bexar; Bexar
+  clerk foreclosure PDF; DeKalb tax sale list; Douglas GA delinquent list; Guilford tax-foreclosure layer;
+  Charlotte code cases; Ellis and Kaufman notice files; San Antonio 311 property maintenance; Austin code
+  complaints; Rowan delinquent spreadsheet; Shelby tax-sale CSV; Nashville code violations.
+- Every row becomes a lead in the right lane (D-009, never dropped) with source_kind, source_url, page or
+  row reference, document/case number, captured date and the evidence text. Dates as written go through
+  `resolve-source-sale-date.js`; ambiguous dates stay quarantined.
+- Network: allowlisted hosts only, about 1 request per second, stop on 401/403/429 and mark the source
+  unavailable; never behind a login, CAPTCHA or click-through; sources whose terms forbid automation
+  stay manual (marked in the profile).
+- Fixes found 2026-11-09: Ellis host moved to www.elliscountytx.gov; Collin URLs in the repo return 403;
+  Dallas should point at dallas.tx.publicsearch.us; Detroit land bank should use the DLBA_For_Sale layer.
+- Tests: a fixture per format; wrong host rejected; 429 stops the run; row references kept; duplicate
+  rows merge with an audit trail; no owner names in logs or aggregate reports.
+- Verification: read-only run counts per source ("rows found / new leads / blocked") on the live app.
+
+---
+
+## B-24 · Paid data provider adapter: comps, property detail, skip trace (D-066) · TODO (switch stays off)
+
+Goal: one provider interface so the app can use the vendor Gabriel picks, without code changes per vendor.
+
+Acceptance
+- Provider registry entry plus environment switch, off by default; key only in Railway; per-call cost
+  logged; monthly cap that stops calls.
+- Comps: closed sales only, with address, date, price, beds, baths, living area, year built, distance and
+  the provider's source label. Reject AVMs, list prices and estimates as comps. Texas results are labeled
+  estimates and can never satisfy a comp or ARV gate (AGENTS.md section 5, D-066).
+- Skip trace: numbers stored as "Possible number, not confirmed" with provider, date, phone type and any
+  DNC or litigator flag (D-006). Rejected or do-not-call numbers never count as a route.
+- List import (pre-foreclosure, probate, tax-delinquent, absentee, vacant) feeds the same lead lanes as B-23.
+- Tests use fixtures from the vendor's published examples; no live calls in tests; a spy proves no call
+  happens while the switch is off.
+
+---
 
 ## Deferred Follow-Up
 
