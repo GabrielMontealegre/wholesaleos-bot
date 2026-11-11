@@ -1,5 +1,41 @@
 # Backlog
 
+## NEXT RUN ORDER (D-067, architect 2026-11-09). Read this first; it replaces every older order below
+
+The older run notes below are history. Work this list from top to bottom. GitHub CI on the PR head is
+the required gate. A local run that fails only because the sandbox blocks the network (ERR_NETWORK_ACCESS_DENIED,
+loopback `fetch failed`, EPERM/EACCES, fixture start timeout) is not a gate failure: push and let CI decide
+(D-067a).
+
+0. **B-25: pin `wasm-feature-detect` 1.9.0** ([#507](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/507)).
+   Every PR's CI fails until this lands.
+1. **Ship or cut the frozen slices.** Each gets one CI run, plus one fix commit if needed; if it fails twice,
+   mark it DEFERRED and move on (D-067c), in this order:
+   #495 device labels → #496 template labels → #497 JV and profit labels → #498 active Today filter →
+   #501 source-card words (update both cache-57 assertions to 58) → #502 batch decision model →
+   #504 note voice → #505 skip-trace preflight. Then rebase PRs #433 and #434, run CI once and merge.
+   Cut, with no work: #499 and #500 (moved to Deferred). Item 455 date polish ends here.
+2. **B-23: public distress lists importer** (D-066).
+3. **B-24: paid data provider adapter, switch off.** This absorbs #494, the skip-trace button (D-067e).
+4. **B-07 and B-21: comps.**
+5. **B-19: match engine.**
+6. Then: 454 board v1 under the #503 contract (D-067f), #450 clock fix with #412 phase B, and the rest of the
+   backlog in its existing order.
+
+Gabriel only (do not wait on these, do not do them): #428 credential rotation confirmation, turning on the
+reply Send switch, picking and paying for the B-24 provider, any outreach.
+
+---
+
+## B-25 · Pin wasm-feature-detect 1.9.0 (D-067b) · TODO ([#507](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/507))
+
+`wasm-feature-detect` 1.10.0 (published 2026-11-09) crashes the tesseract OCR worker on Node 20. With no
+lockfile, CI and the next production deploy both install it. Acceptance: package.json gets
+`"overrides": {"wasm-feature-detect": "1.9.0"}` and nothing else changes; CI shows 305/305 with
+`dallas-foreclosure-acquisition-adapter` and `dashboard-public-deal-queue` passing; deploy; the §7 read-only check passes.
+
+---
+
 USAGE WARNING 2026-11-03: primary43% USED, secondary93% USED. Secondary
 remaining is below10%; architect should review the live app/backlog status.
 No agent reset/purchase/model escalation. Continue the authorized work loop;
@@ -2363,7 +2399,7 @@ Mark the status here as part of each item's PR.
 
 ## Current Owner Order (D-056, GitHub 2026-10-13)
 
-Owner update 2026-11-09 (D-066) supersedes the pause below for source and comps work: after the
+Owner update 2026-11-09 (D-066; run order now at the top of this file, D-067) supersedes the pause below for source and comps work: after the
 open needs-architect items are answered, do B-23 (public distress lists importer), then B-24 (paid data
 provider adapter, switch off), then comps (B-07, B-21) and the match engine (B-19). No new UI polish
 slices before B-23.
@@ -4246,6 +4282,12 @@ Acceptance
 
 ## Deferred Follow-Up
 
+- Commit a lockfile (D-067b follow-up) so CI and production install the same package versions.
+- Email date with an impossible calendar day (#499, D-067d): in `receivedTime`, reject a named-month mail
+  date whose day, month or year does not match in the header's own offset, and show "Time not confirmed".
+  Add no new parser dependency.
+- Owner display day for sale urgency (#500, D-067d): inject the owner's UTC-7 day and add a real-calendar
+  check in `saleDateInfo`. The backend stays the authority for "sale date passed".
 - Classic Today layout shift (CLS) on Conversations/Notifications. D065b/#487
   records existing baseline debt, not a477 regression. Address separately at
   the bottom of the queue; preserve current safety gates and report an actual
