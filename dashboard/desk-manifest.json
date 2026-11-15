@@ -1,0 +1,17 @@
+{
+  "id": "/dashboard/desk.html",
+  "name": "DealPeak Deal Desk",
+  "short_name": "DealPeak",
+  "description": "Gabriel's Deal Desk by Montsan",
+  "start_url": "/dashboard/desk.html",
+  "scope": "/dashboard/desk",
+  "display": "standalone",
+  "background_color": "#050505",
+  "theme_color": "#050505",
+  "orientation": "any",
+  "icons": [
+    {"src": "/dashboard/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+    {"src": "/dashboard/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},
+    {"src": "/dashboard/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}
+  ]
+}
