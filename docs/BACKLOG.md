@@ -1,14 +1,5 @@
 # Backlog
 
-2026-10-22 #432 negotiation planner (Claude cloud session, `claude-building`):
-pure planner `modules/deals/negotiation-planner.js` plus hermetic
-`tests/negotiation-planner.test.js`. Next move (ask seller's number, buyers
-first, open, counter, renegotiate down for defects, hold, walk), #400 part 3
-distress sizing (opening/target/walk-away), buyer asking price and "push a
-little", soft 5-10% counters. No route, UI, storage, send or deploy. PR open for
-review; Codex reviews and merges per AGENTS2 and the #423 deploy pause.
-Assumptions logged in DECISIONS.md.
-
 ## NEXT RUN ORDER (D-067, architect 2026-11-09). Read this first; it replaces every older order below
 
 The older run notes below are history. Work this list from top to bottom. GitHub CI on the PR head is
@@ -710,6 +701,15 @@ or production changes yet,no real credentials/devices/key/files/settings actions
 pending actions,not backlog-wide waits.455 item2+ and456 still deferred.
 
 ## Latest Run Summary
+
+2026-10-22 #432 negotiation planner (Claude cloud session, `claude-building`):
+pure planner `modules/deals/negotiation-planner.js` plus hermetic
+`tests/negotiation-planner.test.js`. Next move (ask seller's number, buyers
+first, open, counter, renegotiate down for defects, hold, walk), #400 part 3
+distress sizing (opening/target/walk-away), buyer asking price and "push a
+little", soft 5-10% counters. No route, UI, storage, send or deploy. PR open for
+review; Codex reviews and merges per AGENTS2 and the #423 deploy pause.
+Assumptions logged in DECISIONS.md.
 
 2026-10-28 PR467/455item2 RELEASED/VERIFIED:main6247e0fe69f998bc24cf6e33f42e35b72c23f8fc
 fulltree identical testedff9434d. AutomaticRailway619e60c5-4dc3-44eb-9b02-a0b1cd912c5b
