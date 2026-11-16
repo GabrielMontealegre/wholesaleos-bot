@@ -10,7 +10,7 @@ const records = require('../modules/records/record-activity');
 const { fixture, now } = require('../tests/reviewed-deals.test');
 const root = path.resolve(__dirname, '..');
 const pages = ['dashboard','todays_deals','jv','findme_scout','buyers_found','leads','pipeline','gmail','settings','record_activity'];
-function createFixtureApp({wider=false,seedLead=false,todayProof=false}={}) {
+function createFixtureApp({wider=false,seedLead=false,todayProof=false,actualDealRoutes=false}={}) {
   const context = { now, operatorId: 'fixture-admin' };
   let store = { users: [{ id: 'fixture-admin', name: 'SYNTHETIC ADMIN' }], leads: [], buyers: [], activities: [] };
   const buyer = finds.validateItems({ items: [{ name: 'Fixture buyer', platform: 'manual', source_url: 'https://records.example.test/buyer', profile_url: 'https://records.example.test/buyer', what_they_buy: 'Fixture houses', deal_type: 'house', states: ['FL'], areas: ['Tampa'], classification: 'end_buyer', captured_at: now, buy_box: { types: ['house'], pct_arv: '75%', price_max: 200000 } }] }, now)[0];
@@ -31,8 +31,11 @@ function createFixtureApp({wider=false,seedLead=false,todayProof=false}={}) {
   app.get('/api/leads', (_, res) => res.json({ leads: store.leads, totalAll: store.leads.length, totalFiltered: store.leads.length }));
   app.get('/api/buyers', (_, res) => res.json({ buyers: store.buyers }));
   app.get('/api/dashboard/buyers-found', (_, res) => res.json(finds.listFinds(store, { now })));
-  app.get('/api/dashboard/todays-deals', (req, res) => res.json(deals.list(store, { now, ...req.query, locationExact:req.query.location_exact==='true' })));
-  require('../modules/records/county-filter-catalog').registerCountyFilterCatalog(app,{requireAdmin:(_,__,next)=>next()});
+  if(actualDealRoutes)require('../modules/deals/reviewed-deal-routes').registerReviewedDealRoutes(app,{db:{readDBStrict:()=>store,writeDB:()=>{throw Error('fixture_write_forbidden');}},requireAdmin:(_,__,next)=>next(),now:()=>now});
+  else {
+    app.get('/api/dashboard/todays-deals', (req, res) => res.json(deals.list(store, { now, ...req.query, locationExact:req.query.location_exact==='true' })));
+    require('../modules/records/county-filter-catalog').registerCountyFilterCatalog(app,{requireAdmin:(_,__,next)=>next()});
+  }
   app.get('/api/dashboard/record-activity', (_, res) => res.json({ ...records.listActivity(store), types: records.TYPES }));
   app.get('/api/dashboard/record-search',(req,res)=>res.json({items:records.search(store,String(req.query.q||''))}));
   app.get('/api/dashboard/record-refs', (_, res) => res.json({ missing: { leads: 0, buyers: 0, deals: 0, matches: 0 }, deal_reserve: records.sequenceFloorStatus(store) }));
@@ -133,7 +136,9 @@ async function prove({ screenshots = false,wider=false } = {}) {
           await page.locator('[data-deal-open]').click();
           assert.ok(await page.locator('.td-open-view .td-detail').isVisible());
           assert.strictEqual(await page.locator('.td-card tbody tr').count(),3);
+          await page.locator('.td-comps > summary').click();
           if(wider){assert.strictEqual(await page.locator('[data-wider-comp]').count(),2);assert.ok((await page.locator('[data-wider-area-label]').innerText()).includes('up to 2.5 miles'));assert.ok((await page.locator('.td-math').innerText()).includes('Preliminary'));}
+          await page.locator('[data-comp-exclusion-open]').first().click();
           await page.locator('[data-deal-action="exclude_comp"]').first().click();
           assert.ok((await page.locator('[data-deal-error]').innerText()).includes('written reason'),'an empty exclusion must not send a request');
           await page.locator('[data-deal-action="approve"]').click();

@@ -1,0 +1,20 @@
+{
+  "synthetic_only": true,
+  "production_content": false,
+  "all_images_inspected": true,
+  "copied_source_byte_identity_verified": true,
+  "images": {
+    "synthetic-decision-desk-1366.png": "ed4cbe7eda6f344d6bb0bbfc089f00b50963aa6921d8968a47342fa1ce9b1e56",
+    "synthetic-agents-1366.png": "fea70e802269c5c8432435b58ae53d973798a99d299968b8c31dfbbc4be66176",
+    "synthetic-outreach-1366.png": "6722b1418a61052245b1faa90806ff473b247376e9672c17c803541f7db06f27",
+    "synthetic-answer-readback-1366.png": "b990a42b6b228d8ba13a157e191fdbea45eef6341c97bf4eae8e3875bb8407a3",
+    "synthetic-decision-desk-400.png": "dcbd09405c0472736e1c455d58c0e05c0deb24fb88a9eb773c88c28a813b5fd2",
+    "synthetic-agents-400.png": "8c7b45765f6efed47aaa17861432c1c28b539e54f960cff76c436712ac5e0aba",
+    "synthetic-outreach-400.png": "fcc540b5e20e0304118cbbbeedfe982f978b37fc4a20bc41442bb004d7a73238",
+    "synthetic-answer-readback-400.png": "074d4e51a6c0d2ca17def592a76ec0ddaa47b9a5a8f76b9e1a27727973662a4d",
+    "synthetic-decision-desk-412.png": "6b3b4582d74adec82673384219f1f2d979b8770887efea24b8e6948fcfdb53c8",
+    "synthetic-agents-412.png": "b886c232706c16180e065aa3e8830a2b925ff2c78ff2657da9b4d3b3b1cb1bfa",
+    "synthetic-outreach-412.png": "36f496e71870cb8f8133d82137491849eb4878bd8376a3aa01be4ab4431ad839",
+    "synthetic-answer-readback-412.png": "2af09dfcad2143503c2952fdd7a9fadbc3cd15b3f97381e66ad31001abbb47bf"
+  }
+}

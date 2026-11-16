@@ -24,17 +24,27 @@
   function formatTime(value, now) {
     var time = instant(value), current = instant(now);
     if (time == null || current == null || time > current) return 'Unknown';
-    var sameWeek = Math.floor((day(time) + 4) / 7) === Math.floor((day(current) + 4) / 7);
+    var recent = current - time <= 7 * DAY;
     var parts = new Intl.DateTimeFormat('en-US', { timeZone: ZONE, year: 'numeric' }).format(new Date(time));
     var year = new Intl.DateTimeFormat('en-US', { timeZone: ZONE, year: 'numeric' }).format(new Date(current));
-    var options = { timeZone: ZONE, hour: 'numeric', minute: '2-digit' };
-    if (sameWeek) options.weekday = 'short';
+    var options = { timeZone: ZONE };
+    if (recent) { options.weekday = 'short'; options.hour = 'numeric'; options.minute = '2-digit'; }
     else { options.month = 'short'; options.day = 'numeric'; if (parts !== year) options.year = 'numeric'; }
     return new Intl.DateTimeFormat('en-US', options).format(new Date(time));
   }
   function formatDate(value) {
     var time = date(value);
     return time == null ? 'Unknown' : new Intl.DateTimeFormat('en-US', { timeZone: 'UTC', month: 'short', day: 'numeric', year: 'numeric' }).format(new Date(time));
+  }
+  function formatScheduledTime(value, now) {
+    var time = instant(value), current = instant(now);
+    if (time == null || current == null) return 'Unknown';
+    if (time <= current) return formatTime(value, now);
+    // A reported appointment may be future-dated; it is not past activity.
+    var year = new Intl.DateTimeFormat('en-US', { timeZone: ZONE, year: 'numeric' });
+    var options = { timeZone: ZONE, month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' };
+    if (year.format(new Date(time)) !== year.format(new Date(current))) options.year = 'numeric';
+    return new Intl.DateTimeFormat('en-US', options).format(new Date(time));
   }
   // This reads the reviewed-deal projection only. It is not a source-date resolver.
   function reviewed(deal, context) {
@@ -94,5 +104,5 @@
       field('Current stage', model.stage + (model.days_in_recorded_stage == null ? ' - time in stage unknown' : ' - ' + model.days_in_recorded_stage + ' days since its recorded start')) +
       field('Next step', model.next) + '</dl>';
   }
-  return { reviewed: reviewed, render: render, formatTime: formatTime, formatDate: formatDate };
+  return { reviewed: reviewed, render: render, formatTime: formatTime, formatDate: formatDate, formatScheduledTime: formatScheduledTime };
 });

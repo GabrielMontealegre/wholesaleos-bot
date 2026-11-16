@@ -47,9 +47,9 @@ async function prove() {
       });
       await page.goto('https://fixture.test/app?preview=1');
       await page.getByRole('button', { name: /Synthetic source-supported property/ }).waitFor();
-      assert((await page.locator('.ws-stats').innerText()).includes('0 replies'));
-      assert((await page.locator('.ws-stats').innerText()).includes('Unknown follow-ups'));
-      assert((await page.locator('.ws-row-main').first().innerText()).includes('10:18 AM'));
+      assert((await page.locator('.ws-today-stats').innerText()).includes('0 replies waiting'));
+      assert((await page.locator('.ws-today-stats').innerText()).includes('Unknown follow-ups due'));
+      assert.match((await page.locator('.ws-today-action-main').first().innerText()), /\d{1,2}:\d{2} (AM|PM)/);
       if (width !== 1366) {
         await page.getByRole('button', { name: 'Open navigation', exact: true }).click();
         assert(await page.getByRole('dialog', { name: 'Navigation', exact: true }).isVisible());
@@ -58,9 +58,9 @@ async function prove() {
       await page.getByRole('button', { name: /Synthetic source-supported property/ }).click();
       assert.equal(await page.getByRole('link', { name: 'Open full record', exact: true }).getAttribute('href'), '/dashboard/?record_ref=WOS-FL-1012');
       await page.getByRole('button', { name: 'Close Record', exact: true }).click();
-      await page.getByRole('tab', { name: 'Best deals', exact: true }).click();
-      assert(await page.getByRole('heading', { name: 'No best deals recorded', exact: true }).isVisible());
-      await page.getByRole('tab', { name: 'Last 24 hours', exact: true }).click();
+      assert(await page.getByRole('heading', { name: 'Best deals', exact: true }).isVisible());
+      assert(await page.getByRole('heading', { name: 'Last 24 hours', exact: true }).isVisible());
+      assert(await page.getByRole('heading', { name: 'No reviewed deals are ready yet', exact: true }).isVisible());
       await page.getByRole('button', { name: /Record imported/ }).click();
       assert(await page.getByText('No unique property or buyer reference is attached.', { exact: false }).isVisible());
       await page.keyboard.press('Escape');
@@ -72,23 +72,24 @@ async function prove() {
       }));
       assert.equal(layout.overflow, false);
       assert.equal(layout.scrollParents, 0);
-      assert.deepEqual(layout.sheets, ['/dashboard/workspace/design-system.css']);
+      assert.deepEqual(layout.sheets, ['/dashboard/workspace/design-system.css', '/dashboard/wos-ui-kit.css', '/dashboard/wos-local-voice.css']);
       assert(layout.firstPaint !== null && layout.firstPaint < 2000, 'Fixture first contentful paint <2s');
       // Email intentionally migrates to the shared native shell in #412.
       if (width !== 1366) await page.getByRole('button', { name: 'Open navigation', exact: true }).click();
       await page.locator((width === 1366 ? '.ws-sidebar ' : '#mobile-nav ') + 'a[href="/app?preview=1&view=email"]').click();
       await page.getByRole('heading', { name: 'No conversations in this view', exact: true }).waitFor();
       assert(await page.locator('.ws-mail').isVisible());
-      // #429: Email -> Deals is labeled as the classic view before the click, and Back returns to Email in the shell.
+      // Owner455: non-native tools live under one More entry; Back still returns to native Email.
       if (width !== 1366) await page.getByRole('button', { name: 'Open navigation', exact: true }).click();
       const navScope = page.locator(width === 1366 ? '.ws-sidebar' : '#mobile-nav');
       assert.equal(await navScope.getByRole('link', { name: 'Email', exact: true }).getAttribute('aria-current'), 'page');
-      const clipped = await navScope.locator('.ws-nav-note').evaluateAll(notes => notes.filter(note => {
+      const clipped = await navScope.locator('.ws-nav a,.ws-nav-more').evaluateAll(notes => notes.filter(note => {
         const box = note.getBoundingClientRect(), frame = note.closest('nav').getBoundingClientRect();
         return box.right > frame.right + 1 || note.scrollWidth > note.clientWidth + 1;
       }).length);
-      assert.equal(clipped, 0, 'Every Classic view label fits inside the navigation');
-      await navScope.getByRole('link', { name: 'Deals - classic view', exact: true }).click();
+      assert.equal(clipped, 0, 'Every current primary navigation control fits');
+      await navScope.getByRole('button', { name: 'More', exact: true }).click();
+      await page.locator('#more-tools').getByRole('link', { name: 'Deals', exact: true }).click();
       await page.getByRole('heading', { name: 'Classic workspace', exact: true }).waitFor();
       await page.goBack();
       await page.getByRole('heading', { name: 'No conversations in this view', exact: true }).waitFor();
@@ -96,17 +97,20 @@ async function prove() {
       await page.goto('https://fixture.test/app?preview=1');
       await page.getByRole('button', { name: /Synthetic source-supported property/ }).waitFor();
       const labels = await page.locator('.ws-sidebar .ws-nav a').evaluateAll(links => links.map(link => [link.getAttribute('href'), link.getAttribute('aria-label') || link.textContent.trim()]));
-      assert.deepEqual(labels, [['/app?preview=1', 'Today'], ['/app?preview=1&view=email', 'Email'],
-        ['/dashboard/?workspace=leads', 'Leads - classic view'], ['/dashboard/?workspace=deals', 'Deals - classic view'],
-        ['/dashboard/?workspace=buyers', 'Buyers - classic view'], ['/dashboard/?workspace=calendar', 'Calendar - classic view'],
-        ['/dashboard/?workspace=pipeline', 'Pipeline - classic view'], ['/dashboard/?workspace=approvals', 'Approvals - classic view']]);
-      assert.equal(await page.locator('.ws-sidebar-footer a').getAttribute('href'), '/dashboard/');
-      assert.equal(await page.getByRole('link', { name: 'Settings - classic view', exact: true }).first().getAttribute('href'), '/dashboard/?workspace=settings');
+      assert.deepEqual(labels, [['/app?preview=1', 'Today'], ['/app?preview=1&view=email', 'Email']]);
+      assert.equal(await page.locator('.ws-sidebar .ws-nav [data-open-more]').count(), 1);
+      assert.equal(await page.locator('.ws-sidebar-footer a').getAttribute('href'), '/app', 'Home follows owner455 nativeToday entry,not the classic tools');
+      if (width !== 1366) await page.getByRole('button', { name: 'Open navigation', exact: true }).click();
+      await page.locator(width === 1366 ? '.ws-sidebar' : '#mobile-nav').getByRole('button', { name: 'More', exact: true }).click();
+      assert.equal(await page.getByRole('link', { name: 'Settings', exact: true }).count(), 1, 'More is the single non-native tool gateway');
+      assert.equal(await page.locator('#more-tools').getByRole('link', { name: 'Settings', exact: true }).getAttribute('href'), '/dashboard/?workspace=settings');
+      await page.getByRole('button', { name: 'Close More', exact: true }).click();
       for (const [key, name] of [['leads', 'Leads'], ['deals', 'Deals'], ['buyers', 'Buyers'], ['calendar', 'Calendar'], ['pipeline', 'Pipeline'], ['approvals', 'Approvals']]) {
         if (width !== 1366) await page.getByRole('button', { name: 'Open navigation', exact: true }).click();
-        const selector = (width === 1366 ? '.ws-sidebar ' : '#mobile-nav ') + 'a[href="/dashboard/?workspace=' + key + '"]';
-        assert.equal(await page.locator(selector).getAttribute('aria-label'), name + ' - classic view');
-        assert((await page.locator(selector).innerText()).includes('Classic view'), 'The classic label is visible, not only announced');
+        await page.locator(width === 1366 ? '.ws-sidebar' : '#mobile-nav').getByRole('button', { name: 'More', exact: true }).click();
+        const selector = '#more-tools a[href="/dashboard/?workspace=' + key + '"]';
+        assert.equal(await page.locator(selector).innerText(), name);
+        assert(!(await page.locator('#more-tools').innerText()).includes('Classic view'), 'Owner455 removes the old labels,not the supported tool destinations');
         await page.locator(selector).click();
         assert.equal(new URL(page.url()).searchParams.get('workspace'), key);
         await page.goBack();
@@ -114,7 +118,7 @@ async function prove() {
         assert.equal(new URL(page.url()).pathname + new URL(page.url()).search, '/app?preview=1', 'Back returns to the shell screen');
       }
       const drawer = await page.evaluate(() => document.documentElement.scrollWidth > innerWidth);
-      assert.equal(drawer, false, 'Classic labels add no horizontal overflow');
+      assert.equal(drawer, false, 'More navigation adds no horizontal overflow');
       fail = true;
       await page.getByRole('button', { name: 'Refresh recorded work', exact: true }).click();
       await page.getByRole('heading', { name: 'Recorded work is unavailable', exact: true }).waitFor();
@@ -133,12 +137,13 @@ async function prove() {
       await page.reload();
       await page.getByRole('heading', { name: 'Unlock your workspace', exact: true }).waitFor();
       assert.equal(reads, before, 'Non-admin cannot read the admin workspace');
+      assert.equal(await page.getByRole('link', { name: 'Open available tools', exact: true }).getAttribute('href'), '/dashboard/', 'Existing signed users retain their authorized classic tools without admin promotion');
       assert.deepEqual(writes, []);
       assert.deepEqual(external, []);
       assert.deepEqual(errors, []);
       await page.close();
     }
-    console.log('workspace-shell-ui: real shell1366/400/412; native Email, labeled classic nav targets with Back to the shell (#429), tabs, rows, X/Escape, explicit refresh,401 clearing, role guard, first paint<2s and zero writes/external calls passed');
+    console.log('workspace-shell-ui: real shell1366/400/412; native Email, More tool targets with Back, Today panels, rows, X/Escape, explicit refresh,401 clearing, role guard, first paint<2s and zero writes/external calls passed');
   } finally { await browser.close(); }
 }
 prove().catch(error => { console.error(error.stack); process.exitCode = 1; });

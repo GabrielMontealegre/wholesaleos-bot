@@ -9,7 +9,7 @@ async function prove() {
   const metadata = (id, patch = {}) => ({ id, source_kind: 'connected_mailbox', from: 'Synthetic Sender <sender@example.test>', sender_name: 'Synthetic Sender',
     subject: 'Synthetic conversation ' + 'long subject '.repeat(6), date: stamp, thread_key: key, direction: 'in', link_status: 'linked',
     conversation: { role: 'buyer', role_source_kind: 'operator_input', role_recorded_at: stamp }, ...patch });
-  const rows = [metadata('first'), metadata('latest', { date: '2026-10-20T12:01:00Z' }), metadata('other', { thread_key: 'c'.repeat(64), sender_name: 'Another synthetic person' }), metadata('alert', { thread_key: 'b'.repeat(64), from: 'alerts@redfin.com', sender_name: 'Synthetic alert' })];
+  const rows = [metadata('first', { unread: true }), metadata('latest', { date: '2026-10-20T12:01:00Z', unread: true }), metadata('other', { thread_key: 'c'.repeat(64), sender_name: 'Another synthetic person', read: true }), metadata('alert', { thread_key: 'b'.repeat(64), from: 'alerts@redfin.com', sender_name: 'Synthetic alert' })];
   const message = id => ({ ...rows.find(row => row.id === id), body: id === 'first' ? 'Earlier synthetic message' : 'LATEST SYNTHETIC TEXT\n' + 'Visible source text. '.repeat(250) + '\nFINAL SYNTHETIC LINE <img src=x onerror=attack()>' });
   try {
     for (const width of [1366, 400, 412]) {
@@ -22,6 +22,7 @@ async function prove() {
         if (url.origin !== 'https://fixture.test') { external.push(url.origin); return route.abort(); }
         if (req.method() !== 'GET') { writes.push(url.pathname); return route.abort(); }
         if (url.pathname === '/api/auth/session') return route.fulfill({ json: { authenticated: true, role: 'admin' } });
+        if (url.pathname === '/api/dashboard/email/thread-replies/status') return route.fulfill({ json: { enabled: false, configured: true, automatic_send_allowed: false } });
         if (url.pathname === '/api/gmail/messages') return route.fulfill({ status: unauthorized ? 401 : 200, json: { ok: !unauthorized, messages: url.searchParams.get('folder') === 'sent' ? [] : rows } });
         if (url.pathname === '/api/gmail/thread' || url.pathname.startsWith('/api/gmail/message/')) {
           bodyReads++;
@@ -35,24 +36,63 @@ async function prove() {
         return route.fulfill({ contentType: relative.endsWith('.css') ? 'text/css' : relative.endsWith('.svg') ? 'image/svg+xml' : 'text/javascript', body: fs.readFileSync(path.join(__dirname, '../dashboard', relative)) });
       });
       await page.goto('https://fixture.test/app?preview=1&view=email');
-      await page.locator('.ws-mail-row').first().waitFor();
-      assert.equal(await page.locator('.ws-mail-row').count(), 2, 'People default excludes automated listing alert, not the real replies');
+      await page.locator('#today-content[aria-busy="false"]').waitFor();
+      assert.equal(await page.getByRole('tab', { name: 'Primary', exact: true }).getAttribute('aria-selected'), 'true');
+      assert.equal(await page.locator('.ws-mail-row').count(), 0, 'Recorded buyer conversations belong to Buyers, not an invented Primary identity');
+      await page.getByRole('tab', { name: 'Buyers', exact: true }).click();
+      assert.equal(await page.locator('.ws-mail-row').count(), 2, 'Buyers retains the two sourced human threads and excludes the automated listing alert');
       assert.equal(bodyReads, 0, 'No message body fetched on load');
+      const unread = page.locator('.ws-mail-row--unread');
+      assert.equal(await unread.count(), 1, 'Only source-backed unread threads get unread styling');
+      assert.equal(await unread.evaluate(el => getComputedStyle(el).boxShadow), 'none', 'Unread messages must not join into a blue vertical stripe');
+      assert.equal(await unread.locator('.ws-mail-sender').evaluate(el => getComputedStyle(el).fontWeight), '700', 'Unread senders remain bold');
+      assert.equal(await page.locator('.ws-mail-row:not(.ws-mail-row--unread) .ws-mail-sender').evaluate(el => getComputedStyle(el).fontWeight), '400', 'Read senders retain normal weight');
+      await unread.focus();
+      await page.keyboard.press('Tab');
+      await page.keyboard.press('Shift+Tab');
+      assert(await unread.evaluate(el => el.matches(':focus-visible') && getComputedStyle(el).outlineStyle !== 'none'), 'Removing the unread stripe preserves keyboard focus');
+      assert.equal(await page.locator('.ws-composer').count(), 0, 'The default mail view never reserves an empty reply box');
+      assert(await page.locator('.ws-mail-list').evaluate(el => el.getBoundingClientRect().width >= el.parentElement.getBoundingClientRect().width - 1), 'List owns the main-area width, not half of a split pane');
+      assert.equal(await page.locator('#help').isVisible(), false, 'Email reserves no blank help strip');
+      assert(await page.locator('#refresh').getAttribute('title'), 'Help remains available on the control');
+      const listTop = await page.locator('.ws-mail-list').evaluate(el => el.getBoundingClientRect().top);
+      assert(listTop <= (width === 1366 ? 180 : 196), 'Search, real list tools and category chrome remain bounded: ' + listTop);
+      await page.locator('#refresh').hover();
+      assert.equal(await page.locator('.ws-mail-list').evaluate(el => el.getBoundingClientRect().top), listTop, 'Hover help cannot shift the list');
       await page.getByRole('tab', { name: 'Alerts', exact: true }).click();
+      assert.equal(await page.locator('.ws-mail-row--unread').count(), 0, 'Unknown read state is not presented as unread');
       assert((await page.locator('.ws-mail-row').innerText()).includes('Synthetic alert'));
-      await page.getByRole('tab', { name: 'Alerts', exact: true }).press('ArrowLeft');
-      assert.equal(await page.getByRole('tab', { name: 'People', exact: true }).getAttribute('aria-selected'), 'true');
+      await page.getByRole('tab', { name: 'Alerts', exact: true }).press('Home');
+      assert.equal(await page.getByRole('tab', { name: 'Primary', exact: true }).getAttribute('aria-selected'), 'true');
+      await page.getByRole('tab', { name: 'Primary', exact: true }).press('ArrowRight');
+      assert.equal(await page.getByRole('tab', { name: 'Buyers', exact: true }).getAttribute('aria-selected'), 'true');
       await page.locator('.ws-mail-row').first().click();
       await page.getByText('LATEST SYNTHETIC TEXT', { exact: false }).waitFor();
+      assert.equal(await page.locator('.ws-mail-list').isVisible(), false, 'Opened message replaces the list on desktop and phone');
+      assert(await page.locator('.ws-mail-reading').evaluate(el => el.getBoundingClientRect().width >= el.parentElement.getBoundingClientRect().width - 1), 'Opened reader owns the full main-area width');
+      assert.equal(await page.locator('.ws-composer').count(), 0, 'Opening a thread does not open a composer');
+      assert(await page.locator('.ws-mail-reply-actions').evaluate(el => el.getBoundingClientRect().top >= document.querySelector('.ws-mail-message .ws-mail-body').getBoundingClientRect().bottom), 'Reply follows the source thread rather than occupying header space');
       assert.equal(await page.locator('.ws-mail-earlier[open]').count(), 0);
       assert.equal(await page.locator('.ws-mail-body img').count(), 0, 'Source HTML is text only');
       const reading = await page.locator('.ws-mail-thread').evaluate(el => ({ height: el.clientHeight, ownScroll: getComputedStyle(el).overflowY, bodyOverflow: getComputedStyle(el.querySelector('.ws-mail-body')).overflowY }));
       assert(reading.height > 300, JSON.stringify(reading));
+      assert(reading.height >= (width === 1366 ? 450 : 550), 'Long subjects must preserve reading height: ' + JSON.stringify(reading));
+      const bodyTop = await page.locator('.ws-mail-message .ws-mail-body').evaluate(el => el.getBoundingClientRect().top);
+      assert(bodyTop <= (width === 1366 ? 340 : 410), 'Message starts near the top even with a long subject: ' + bodyTop);
+      assert.equal(await page.getByRole('button', { name: 'Back to messages', exact: true }).getAttribute('title'), 'Back to messages');
+      if (width === 1366) {
+        assert(await page.locator('.ws-mail-rail').getByRole('button', { name: 'Inbox', exact: true }).isVisible());
+        assert(await page.locator('.ws-mail-rail').getByLabel('Other email folders', { exact: true }).isVisible());
+      }
+      assert.equal(await page.getByRole('tab', { name: 'Alerts', exact: true }).isVisible(), false, 'Gmail reading mode replaces the category/list controls at every size');
       assert.equal(reading.ownScroll, 'auto');
       assert(!['auto', 'scroll'].includes(reading.bodyOverflow), 'Message text has no nested scrollbox');
       assert(await page.locator('.ws-mail-reading-head .ws-role--buyer').isVisible());
       await page.keyboard.press('e');
       assert.equal(await page.locator('.ws-mail-earlier[open]').count(), 1);
+      await page.locator('.ws-mail-thread').evaluate(el => { el.scrollTop = el.scrollHeight; });
+      assert(await page.getByText('FINAL SYNTHETIC LINE', { exact: false }).isVisible(), 'Final source text stays accessible');
+      assert(await page.locator('.ws-mail-thread').evaluate(el => { const bottom = el.querySelector('.ws-mail-message .ws-mail-body').getBoundingClientRect().bottom, pane = el.getBoundingClientRect(); return bottom <= pane.bottom + 1 && bottom > pane.top; }), 'The actual end of the source message scrolls into the pane');
       await page.keyboard.press('j');
       await page.locator('.ws-mail-row[data-mail-key="' + 'c'.repeat(64) + '"][aria-pressed="true"]').waitFor({ state: 'attached' });
       await page.locator('.ws-mail-body').waitFor();
@@ -73,15 +113,28 @@ async function prove() {
       assert.equal(await page.getByLabel('Message', { exact: true }).inputValue(), 'LOCAL ONLY REPLY');
       await page.getByRole('button', { name: 'Close reply', exact: true }).click();
       await page.getByRole('button', { name: 'Back to messages', exact: true }).click();
+      assert(await page.locator('.ws-mail-list').isVisible(), 'Back restores the full-width list');
+      assert(await page.getByRole('tab', { name: 'Alerts', exact: true }).isVisible(), 'Back restores the phone category controls');
       failBody = true;
       await page.locator('.ws-mail-row').first().click();
       await page.getByText('This conversation could not be read. Your list is still available.', { exact: false }).waitFor();
+      assert(await page.locator('.ws-mail-status').isVisible(), 'Compact reading mode never hides an error');
       assert.equal(await page.locator('.ws-mail-row').count(), 2);
       assert.equal(await page.locator('.ws-mail-body').count(), 0);
-      await page.getByRole('button', { name: 'Sent', exact: true }).click();
+      async function chooseFolder(name) {
+        if (width === 1366) return page.locator('.ws-mail-rail').getByRole('button', { name, exact: true }).click();
+        if (!await page.locator('#mail-folders-open').isVisible()) await page.getByRole('button', { name: 'Back to messages', exact: true }).click();
+        await page.getByRole('button', { name: 'Mail folders', exact: true }).click();
+        const dialog = page.getByRole('dialog', { name: 'Mail folders', exact: true });
+        assert(await dialog.getByLabel('Other email folders', { exact: true }).isVisible());
+        await dialog.getByRole('button', { name, exact: true }).click();
+      }
+      await chooseFolder('Sent');
       await page.getByRole('heading', { name: 'No conversations in this view', exact: true }).waitFor();
       failBody = false;
-      await page.getByRole('button', { name: 'Inbox', exact: true }).click();
+      await chooseFolder('Inbox');
+      await page.locator('#today-content[aria-busy="false"]').waitFor();
+      await page.getByRole('tab', { name: 'Buyers', exact: true }).click();
       await page.locator('.ws-mail-row').first().waitFor();
       delay = {}; delay.promise = new Promise(resolve => { delay.resolve = resolve; });
       await page.locator('.ws-mail-row').first().click();

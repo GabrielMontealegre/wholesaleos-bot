@@ -1,0 +1,27 @@
+{
+  "source_sha": "6247e0fe69f998bc24cf6e33f42e35b72c23f8fc",
+  "synthetic_only": true,
+  "production_writes": 0,
+  "rows": [
+    {
+      "test": "shared-dashboard-login.test.js",
+      "status": "passed",
+      "seconds": 20.81
+    },
+    {
+      "test": "remembered-device-ui.test.js",
+      "status": "passed",
+      "seconds": 52.8
+    },
+    {
+      "test": "workspace-navigation-journey.test.js",
+      "status": "passed",
+      "seconds": 27.68
+    },
+    {
+      "test": "workspace-mailbox-chrome.test.js",
+      "status": "passed",
+      "seconds": 28
+    }
+  ]
+}

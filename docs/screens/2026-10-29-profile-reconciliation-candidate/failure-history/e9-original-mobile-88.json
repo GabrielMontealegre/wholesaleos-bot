@@ -1,0 +1,252 @@
+{
+  "synthetic_only": true,
+  "baseline": "7262b1114f5db3543cfb13a8cd304ad529a6f99a",
+  "source_sha": "e9b956c15ce70e6f59595e89b7c3900d96fd7772",
+  "sizes": [
+    {
+      "mode": "before",
+      "view": "settings",
+      "width": 1366,
+      "fcp": 190,
+      "overflow": false,
+      "actualPage": "settings",
+      "profileForms": 0,
+      "templateForms": 0,
+      "preview": 0,
+      "errors": []
+    },
+    {
+      "mode": "before",
+      "view": "settings",
+      "width": 400,
+      "fcp": 162.70000000298023,
+      "overflow": false,
+      "actualPage": "settings",
+      "profileForms": 0,
+      "templateForms": 0,
+      "preview": 0,
+      "errors": []
+    },
+    {
+      "mode": "before",
+      "view": "settings",
+      "width": 412,
+      "fcp": 104.69999999552965,
+      "overflow": false,
+      "actualPage": "settings",
+      "profileForms": 0,
+      "templateForms": 0,
+      "preview": 0,
+      "errors": []
+    },
+    {
+      "mode": "before",
+      "view": "email",
+      "width": 1366,
+      "fcp": 304,
+      "overflow": false,
+      "actualPage": "gmail",
+      "profileForms": 0,
+      "templateForms": 1,
+      "preview": 0,
+      "errors": []
+    },
+    {
+      "mode": "before",
+      "view": "email",
+      "width": 400,
+      "fcp": 154.89999999850988,
+      "overflow": false,
+      "actualPage": "gmail",
+      "profileForms": 0,
+      "templateForms": 1,
+      "preview": 0,
+      "errors": []
+    },
+    {
+      "mode": "before",
+      "view": "email",
+      "width": 412,
+      "fcp": 127,
+      "overflow": false,
+      "actualPage": "gmail",
+      "profileForms": 0,
+      "templateForms": 1,
+      "preview": 0,
+      "errors": []
+    },
+    {
+      "mode": "after",
+      "view": "settings",
+      "width": 1366,
+      "fcp": 160.60000000149012,
+      "overflow": false,
+      "actualPage": "settings",
+      "profileForms": 1,
+      "templateForms": 0,
+      "preview": 0,
+      "errors": []
+    },
+    {
+      "mode": "after",
+      "view": "settings",
+      "width": 400,
+      "fcp": 159.60000000149012,
+      "overflow": false,
+      "actualPage": "settings",
+      "profileForms": 1,
+      "templateForms": 0,
+      "preview": 0,
+      "errors": []
+    },
+    {
+      "mode": "after",
+      "view": "settings",
+      "width": 412,
+      "fcp": 148.89999999850988,
+      "overflow": false,
+      "actualPage": "settings",
+      "profileForms": 1,
+      "templateForms": 0,
+      "preview": 0,
+      "errors": []
+    },
+    {
+      "mode": "after",
+      "view": "email",
+      "width": 1366,
+      "fcp": 100.80000000447035,
+      "overflow": false,
+      "actualPage": "gmail",
+      "profileForms": 0,
+      "templateForms": 1,
+      "preview": 1,
+      "errors": []
+    },
+    {
+      "mode": "after",
+      "view": "email",
+      "width": 400,
+      "fcp": 111.59999999403954,
+      "overflow": false,
+      "actualPage": "gmail",
+      "profileForms": 0,
+      "templateForms": 1,
+      "preview": 1,
+      "errors": []
+    },
+    {
+      "mode": "after",
+      "view": "email",
+      "width": 412,
+      "fcp": 85.60000000149012,
+      "overflow": false,
+      "actualPage": "gmail",
+      "profileForms": 0,
+      "templateForms": 1,
+      "preview": 1,
+      "errors": []
+    }
+  ],
+  "lighthouse": [
+    {
+      "mode": "before",
+      "view": "settings",
+      "width": 1366,
+      "version": "13.5.0",
+      "performance": 97,
+      "accessibility": 98,
+      "runtimeErrorCode": null,
+      "auditErrors": []
+    },
+    {
+      "mode": "before",
+      "view": "settings",
+      "width": 412,
+      "version": "13.5.0",
+      "performance": 98,
+      "accessibility": 94,
+      "runtimeErrorCode": null,
+      "auditErrors": []
+    },
+    {
+      "mode": "before",
+      "view": "email",
+      "width": 1366,
+      "version": "13.5.0",
+      "performance": 99,
+      "accessibility": 98,
+      "runtimeErrorCode": null,
+      "auditErrors": []
+    },
+    {
+      "mode": "before",
+      "view": "email",
+      "width": 412,
+      "version": "13.5.0",
+      "performance": 100,
+      "accessibility": 98,
+      "runtimeErrorCode": null,
+      "auditErrors": []
+    },
+    {
+      "mode": "after",
+      "view": "settings",
+      "width": 1366,
+      "version": "13.5.0",
+      "performance": 100,
+      "accessibility": 98,
+      "runtimeErrorCode": null,
+      "auditErrors": []
+    },
+    {
+      "mode": "after",
+      "view": "settings",
+      "width": 412,
+      "version": "13.5.0",
+      "performance": 100,
+      "accessibility": 98,
+      "runtimeErrorCode": null,
+      "auditErrors": []
+    },
+    {
+      "mode": "after",
+      "view": "email",
+      "width": 1366,
+      "version": "13.5.0",
+      "performance": 100,
+      "accessibility": 98,
+      "runtimeErrorCode": null,
+      "auditErrors": []
+    },
+    {
+      "mode": "after",
+      "view": "email",
+      "width": 412,
+      "version": "13.5.0",
+      "performance": 88,
+      "accessibility": 98,
+      "runtimeErrorCode": null,
+      "auditErrors": []
+    }
+  ],
+  "notes": "Actual fullindex fixed Settings and classic Email/template routes; APP.page asserted. Template fixture driver clicks actual Load/summary, no state freeze or source initializer. GET-only synthetic endpoints; no production/private data. Baseline Settings input fields opaque BEFORE screenshot; no full Lighthouse DOM/HTML reports retained.",
+  "sources": [
+    {
+      "file": "index.html",
+      "normalized_sha256": "e9b2400f88224de0f053ee8c7b1dd64de94de107b518376aa5a4a3a317b95eab"
+    },
+    {
+      "file": "wos-operator-profile.js",
+      "normalized_sha256": "5756c303abfe0e15b587946798ee52707842dae9373b9f5aff2f7a8c32d27c0c"
+    },
+    {
+      "file": "wos-email-templates.js",
+      "normalized_sha256": "7b7da6c88e9a56d798871e2faacc4ea725fc51b0f42246136e17929a1af8177d"
+    },
+    {
+      "file": "wos-ui-kit.css",
+      "normalized_sha256": "a6d4f808e581d5daaad2dbb06ece4e0035431d4e40b65dc6d664580609ff3797"
+    }
+  ]
+}

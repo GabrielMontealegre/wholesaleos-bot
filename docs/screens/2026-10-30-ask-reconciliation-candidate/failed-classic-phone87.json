@@ -1,0 +1,345 @@
+{
+  "synthetic_only": true,
+  "baseline": "edbd25545ee5518d37aa50469a364b0ec78a9a92",
+  "source_sha": "b3a8a2a2e2919c861efed1f3d320335c9195fb61",
+  "sizes": [
+    {
+      "mode": "after",
+      "surface": "today",
+      "width": 1366,
+      "fcp": 92.19999999552965,
+      "actual": {
+        "native": true,
+        "screen": "today",
+        "classicPage": null,
+        "ready": true,
+        "dialog": true,
+        "context": 1,
+        "overflow": false
+      },
+      "errors": []
+    },
+    {
+      "mode": "after",
+      "surface": "today",
+      "width": 400,
+      "fcp": 72.5,
+      "actual": {
+        "native": true,
+        "screen": "today",
+        "classicPage": null,
+        "ready": true,
+        "dialog": true,
+        "context": 1,
+        "overflow": false
+      },
+      "errors": []
+    },
+    {
+      "mode": "after",
+      "surface": "today",
+      "width": 412,
+      "fcp": 46.79999999701977,
+      "actual": {
+        "native": true,
+        "screen": "today",
+        "classicPage": null,
+        "ready": true,
+        "dialog": true,
+        "context": 1,
+        "overflow": false
+      },
+      "errors": []
+    },
+    {
+      "mode": "after",
+      "surface": "email",
+      "width": 1366,
+      "fcp": 64,
+      "actual": {
+        "native": true,
+        "screen": "email",
+        "classicPage": null,
+        "ready": true,
+        "dialog": true,
+        "context": 1,
+        "overflow": false
+      },
+      "errors": []
+    },
+    {
+      "mode": "after",
+      "surface": "email",
+      "width": 400,
+      "fcp": 48.899999998509884,
+      "actual": {
+        "native": true,
+        "screen": "email",
+        "classicPage": null,
+        "ready": true,
+        "dialog": true,
+        "context": 1,
+        "overflow": false
+      },
+      "errors": []
+    },
+    {
+      "mode": "after",
+      "surface": "email",
+      "width": 412,
+      "fcp": 63,
+      "actual": {
+        "native": true,
+        "screen": "email",
+        "classicPage": null,
+        "ready": true,
+        "dialog": true,
+        "context": 1,
+        "overflow": false
+      },
+      "errors": []
+    },
+    {
+      "mode": "after",
+      "surface": "classic",
+      "width": 1366,
+      "fcp": 108.5,
+      "actual": {
+        "native": false,
+        "screen": "classic",
+        "classicPage": "dashboard",
+        "ready": true,
+        "dialog": true,
+        "context": 1,
+        "overflow": false
+      },
+      "errors": []
+    },
+    {
+      "mode": "after",
+      "surface": "classic",
+      "width": 400,
+      "fcp": 82.29999999701977,
+      "actual": {
+        "native": false,
+        "screen": "classic",
+        "classicPage": "dashboard",
+        "ready": true,
+        "dialog": true,
+        "context": 1,
+        "overflow": false
+      },
+      "errors": []
+    },
+    {
+      "mode": "after",
+      "surface": "classic",
+      "width": 412,
+      "fcp": 79.60000000149012,
+      "actual": {
+        "native": false,
+        "screen": "classic",
+        "classicPage": "dashboard",
+        "ready": true,
+        "dialog": true,
+        "context": 1,
+        "overflow": false
+      },
+      "errors": []
+    }
+  ],
+  "lighthouse": [
+    {
+      "mode": "after",
+      "surface": "today",
+      "width": 1366,
+      "observed": {
+        "native": true,
+        "screen": "today",
+        "classicPage": null,
+        "ready": true,
+        "dialog": true,
+        "context": 1,
+        "overflow": false
+      },
+      "version": "13.5.0",
+      "performance": 99,
+      "accessibility": 100,
+      "runtimeErrorCode": null,
+      "auditErrors": [],
+      "metrics": {
+        "first-contentful-paint": 184.219,
+        "largest-contentful-paint": 527.953,
+        "cumulative-layout-shift": 0.06746431185944363,
+        "total-blocking-time": 31.762999999999977,
+        "speed-index": 477
+      }
+    },
+    {
+      "mode": "after",
+      "surface": "today",
+      "width": 412,
+      "observed": {
+        "native": true,
+        "screen": "today",
+        "classicPage": null,
+        "ready": true,
+        "dialog": true,
+        "context": 1,
+        "overflow": false
+      },
+      "version": "13.5.0",
+      "performance": 96,
+      "accessibility": 100,
+      "runtimeErrorCode": null,
+      "auditErrors": [],
+      "metrics": {
+        "first-contentful-paint": 46.94,
+        "largest-contentful-paint": 278.904,
+        "cumulative-layout-shift": 0.11999658469945355,
+        "total-blocking-time": 0,
+        "speed-index": 241
+      }
+    },
+    {
+      "mode": "after",
+      "surface": "email",
+      "width": 1366,
+      "observed": {
+        "native": true,
+        "screen": "email",
+        "classicPage": null,
+        "ready": true,
+        "dialog": true,
+        "context": 1,
+        "overflow": false
+      },
+      "version": "13.5.0",
+      "performance": 99,
+      "accessibility": 100,
+      "runtimeErrorCode": null,
+      "auditErrors": [],
+      "metrics": {
+        "first-contentful-paint": 52.975,
+        "largest-contentful-paint": 335.591,
+        "cumulative-layout-shift": 0.06746431185944363,
+        "total-blocking-time": 0,
+        "speed-index": 265
+      }
+    },
+    {
+      "mode": "after",
+      "surface": "email",
+      "width": 412,
+      "observed": {
+        "native": true,
+        "screen": "email",
+        "classicPage": null,
+        "ready": true,
+        "dialog": true,
+        "context": 1,
+        "overflow": false
+      },
+      "version": "13.5.0",
+      "performance": 96,
+      "accessibility": 100,
+      "runtimeErrorCode": null,
+      "auditErrors": [],
+      "metrics": {
+        "first-contentful-paint": 61.562,
+        "largest-contentful-paint": 330.948,
+        "cumulative-layout-shift": 0.11999658469945355,
+        "total-blocking-time": 0,
+        "speed-index": 263
+      }
+    },
+    {
+      "mode": "after",
+      "surface": "classic",
+      "width": 1366,
+      "observed": {
+        "native": false,
+        "screen": "classic",
+        "classicPage": "dashboard",
+        "ready": true,
+        "dialog": true,
+        "context": 1,
+        "overflow": false
+      },
+      "version": "13.5.0",
+      "performance": 93,
+      "accessibility": 100,
+      "runtimeErrorCode": null,
+      "auditErrors": [],
+      "metrics": {
+        "first-contentful-paint": 107.434,
+        "largest-contentful-paint": 652.172,
+        "cumulative-layout-shift": 0.15214357613469986,
+        "total-blocking-time": 99.23399999237054,
+        "speed-index": 545
+      }
+    },
+    {
+      "mode": "after",
+      "surface": "classic",
+      "width": 412,
+      "observed": {
+        "native": false,
+        "screen": "classic",
+        "classicPage": "dashboard",
+        "ready": true,
+        "dialog": true,
+        "context": 1,
+        "overflow": false
+      },
+      "version": "13.5.0",
+      "performance": 87,
+      "accessibility": 100,
+      "runtimeErrorCode": null,
+      "auditErrors": [],
+      "metrics": {
+        "first-contentful-paint": 125.615,
+        "largest-contentful-paint": 849.724,
+        "cumulative-layout-shift": 0.20961324208180807,
+        "total-blocking-time": 191.015,
+        "speed-index": 886
+      }
+    }
+  ],
+  "notes": "Unmodified parent screens; baseline has no Ask implementation. Candidate driver clicks actual header then asks a synthetic reference using the existing form. Required official Accessibility gatherer delegates unchanged and captures measurement-phase actual scope. No storage/app-state freeze or category suppression. Screenshots mask underlying application before disk; numeric-only Lighthouse outputs.",
+  "candidate_only": true,
+  "sources": [
+    {
+      "file": "index.html",
+      "normalized_sha256": "0fcbacdb2e8c060816af3f63b655b7ed29cf7d7656d1edffb5955c03e4950d9f"
+    },
+    {
+      "file": "workspace/index.html",
+      "normalized_sha256": "7e1e7c549ee5e30eec35a651bf5df66ac87c2eb2e2ab688e18f7fb932e3764aa"
+    },
+    {
+      "file": "workspace/app.js",
+      "normalized_sha256": "e433e2286c33425e2d3772abfc7184860b57962e6dec9b459b02261dde29a74b"
+    },
+    {
+      "file": "wos-ask-demo.js",
+      "normalized_sha256": "c9c017aeaa4b4e49d44a2ff56ee815fc63461f87869009c3afc4bdc62881653a"
+    },
+    {
+      "file": "wos-ask-model.js",
+      "normalized_sha256": "c02ac124dfb5381a6d95ad9a0688694ec3ec0b609b156cf28202c70d62eba554"
+    },
+    {
+      "file": "wos-ui-kit.css",
+      "normalized_sha256": "a4e48c9aeb87705e658881d0faeadc41c64b2d11a60d428ba3f0e07d228c0d08"
+    },
+    {
+      "file": "wos-local-voice.js",
+      "normalized_sha256": "4f521c3ed368c00f4b5a10a607c6a9f77f3759cfb342a09677edcb0cb1514f0a"
+    },
+    {
+      "file": "workspace/components.js",
+      "normalized_sha256": "cf2969a5afe7d44adf90b6d11d0d41b3dca3ed8d73b42a42c09947727e2a2a27"
+    }
+  ]
+}

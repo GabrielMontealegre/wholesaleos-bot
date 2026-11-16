@@ -1,0 +1,31 @@
+{
+  "synthetic_only": true,
+  "tested_head": "50c38e3ee4717695357199b45439532cf1ab797e",
+  "baseline": "71f32fc4a96a33f1f89f2d1ef7381c146f567543",
+  "preview_route": "/dashboard/?workspace=today",
+  "deals_route": "/dashboard/?workspace=deals",
+  "preview_page_and_panel_asserted": true,
+  "lighthouse_retained_explicit_route_asserted": true,
+  "paint_under_2000ms": true,
+  "performance_and_accessibility_minimum": 90,
+  "old_failed_reports_retained": true,
+  "no_product_gate_weakened": true,
+  "sources": [
+    {
+      "file": "dashboard/index.html",
+      "normalized_sha256": "618bbbf3c3e60547b94541c1a9f01ddd4ad2490527d42e1590af7633a634f35f",
+      "exact_committed_source_match": true
+    },
+    {
+      "file": "dashboard/wos-todays-deals.js",
+      "normalized_sha256": "201aed6967a27f087f4da3c7457de5b28b8198e88ffbd82be62b9cdf5b00e269",
+      "exact_committed_source_match": true
+    },
+    {
+      "file": "dashboard/wos-public-deals.js",
+      "normalized_sha256": "426d1af40d54459ac250e047121f824c1fa73855ffc11e1be102840d9b77c6be",
+      "exact_committed_source_match": true
+    }
+  ],
+  "audit_helper_normalized_sha256": "2ab72434337985c57025af84b3ed630ff10540e4658ff87faa109bb2dcee2d7e"
+}

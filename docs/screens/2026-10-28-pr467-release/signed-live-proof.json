@@ -1,0 +1,115 @@
+{
+  "source_sha": "6247e0fe69f998bc24cf6e33f42e35b72c23f8fc",
+  "get_only": true,
+  "production_writes": 0,
+  "credential_transfer": false,
+  "today": {
+    "chooserEnabled": true,
+    "height": 585,
+    "homeTarget": "/app",
+    "importDisabled": true,
+    "importHidden": true,
+    "latestAbsent": true,
+    "loginAbsent": true,
+    "nativeToday": true,
+    "overflow": false,
+    "pickerEmpty": true,
+    "pickerHidden": true,
+    "width": 1280,
+    "recordedWorkOpened": true
+  },
+  "settings": {
+    "devicePanel": true,
+    "height": 585,
+    "keyFieldEmpty": true,
+    "keyRevealClosed": true,
+    "loginHidden": true,
+    "overflow": false,
+    "refreshEnabled": true,
+    "rows": 0,
+    "width": 1280
+  },
+  "devices": {
+    "ok": true,
+    "onlyMetadata": true,
+    "rows": 0
+  },
+  "email": {
+    "defaultComposer": false,
+    "height": 585,
+    "loadedRows": 48,
+    "loginAbsent": true,
+    "overflow": false,
+    "width": 1280,
+    "bodyLength": 1116,
+    "emptyReply": {
+      "editDisabled": true,
+      "fieldsFit": true,
+      "previewDisabled": true,
+      "sendDisabled": true,
+      "unavailableGmail": true
+    },
+    "closeRestored": {
+      "bodyLength": 1116,
+      "readable": true,
+      "composerAbsent": true,
+      "overflow": false,
+      "method": "same-locator exact in-memory text comparison"
+    },
+    "firstSelectionNoReadableText": true,
+    "firstSelection": {
+      "placeholderLength": 18,
+      "noReadableText": true
+    },
+    "readableBody": true,
+    "exactRestoreDiagnostic": {
+      "beforeLength": 1116,
+      "afterLength": 1116,
+      "sameText": true
+    },
+    "earlierSpacedMeasurements": {
+      "beforeLength": 1116,
+      "afterLength": 1238,
+      "identityEqualityNotEstablished": true
+    }
+  },
+  "classic": {
+    "before": {
+      "cards": 19,
+      "loginHidden": true,
+      "workbenches": 0
+    },
+    "open": {
+      "backVisible": true,
+      "cards": 1,
+      "workbenches": 1
+    },
+    "backLoading": {
+      "cards": 0,
+      "loading": true,
+      "workbenches": 0
+    },
+    "restored": {
+      "cards": 19,
+      "height": 529,
+      "loading": false,
+      "overflow": false,
+      "width": 1280,
+      "workbenches": 0
+    }
+  },
+  "console": {
+    "classicApplicationErrors": 1,
+    "settingsTodayEmailApplicationErrors": 0,
+    "retainedClassicLeadReadHTTP502BeforeNewSourceReload": 1,
+    "currentSourceClassicJourneyErrors": 0
+  },
+  "notes": [
+    "Retained old classic page logged one lead-read HTTP502 at2026-10-28T09:33:09.448Z before its explicit new-source reload and verification;not mislabeled an extension error or total-zero console history.",
+    "Current-source classic19->1->BackLoading0->19 and signed feature checks completed with no new error entry;no retry used to hide the historical entry.",
+    "Native->classicSettings tool deadline completed the SAME navigation;no restart.",
+    "No real PIN/login/remember/revoke/logout/key/file/POST/import/settings/business action or authtransfer.",
+    "First selected message explicitly had no readable text;18chars was the UI placeholder,not a full-body claim. One other explicit opened message supplied1116readable characters. No unopened-body batch or retry.",
+    "Spaced DOM inspections were not treated as identity proof;one bounded same-locator exact comparison confirmed1116==1116 readable source text after Reply/Close. Private comparison strings cleared immediately."
+  ]
+}

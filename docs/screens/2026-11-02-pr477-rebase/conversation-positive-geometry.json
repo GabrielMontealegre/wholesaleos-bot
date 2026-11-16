@@ -1,0 +1,41 @@
+{
+  "synthetic_only": true,
+  "rows": [
+    {
+      "width": 1366,
+      "height": 768,
+      "heading_rectangle": {
+        "x": 335.40625,
+        "y": 527,
+        "width": 144.59375,
+        "height": 24
+      },
+      "positive_card": true,
+      "no_writes": true
+    },
+    {
+      "width": 400,
+      "height": 915,
+      "heading_rectangle": {
+        "x": 113.90625,
+        "y": 648.1875,
+        "width": 144.59375,
+        "height": 24
+      },
+      "positive_card": true,
+      "no_writes": true
+    },
+    {
+      "width": 412,
+      "height": 915,
+      "heading_rectangle": {
+        "x": 113.90625,
+        "y": 648.1875,
+        "width": 144.59375,
+        "height": 24
+      },
+      "positive_card": true,
+      "no_writes": true
+    }
+  ]
+}

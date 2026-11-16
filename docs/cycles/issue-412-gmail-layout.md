@@ -1,0 +1,245 @@
+# #412 Gmail-Structure Email Migration
+
+## Failed Live Acceptance: 442
+
+441 mergeded1ee8c/automatic563cd3de-8826-4c7d-90b8-9026b63c139b exact
+source Active/successful, but signed1038x503 rail measured client41x432 and
+scroll44x644; horizontal inner scrollbar,off-screen labels and41px targets
+fail containment/44px acceptance. Public12/health200 and same-merge synthetic
+journey do not override this evidence. No source/auth/send/business-data issue.
+AGENTS7 requires rollback to previously verified32c0c2a before bounded repair.
+442 records reproduction and recommended accessible drawer-based short-height
+fallback. Historical candidate proof/gates below are NOT release acceptance.
+
+## Bounded 442 Repair After Verified Rollback
+
+443 exact rollbackd78f77f/automatic2cefb141-a0be-4b5e-bc9b-c1e9d9df7332
+was full247/0/0 and435mixed-proof VERIFIED before work on this repair. Branch
+item/442-mail-rail-containment starts from that main and retains rollback proof.
+Only the already-approved D-063A product files are reintroduced; no B/C writer,
+API/auth/source/D-061 gate or business data change.
+
+New actual fixture regression first reproduced the old1038x503 fixed-rail
+failure on reverted441 source. It now runs1366x768/400x915/412x915 PLUS
+1038x503 and1366x600, asserting rail scrollWidth/Height never exceed client,
+all visible commands contained with44px targets,labels reachable through a
+labeled drawer replacement,and every composer input/textarea/X/command/status
+within viewport. Existing source/forged/unlinked/duplicate/empty/failure/401,
+draft and actual navigation assertions remain. The label selector now follows
+the visible rail OR labeled drawer,not an off-screen hidden control.
+
+Fix: fixed system folders remain visible; at heights<=850 the long role filters
+move to the existing X/Escape drawer behind a visible Mail labels icon/tooltip.
+No inner rail scrolling or clipped44px targets. At heights<=650 ONLY explicit
+composer focus hides source text temporarily and reduces gaps/input padding,
+keeping minimum44px controls and full outcome status. Closing/Escape restores
+the complete source reader and local draft. Initial broad850 composer cutoff
+failed the ORIGINAL768px reading-height>=180 assertion; the test was retained
+unchanged and cutoff corrected to650. All six focused suites then pass; no
+safety assertion weakened. Five-size source/label/context/compact-composer tests,
+original Email UI/loading/reply/shell/actual navigation all pass.
+
+Cache CSS/Email versions10. Before comparison uses EXACT healthy rollbackd78f77f
+HTML/app/components/Email/CSS,not failed441 or a pre-opened composer. Full final
+head gate,synthetic snapshots/FCP/accessibility and exact live read-only proof
+still required. 442/412 stay OPEN; no owner approval or full Gmail/B/C completion.
+
+## Authoritative Scope
+
+Owner/architect6389032123 replaces the compact split-pane layout with Gmail's
+structure: centered search, folder/label rail, dense full-width threads,
+five categories, reader replacing list, collapsed history, bottom-only reply,
+collapsible context, floating compose and phone full-screen reading.
+Keep the shared dark system and existing exact-thread D-061 gates unchanged.
+Gabriel has NOT approved the current screen; do not start native Deals.
+
+## Capability Trace And Ordered Gates
+
+| Requirement | Current writer / source | Reader / next gate |
+| --- | --- | --- |
+| Message identity, source chronology, role | mailbox-reader metadata; thread-view exact anchor annotation; conversations operator/import records | email-model validates provenance/role date; layout projection must reuse it |
+| Full reader / history / local reply | mailbox-reader message/thread GET; email-screen sequence ownership | replace list rather than split panes; preserve source/body/401 races and local drafts |
+| Review / Send | reviewed-thread-replies signed-admin/CSRF/version/receipt/idempotency/cap/kill boundary | email-reply binding unchanged; default OFF; no real preview/send verification |
+| Search / categories / label counts | only loaded metadata and recorded roles currently exist | pure local projection first; label loaded scope, never invent global search/counts |
+| 50 rows / authoritative total / older pages | provider list cap50; no exposed cursor/total | separate read-only capability, not fake arrows or totalN |
+| Snippet / attachments | OAuth snippet exists; IMAP snippet empty; no attachment manifest | missing stays absent; no speculative body fetch or attachment chip |
+| Archive/read/star/snooze/delete/move/labels | no approved provider writer | BLOCKED affected commands pending needs-architect439; no fake success |
+| New-thread Compose / Forward / files / voice | outside exact-existing-thread D-061 boundary | BLOCKED affected commands pending439; never reuse buyer package transport |
+| Gmail comparison | actual Gmail reference at1366/400 with private fields masked | synthetic before/after + approved435 live contract; owner screenshot approval required |
+
+439 asks whether the structural read-only migration may precede unsupported
+commands using visibly unavailable controls plus Open in Gmail, with later
+capabilities separately approved. Do not infer that answer or call a partial
+layout the completed specification. Independent pure presentation preparation
+can proceed without changing runtime, send, provider access or business state.
+
+## Design Direction
+
+Reuse near-black surfaces, green actions, blue links, red urgency and existing
+type/tokens; no new CSS layer or hero. Email list and opened reader occupy the
+same main-area track. The folder rail persists on desktop and becomes a drawer
+on phones. Search belongs to chrome; source text belongs to the scrolling
+reader. Action controls must name real capabilities, not imply disconnected
+mailbox writes. The current full specification remains open through each phase.
+
+## Preparation Boundary
+
+mail-layout-model is a pure, unwired projection over email-model.list. Inputs
+are existing connected-mailbox metadata and an injected clock. Search is literal
+over loaded metadata only; five display categories use source-backed role/
+automated-sender classification and explicit mailbox report labels, never
+subject-based identity guesses. Counts/ranges are explicitly LOADED scope;
+folder total and older-page capability remain unavailable. It neither fetches
+bodies nor persists selection, snippets, labels, drafts or workflow facts.
+
+Independent structural work also makes opening a message replace the list at
+ALL widths, not only phones. Reply moves after the source thread and no empty
+composer mounts until explicit Reply. The existing state/request ownership,
+history,unsent-draft memory and exact-thread binding remain unchanged. This
+is an IN-PROGRESS candidate, not the complete Gmail specification or a release;
+rail/search/dense rows/context and the439 capability decision remain required.
+
+Foundation focused model and original Email UI tests pass. Additive assertions
+prove no default composer,full-width list/reader,desktop+phone list replacement,
+Reply after the full source thread,and Back restoration. Existing assertions
+were not weakened or removed. Synthetic --layout compares exact live3d19945
+including its stylesheet,not a staged composer falsely shown as the default.
+New verifier option initially shadowed its local layout variable; corrected
+only that verifier name. Serialized pinned1.44.0 proof then passed at all3 sizes:
+FCP65.7/40.1/38ms,reader573/695/695px,Lighthouse13.5.0=100/100,zero writes/
+external/pageerrors. Screens docs/screens/2026-10-25-gmail-reading-foundation.
+These are working-tree synthetic results,not live release or Gmail references.
+
+## Phase Two: Mailbox Chrome Candidate (Not Released)
+
+The reading foundation is now verified separately in PR440; its exact source,
+deployment and mixed live proof are recorded under
+`docs/screens/2026-10-25-pr440-release`. It is not whole-412 approval.
+
+The next bounded candidate wires the existing pure projection into a narrow
+folder rail/drawer, centered loaded-mail search, five sourced categories,
+44px desktop rows, local checkboxes and optional recorded-context panel.
+Search never calls global discovery or writes; labels are local filters, not
+mailbox-label mutations. Latest50 metadata uses the already-supported GET
+limit; exact body/reply caps remain unchanged. Unknown total, older paging,
+star state and new Compose remain explicitly unavailable, not fabricated.
+No archive/delete/snooze/move/label or new-thread send route is added.
+
+Writer/reader trace: mailbox-reader's connected metadata -> email-model.list
+validation -> mail-layout-model.project -> category counts/range/rows. Role
+source/date/link validation precedes chips and context; a record link requires
+one strict canonical ref on a linked, validated-role message. Snippets require
+consistent connected-source copies. Search/query/selection/context are local
+screen memory and clear on destroy; private drafts retain the prior D-061
+binding. Folder changes use existing GET routes and independent metadata/body
+request ownership. app.js only supplies Email chrome and literal input events;
+Today, classic links, signed-admin/CSRF and send services are not rewritten.
+
+Intentional assertion changes in workspace-email-ui: People/two tabs become
+the owner's five named tabs, initial Primary then explicit Buyers; tab keyboard
+navigation uses five roving targets. The old132/180px list-top allowance becomes
+180/196px for the explicit list toolbar/category strip; opened readers still
+hide it and occupy the full canvas. Phone folder access uses the real drawer,
+and category controls hide on opened readers at ALL sizes. Source/body/history,
+draft/error/401 and zero-write assertions remain. Loading assertions select
+Sent through that same phone drawer, retaining all delayed/obsolete-response
+negatives. No safety assertion was removed or weakened.
+
+Focused pure model/components/Email/loading/reply/shell/actual navigation and
+new mailbox-chrome tests pass at1366/400/412 using pinned Playwright1.44.0.
+The new search fixture initially used separate words whose one-letter token
+also matched "subject"; changed only to a distinct literal synthetic token.
+A sandbox Chromium launch failure and one wrong test filename were execution
+errors, not product skips. The final context negative withholds forged unlinked
+refs; actual linked context, X/Escape, draft preservation, local selection,
+folder50 GETs and literal/NFKC search are covered without provider writes.
+
+Synthetic comparison uses exact current-live32c0c2a HTML/app/components/Email/
+CSS, not prior compact UI. Three-size proof: FCP56.6/47.3/65.5ms, reader645/
+740/740px, Lighthouse13.5.0 accessibility98/98, no overflow/writes/external
+requests/page errors. Screens `docs/screens/2026-10-25-gmail-mailbox-chrome`.
+These are SYNTHETIC, not a live release or actual Gmail reference comparison.
+Whole Gmail acceptance, full final-head suite, affected439 scope, exact deploy,
+approved mixed live proof and owner approval remain outstanding. Do not merge
+this candidate merely because a focused suite passes. No native Deals yet.
+
+Final product checkpoint a4dbae657b50bf04cfdca7e43f5e4008487c1c2a is remote
+draft PR441. Exact hosted40151794301/job121044673698 finished248passed,
+0failed,0skipped,600s/file,13m45s job. All248 sanitized timing rows preserved;
+their768.01s sum is NOT wall time. New chrome test7.54s/model0.11s. Review
+confirms no backend/auth/CSP/send service changes and unchanged source/draft/
+request gates. Architect439 remains unanswered; keep DRAFT/UNMERGED despite
+green CI. No new deployment. This following evidence checkpoint is LOCAL-ONLY
+documentation, not another tested product head or an instruction to rerun CI.
+PR attachment tool was attempted for440/441 but reports chat attachment limit
+100; no unrelated attachment was removed. GitHub PRs and evidence remain intact.
+
+Goal-continuation audit: prior turn made progress (440 verified release and441
+green preparation); current origin/main and clean retained branch revalidated.
+439 remains unanswered; no eligible independent code slice was found without
+crossing owner/architect ordering or duplicating Claude. Public official Gmail
+guide/cheat-sheet source evidence and candidate gap matrix now recorded in
+`docs/screens/2026-10-25-gmail-mailbox-chrome/gmail-reference.md`. Browser public
+reference navigation failed twice; no screenshot/phone comparison is claimed.
+This local documentation adds no product change or rerun/deploy permission.
+
+## Architect Answer and A-Gate Update
+
+439 comment6392281483 APPROVED A->B->C on2026-10-25 and explicitly allows
+441 to finish gates/merge/release under read-only A. D-063 records exact B/C
+boundaries and all default-OFF/idempotency/audit/Undo/rate/send restrictions.
+The previous scope hold is superseded, not a reason to keep waiting forever.
+
+Existing unsupported Compose/star/pager controls now render disabled icons
+with native wrapper tooltips "Not available yet: open in Gmail". The star
+does not claim source state or persist changes. Existing per-thread Gmail
+fallback remains; no provider mutation, default send or automatic request.
+Negative tests cover every disabled control, including the hidden phone folder
+dialog. Initial assertion used visibility-filtered getByRole for hidden clones;
+changed only to its direct button locator, preserving the disabled invariant.
+Cache versions increment for the changed Email/CSS assets. A new full suite
+must prove this changed product; old a4dbae6 green is not borrowed.
+
+Before merging, browser3 inventory is available but a fresh production Email
+tab's navigation timed out. Do not infer production failure or revive435's
+resolved viewport block. No merge/deploy should start until signed read-only
+verification is available and budget reserve sufficient. No source rollback,
+auth/cookie transfer, provider-setting change or production test write.
+
+D-063 self-review additionally found that pending/failed metadata could show
+an empty loaded range before source confirmation. Hide that range while busy
+or errored; keep real source-confirmed empty0 visible. All three-size delayed/
+failed/empty/401 loading scenarios pass with added assertions. This final source
+correction supersedes the earlier99fe999 CI head; concurrency cancellation of
+that older run is not a test failure or proof for the changed final head.
+
+Final9a5b3e84efdc806ff0bbbfe498ac2ccf883f5c31 cloud40155677969/job121056598346
+TERMINAL SUCCESS248/0/0,600s/file,14m12s job; all248 timing rows in
+phase-a-final-timings.json. Per-file sum788.34s NOT wall time. Mailbox chrome
+7.73s/loading6.75s. Prior40155479079 cancelled by workflow concurrency,not
+suite failure. No local jobs remain. Stop new merge/deploy at primary92%
+verification reserve; production browser control also needs reconnection.
+Owner async request made,keep PIN private. Architecture hold is ANSWERED.
+No manual deployment/settings/auth transfer/outreach or business-data write.
+This subsequent LOCAL-ONLY evidence commit does not change tested product or
+authorize a docs-only CI rerun. PR441 is ready-for-review but UNMERGED.
+
+2026-10-25 resume: quota reset; medium/default verified from this thread's
+dated session fields. Existing signed classic tab AX/control initially works,
+but reload observation and the same-handle follow-up time out; no new merge
+or deploy. No new owner request spam or authentication transfer. This remains
+the release preflight tooling gate, not an application failure.
+
+Actual writer/reader trace then found an UNMERGED441 acceptance defect: the
+new context panel read conversation.refs, but modules/email/thread-view.js
+deliberately emits conversation.records (unique kind/id/ref) and deals, not
+the stored raw refs. The former UI positive fixture incorrectly invented that
+response field. Correct the consumer, not the backend contract: only one
+validated linked deal/buyer record with a strict ref creates a link. No raw
+legacy refs fallback, source guessing or record-body leak. The test now uses
+actual annotate output with canonical buyer storage and exact message anchor;
+forged/unlinked and role-without-record negatives remain, and duplicate stored
+identity yields no annotation link. Focused three-size fixture passed before
+the additive missing-record negative; new final-head gate required. Historical
+9a5b3e8 248green does not prove this changed candidate. No live regression or
+whole412 completion is claimed.

@@ -21,6 +21,7 @@
     root._userRole = 'user';
     root._isAdmin = false;
     root.WOS_DASHBOARD_UNLOCKED = false;
+    if (typeof root.dispatchEvent === 'function' && typeof root.Event === 'function') root.dispatchEvent(new root.Event('wos:session-ended'));
     return LOCKED_USER_ID;
   }
 
@@ -55,12 +56,19 @@
       return { ok: false, code: 'LOGIN_TRANSPORT_UNAVAILABLE', status: 0 };
     }
 
+    var payload = { pin: String(pin || '') };
+    if (typeof opts.remember_device === 'boolean') payload.remember_device = opts.remember_device;
     var request = {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
-      body: JSON.stringify({ pin: String(pin || '') })
+      body: JSON.stringify(payload)
     };
+    if (opts.remember_device === true) {
+      if (!root.crypto || typeof root.crypto.randomUUID !== 'function') return { ok: false, code: 'DEVICE_BROWSER_UNSUPPORTED', status: 0 };
+      request.headers['X-WOS-Device-Action'] = '1';
+      request.headers['X-WOS-Remember-Request'] = root.crypto.randomUUID();
+    }
     if (root.AbortSignal && typeof root.AbortSignal.timeout === 'function') {
       request.signal = root.AbortSignal.timeout(Number(opts.timeout_ms) || 3000);
     }
@@ -105,14 +113,18 @@
   async function logout(app, options) {
     var opts = options || {};
     var fetchImpl = opts.fetch_impl || root.fetch;
+    var ok = false;
     try {
       if (typeof fetchImpl === 'function') {
-        await fetchImpl('/api/auth/logout', { method: 'POST', credentials: 'include' });
+        var response = await fetchImpl('/api/auth/logout', { method: 'POST', credentials: 'include', headers: { 'X-WOS-Device-Action': '1' } });
+        ok = response && response.ok === true;
       }
+    } catch (_) {
+      ok = false;
     } finally {
       lockIdentity(app);
     }
-    return { ok: true };
+    return { ok: ok, code: ok ? null : 'SIGNOUT_UNCERTAIN' };
   }
 
   function installFetchGuard(app, options) {

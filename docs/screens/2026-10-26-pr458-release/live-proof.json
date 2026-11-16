@@ -1,0 +1,31 @@
+{
+  "source_sha": "dd04d989ebf74fe7c208554024b93f6a5bc4fd90",
+  "deployment_id": "e4da6bfb-0395-4dd4-8fa2-64c7dae9f846",
+  "deployment_details": "Active; Deployment successful; exact GitHub commit link observed",
+  "signed_existing_chrome": {
+    "viewport": [1280, 529],
+    "snapshot_get": {"ok": true, "can_import": true, "has_latest": false, "schema": "wos-assistant-snapshot", "version": 1, "max_bytes": 1048576},
+    "email_loaded_rows": 48,
+    "source_body_characters": 1996,
+    "default_composer": false,
+    "empty_reply_preview_disabled": true,
+    "empty_reply_send_disabled": true,
+    "final_reply_status": "Not sent. Reply sending is unavailable; use Gmail.",
+    "close_restores_source": true,
+    "classic_cards_before": 19,
+    "classic_exact_workbenches": 1,
+    "back_observed_loading": true,
+    "classic_cards_after": 19,
+    "classic_workbenches_after": 0,
+    "horizontal_overflow": false,
+    "console_errors": 0,
+    "send_status": {"enabled": false, "configured": true, "automatic_send_allowed": false}
+  },
+  "synthetic_exact_merge": {"mailbox_sizes": [[1366,768],[400,915],[412,915],[1038,503],[1366,600]], "navigation_sizes": [[1366,768],[400,915],[412,915]], "passed": true},
+  "auth_transfer": false,
+  "production_imports_or_posts": 0,
+  "real_preview_send_or_draft_typing": false,
+  "private_contents_logged": false,
+  "screenshots_opaque_masked_before_disk": true,
+  "full_main_gate": "40385719994/job121793323299 SUCCESS257/0/0; all257 timings in main-timings.json"
+}

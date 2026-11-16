@@ -1,5 +1,7 @@
 'use strict';
 
+const restoreClock = require('./helpers/fixed-clock').installFixedClock('2026-10-02T12:00:00Z');
+
 const assert = require('assert');
 const fs = require('fs');
 const os = require('os');
@@ -128,6 +130,7 @@ function notice(prefix, saleDate = 'November 3, 2026') {
     assert.strictEqual(requests, 0);
     console.log('active notice address origins passed');
   } finally {
+    restoreClock();
     fs.rmSync(temp, { recursive: true, force: true });
     global.fetch = original.fetch;
     http.get = original.httpGet;

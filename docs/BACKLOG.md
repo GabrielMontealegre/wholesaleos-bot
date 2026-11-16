@@ -1,7 +1,5 @@
 # Backlog
 
-## Latest Run Summary
-
 2026-10-22 #432 negotiation planner (Claude cloud session, `claude-building`):
 pure planner `modules/deals/negotiation-planner.js` plus hermetic
 `tests/negotiation-planner.test.js`. Next move (ask seller's number, buyers
@@ -11,6 +9,1570 @@ little", soft 5-10% counters. No route, UI, storage, send or deploy. PR open for
 review; Codex reviews and merges per AGENTS2 and the #423 deploy pause.
 Assumptions logged in DECISIONS.md.
 
+## NEXT RUN ORDER (D-067, architect 2026-11-09). Read this first; it replaces every older order below
+
+The older run notes below are history. Work this list from top to bottom. GitHub CI on the PR head is
+the required gate. A local run that fails only because the sandbox blocks the network (ERR_NETWORK_ACCESS_DENIED,
+loopback `fetch failed`, EPERM/EACCES, fixture start timeout) is not a gate failure: push and let CI decide
+(D-067a).
+
+0. **B-25: pin `wasm-feature-detect` 1.9.0** ([#507](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/507)).
+   Every PR's CI fails until this lands.
+1. **Ship or cut the frozen slices.** Each gets one CI run, plus one fix commit if needed; if it fails twice,
+   mark it DEFERRED and move on (D-067c), in this order:
+   #495 device labels → #496 template labels → #497 JV and profit labels → #498 active Today filter →
+   #501 source-card words (update both cache-57 assertions to 58) → #502 batch decision model →
+   #504 note voice → #505 skip-trace preflight. Then rebase PRs #433 and #434, run CI once and merge.
+   Cut, with no work: #499 and #500 (moved to Deferred). Item 455 date polish ends here.
+2. **B-23: public distress lists importer** (D-066).
+3. **B-24: paid data provider adapter, switch off.** This absorbs #494, the skip-trace button (D-067e).
+4. **B-07 and B-21: comps.**
+5. **B-19: match engine.**
+6. Then: 454 board v1 under the #503 contract (D-067f), #450 clock fix with #412 phase B, and the rest of the
+   backlog in its existing order.
+
+Gabriel only (do not wait on these, do not do them): #428 credential rotation confirmation, turning on the
+reply Send switch, picking and paying for the B-24 provider, any outreach.
+
+---
+
+## B-25 · Pin wasm-feature-detect 1.9.0 (D-067b) · TODO ([#507](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/507))
+
+`wasm-feature-detect` 1.10.0 (published 2026-11-09) crashes the tesseract OCR worker on Node 20. With no
+lockfile, CI and the next production deploy both install it. Acceptance: package.json gets
+`"overrides": {"wasm-feature-detect": "1.9.0"}` and nothing else changes; CI shows 305/305 with
+`dallas-foreclosure-acquisition-adapter` and `dashboard-public-deal-queue` passing; deploy; the §7 read-only check passes.
+
+---
+
+USAGE WARNING 2026-11-03: primary43% USED, secondary93% USED. Secondary
+remaining is below10%; architect should review the live app/backlog status.
+No agent reset/purchase/model escalation. Continue the authorized work loop;
+reserve the final5% primary window for rollback/redeploy only.
+
+2026-11-03 455.4B2 FIRST LOCAL FULL8fe2d5f naturally FAILED302/3/0 of305,
+600s/file; all305timings retained proof-455-recorded-context-times. Fixed
+May/Nov2026 notice tests omitted a reference clock: existing historical helper
+now pins their existing Oct2 corpus date, restores afterward, keeps all original
+source/address/date/negative assertions. Both corrected focus checksPASS;
+NO backend change. Shared-login failure cause remains UNPROVEN/untouched.
+No unchanged full retry, environment attribution or retrospective pass.
+First corrected-head hosted gate/PR/release still pending; no push yet.
+
+HISTORICAL PRE-GATE:
+2026-11-03 455.4B2 LOCAL recorded Ask/Activity candidate: shared strict owner
+time/day/year labels, no ambiguous date inference or row/source-prose loss.
+Activity From/To now matches UTC-7 labels; Tokyo mismatch reproduced first,
+corrected boundary/invalid range/no-stale/unknown-vs-real-zero checksPASS.
+Actual synthetic1366/400/412 labels/source/escaping/tolerance/no-write proof
+PASS; six positive timestamp images inspected. Initial case/route/capture
+driver gaps retained in trace; no weakened safety assertion or runtime workaround.
+Existing Ask/native/privacy/Activity/metadata/routes focusPASS; final Activity
+verifier alsoPASS after query correction. No backend/schema/writer/filterengine/
+deadline arithmetic changes. FIRST full305 gate pending; no push/PR/CI/release.
+Unrelated exports/debug.log excluded; prior492releaseproof deliberately retained.
+
+2026-11-03 PR492/455.4B1 RELEASED/VERIFIED: sourcec45de93, merge/main
+bca8fefc962b5cf17c6c981565b6df29a842675c whole tree identical. FIRST PR
+41739396760/job126276796820 and sole MAIN41741351625/job126283354607 each
+304/0/0 of304,600s/file; job walls13m29/18m49. All608 hosted timing rows
+retained proof-455-assistant-times, alongside original304 local303/1/0 rows;
+no retrospective pass or unchanged retry. AutomaticRailway4f1d9962 exactmerge
+SUCCESS; nine fixed public GET/static/401 checks and signed GLOBAL shell/
+control44x44/nooverflow proofPASS. Temporary tab closed, no private contents/
+JSON/AX/captures/mail/key records/provider/business writes/auth transfer.
+Nine inspected synthetic1366/400/412 images show actual sheet/Desk/Settings.
+This finishes assistant/Decision Desk/Settings dates only, NOT whole455.4/487.
+Next independent455.4B readers: recorded Ask/Activity, device expiry, templates,
+JV/profit metadata, then trace active legacy/source-day boundaries; don't edit
+shadowed paths or infer ambiguous source dates. Standing release authority
+continues. Unrelated exports/debug.log remain untouched/unstaged.
+PR: https://github.com/GabrielMontealegre/wholesaleos-bot/pull/492
+
+HISTORICAL PRE-RELEASE:
+2026-11-03 455.4B1 FIRST LOCAL FULL71a7ae7 naturally303/1/0 of304,600s/file;
+all304timings retained proof-455-assistant-times/first-local-full.json. Owned
+buyer-reply test expects a recent weekday using an unpinned browser clock;
+pin browser Date to its existing fixture now, preserve every original rank/
+source/weekday/privacy/no-write assertion. Runtime unchanged after gate. This
+remains a failed local full result, not waived/retrospectively green. Corrected
+focused/first hosted gates pending; no unchanged full retry or release yet.
+
+2026-11-03 next455.4B bounded assistant/Decision Desk/Settings timestamp display
+LOCAL candidate: shared recent/old/year UTC-7 policy, literal day/year labels,
+separate strict future walk formatter; no schema/writer/source/deadline change.
+New socket-free actual UI testPASS1366/400/412 with Tokyo browser timezone;
+nine synthetic screenshots inspected. Two initial new-test loopback transport
+failures retained in trace, not attributed to historical failures. Existing
+regressions/full/CI/release gates pending; not pushed/PR/deployed. New454
+board addendum6617488378 read once and recorded; D065 order unchanged, no
+send/paid/private permission. Metadata cutoff now2026-11-03T22:50:21Z for454.
+
+2026-11-03 PR491 classic Email RELEASED/VERIFIED: source eb162fe3,
+merge/main42f8c591053a5259c85f123f69401ae5e2cbbf98, whole tree identical.
+FIRST PR41728685564/job126240043923 and sole MAIN41731846206/job126250937284
+each303/0/0 of303,600s/file; job walls19m30/18m35. All606 hosted timings
+retained in docs/cycles/proof-491; original299/4/0 local result/all303timings
+unchanged. Automatic Railway7d4d751b exactmergeSUCCESS; eight fixed public
+GET/static checks and signed GLOBAL shell/control/geometry proofPASS. No live
+mail opened, private content/JSON/AX/captures, provider action, auth transfer or
+business write. Six inspected synthetic1366/400/412 screenshots show changed
+Email screens; Send remains disabled/inert. Proof branch491-release-verification.
+This completes the direct Email reading-room request, not whole455/487/backlog.
+Standing fetch/backlog-release authority remains; next eligible ordered slice
+is455.4B nonshared timestamp readers. Two unrelated exports remain unstaged.
+PR: https://github.com/GabrielMontealegre/wholesaleos-bot/pull/491
+
+HISTORICAL PRE-RELEASE:
+2026-11-03 standing fetch/reconcile/backlog-release authorization received
+directly from Gabriel, for this and every run until revoked. Authorized fetch
+succeeded; origin/main remains326ad472 and is an ancestor of the local Email
+candidate, so no rebase/content rewrite is needed. Prior no-fetch hold is
+superseded, not bypassed. Existing299/4/0 local full failure stays retained;
+the owned verifier correction has targeted proof but needs its FIRST hosted
+exact-head CI before any green release claim. No paid/outreach/secrets/private
+content or production business-write authorization. Two exports untouched.
+
+2026-11-03 classic Email FIRST full gate on38be8b1 naturally FAILED299/4/0
+of303,600s/file; all303timings retained in proof-classic-email-reading-room.
+Owned inbox verifier still targeted the removed role button/always-open Reply:
+corrected to owner-requested controls, preserve source/grouping/link/no-send
+checks and add collapsed-history/no-composer assertions; focused1366/400/412
+PASS with identical runtime. Original full result stays FAILED, not299/3/0.
+Dashboard mount-order, notification UI and Today UI causes remain unproven;
+no unchanged rerun, unrelated repair or environment attribution. No fixed-head
+full/CI/current-main/release gate; no push/PR/deploy. Synthetic-only preview:
+http://127.0.0.1:32194/dashboard/?workspace=email. Fetch restriction unresolved.
+
+2026-11-03 direct owner classic Email readability request LOCAL candidate:
+full-width reader, compact top controls, explicit Reply, recorded status only.
+Targeted synthetic1366/400/412 UI, existing layout/read-error/local-voice and
+pure identity/state/link checks PASS. First mobile chooser clipping corrected
+with a new geometry assertion; six final synthetic images inspected. Full-suite
+gate pending; NOT pushed/released. No live mailbox/private data/send or business
+write. Existing fetch prohibition/rejection remains; no retry/bypass. Trace:
+docs/cycles/classic-email-reading-room.md. Two unrelated exports remain unstaged.
+
+2026-11-02 PR477 RELEASED/VERIFIED under D065b/D065c: source b120fd3,
+merge/production/main326ad4721fe0c7bb400f31389a9bc3b20828a7b6, whole tree
+identical. First rebased PR41574089467/job125713472693 and sole MAIN41576120940/
+job125719898875 each302/0/0 of302,600s/file; job walls19m09/19m04. All604
+successful timing rows retained in docs/cycles/proof-477; original277/1/0
+failed-head proof remains unchanged. AutomaticRailway99fe7103 exactmergeSUCCESS.
+Ten fixed public GET/static checksPASS; signedGLOBAL four-face shell/control/
+geometry/nooverflow checksPASS. No private content/JSON/AX/captures, writes,
+provider action or auth transfer. Twelve inspected synthetic screenshots at
+docs/screens/2026-11-02-pr477-rebase remain the three-width visual proof; no
+new performance claim/audit rerun. Watch71179 naturally terminalPASS. This
+finishes only the PR477 workflow-card slice; whole455/487/backlog INCOMPLETE.
+PR490/#472 already VERIFIED and472 CLOSED; no repeat release checks needed.
+
+2026-11-02 PR490/#472 RELEASED/VERIFIED: main84da984 whole tree identical
+tested849754f. PR41568932641 and MAIN41570456973 each301/0/0; automaticRailway
+1f32a4b8 exactsourceSUCCESS, bounded fixedGET and signedGLOBAL proofPASS.
+All602 successful timings plus original301 failure timings retained; docs-only
+proof21d69b8 on proof/490-release-verification,472 CLOSED. No private data/writes.
+PR477 is now rebased onto that current main underD065c using the two owned
+item commits47170f6/412ed2e, preserving the old local branch and all proof.
+Only docs conflicted; kept current decisions and historical item notes. Runtime
+diff remains four display-node removals +four cache versions; no auth/backend/
+provider/canonical writer changes. Did not replay obsolete30138e0 PR476proof.
+No stash/staging/revert of the two unrelated dirty exports. Managed-worktree
+creation rejected nested sourceRoot, created nothing; reused current checkout
+with scoped patch transplants, not another worktree route or permission bypass.
+Four-screen synthetic functional checkPASS1366/400/412. First Conversation
+capture was belowfold/not positive proof; retain it, add heading viewport
+assertion, then capture ONLY three Conversation views with unchanged runtime.
+All12 selected positive synthetic images inspected and byte/hash checked.
+No repeated Lighthouse/performance/15-case audit; D065b's prior accepted
+baseline comparison remains historical, not a new speed claim. One new-head
+CI/main/automatic/section7 gates still required;477 NOT released yet.
+
+2026-11-02 D065c/#487 comment6594135767 resolves the CI allowance hold:
+one run per changed head, no unchanged retry.490's tests/.tmp restoration is
+authorized for its first fixed-head CI, with original300/1/0 retained; no green
+release claim until exact-head gate/automatic deploy/main gate/read-only proof.
+After490, rebase477/currentmain, resolve conflicts, one changed-head CI; green
+releases underD065b, failure defers/no third attempt. Owner merge/deploy approval
+is already recorded. No private/business/provider scope expands. Two exports
+remain unrelated/unstaged. Whole487/455/backlog still incomplete.
+
+HISTORICAL HOLD: 2026-11-01 PR490 first exact-head CI FAILED300/1/0 of301, run41382706484/
+job125076759547,19m04 job wall,600s/file. Failure is the unchanged tracked-secret
+test's required .dockerignore tests/.tmp entry: adding the broader tests entry
+had removed that explicit entry. No secret-value finding was emitted. Preserve
+all301 timings and the failed sourceb820b055. Keep490 OPEN/DRAFT/UNMERGED;
+no deploy/main CI, no rerun/cancel/skip/waiver under the one-PR-CI limit. Restore
+the explicit entry alongside tests LOCALLY; a targeted configuration check passes,
+but no new-head full gate exists. This local fix is not a green release.489/488/
+486 remain verified;477 stays failed/open. Whole487/455/backlog remain incomplete.
+
+HISTORICAL PRE-CI: 2026-11-01 #472 LOCAL candidate from main3eff9420: explicit boolean test flags
+only at typed import/JSON display boundaries, reviewed public-asset build/start
+guard and test-directory image exclusion. No name/text censorship, row removal,
+auth/provider or UI-layout rewrite. Focused existing import/snapshot/key checks
+pass; new boundary/assets/purity negatives pass, exact-head full CI pending.
+Initial new-test setup Express resolution and localhost EACCES retained; no
+historical failure attribution. Not merged/deployed/verified; whole455/backlog
+remain incomplete.477 stays open/failedCI; unrelated exports untouched/unstaged.
+
+2026-11-01 #471 ONE reintroduction prepared from verified current main ebace1c9
+(486/488 released; owned prooff7d5462 preserved). Shared date label regression
+failed first, then changed-policy/strict negatives and synthetic Email/Today/
+reviewed-deal/Conversation focused checks pass. Nine synthetic images inspected.
+Pre-change unsigned native/classic desktop Remember-device rectangles both
+400x44 in viewport, serialized. Diagnostic stopped on a harness assertion about
+an already-blocked external GET; no geometry failure. Initial diagnostic could
+not launch the missing pinned1117 browser; installed that exact browser cache,
+no dependency/lock changes or attribution of older469/b1/486 failures. The
+candidate verifier preserves original44px/in-viewport and write guards, allows
+aborted externalGET attempts like the existing verifier, and records every
+case/rectangle before assertion. No baseline rerun or candidate acceptance yet.
+First PR/main CI and deployment gates pending; not released.477 remains open,
+472 independent next; unrelated exports unstaged and preserved.
+
+2026-11-01 owner explicitly approved merging/deploying486 and477, and later
+codex-task PRs when AGENTS gates pass; blocked PRs stay open while487 advances.
+486 merged d081c438 after exact-head CI289/0/0; automatic Railway reports
+success, main CI/read-only verification pending.477 remains OPEN/DRAFT with
+conflicts and failed exact-head CI; no merge or unchanged retry attempted.
+487 candidate reconciles current main, preserving stripe removal and cache17.
+Its first PR CI remains pending; prior local296/1/0 is retained, not green.
+No production private contents or business writes; unrelated exports untouched.
+
+2026-11-01 #487 walk-plan addendum LOCAL implementation: optional reported
+plan/plain Walk line, exact same-snapshot buyer agreement evidence gate, no
+booking/contact/payment or canonical promotion. New20-row/negative/import and
+three-width UI checks pass; three synthetic screens inspected. Earlier full
+b1 gate remains296/1/0, unknown remembered-device cause, not retried/waived.
+New runtime full/CI/release gates pending; no PR/push/merge/deploy,486 denial
+honored and unrelated exports preserved.
+
+2026-11-01 #487/#454v2 FIRST FULL LOCAL gate FAILED on frozen b1b0f6f:
+296/1/0 of297, explicit Node22.22,600s/file, natural exit1. Failed file:
+remembered-device-ui.test.js (25.91s), cause UNKNOWN; raw values withheld.
+All297 timing rows retained; sum1214.04s is NOT wall time. No retry/waiver/
+assertion change; no exact-head CI exists, so no environment-skip/pass claim.
+Candidate stays LOCAL/UNPUSHED/UNRELEASED. Prior486 failures remain unchanged;
+execution approval is not retried. Two generated exports preserved unstaged.
+
+2026-11-01 #487/#454v2 coordinated LOCAL review passed acceptance checks and
+fixed two pre-release gaps: answer routes now authorize/limit/parse before
+generic server parsers; stored v2 schema/base accessors reject without reads.
+Both new regressions failed first, then focused auth/import/answer/UI tests
+passed. Twelve inspected byte-identical synthetic screens retained with hashes.
+Local preparation is not CI/production completion: no full suite/PR/push/merge/
+deploy; existing486 approval restriction remains untouched, exports preserved.
+
+2026-11-01 #487/#454v2 LOCAL answer UI edge cases verified: persisted notes,
+choice/Refresh focus, all A/B/C appends and lost-POST GET-only recovery at
+1366/400/412. Three visible answer-note readback screenshots inspected. Pure
+20-row follow-up engine remains non-sending and clock-free. Final coordinated
+acceptance/review pending, no release claim or merge-restriction bypass.
+
+2026-11-01 #487/#454v2 LOCAL pure follow-up scheduler added: F1+1/F2+2/F3+3/
+F4+7 then park, reply stop, cross-property agent daily cap, no drafts/prices/
+sender/clock/network. Synthetic20-row schedule and identity/date/sequence/
+purity negatives pass. UI/import/answer checkpoint remains local. Coordinated
+acceptance and final edge-case review still pending; no full suite/CI/PR/push/
+merge/deploy. Existing486 execution restriction unchanged and not retried.
+
+2026-11-01 #487/#454v2 LOCAL Decision Desk/Agents/Outreach views now wired;
+explicit A/B/C answers append with guarded readback, latest-source binding,
+no blind retry, and late-auth clearing. Synthetic 1366/400/412 UI, focused
+answer/import/model tests and unchanged-intent v1 UI pass; nine local synthetic
+screens inspected. Pure follow-up engine/remaining coordinated acceptance
+still required. No full suite/CI/PR/push/merge/deploy; 486 approval not retried.
+
+2026-11-01 #487/#454v2 LOCAL owner-answer log/API added: source-bound latest-v2
+item A/B/C choices append separately, actor-scoped idempotent UUID requests,
+server time and private paged GET. No imported/canonical/provider mutation.
+Pure/route negatives and existing snapshot integration/routes pass. UI buttons,
+Desk/Agents/Outreach views and follow-up engine remain; no full suite/CI/PR/
+push/merge/deploy. Pending486 merge approval is neither retried nor bypassed.
+
+2026-11-01 #487/#454v2 LOCAL integration advances: both base/extension validation
+now guard v2 append/read, exact hashes and v1 history retained; uploader and
+compatible API capability wired. Pure native projection adds tier counts,
+reported agents/outreach/provenance with unknown-day due count. Focused v2,
+v1, routes/model/uploader checks pass; no full suite/CI/PR/deploy. Actual Desk
+screens/answers/follow-up engine still required. No merge restriction bypass.
+Previous unused-validator checkpoint below is history, not current integration.
+
+2026-11-01 #487/#454v2 LOCAL preparation on item/454-v2-field-validation.
+New pure extension-field validator and synthetic20-row/negative tests pass;
+existingv1 snapshot tests pass unchanged. NOT wired into importer or UI yet;
+no full suite/CI/PR/merge/deployment or complete-v2 claim. See cycle trace
+issue-454-v2-decision-desk.md for field assumptions and required integration.
+PR486 remains DRAFT, exactgreen1c77; production-impacting merge attempt was
+auto-review denied, explicit approval requested once. Do not retry or bypass.
+Owned f098341 docs-only mailbox checkpoint and all previous proof branches
+preserved. Two generated exports remain unstaged, never bundled into v2 work.
+PR483/report-label work DEFERRED under487/D-065; no diagnostics/re-release.
+
+2026-10-30 #412/D-063B native report-label consumer LOCAL CANDIDATE, not released.
+Fresh origin/mainc972 and architect priority/answers checked;471/472/478 still
+unanswered. Current producer453 emits per-message receipts, but native Reports
+read an unproduced raw labels array. Scoped correction accepts exact IMAP name
+receipts only, rejects raw/opaque REST/forged/conflicting/mixed evidence, never
+infers person roles/counts or adds requests/writers. New pure regression FIRST
+failed0!=1 then passed. Initial numerically green audit found selected phone tab
+clipping; new geometry assertion FIRST failed then Email-only tab selection
+scroll repair passed. Final auditeda4a175b FCP160.6/116.8/131.8ms;LH13.5 perf99/96,
+access100/100/actualReports1/tabfits/nooverflow. Three final audit images+15native
+UI views inspected; baseline and first visual failure retained, no score reuse.
+Trace issue-412-report-label-receipts.md; proof2026-10-30-report-label-candidate.
+Full289PR/main/current-head review/exactauto/live gates PENDING. No production
+private reads/captures/values/writes. Owned397proof35ced preserved deliberately.
+No nativeDeals/design sign-off or whole412/455/backlog completion;455 stays6/9.
+
+2026-10-30 #372/D-060 BOUNDED read-only demo DONE via PR397 RELEASED/VERIFIED.
+Actualmain c972d44025dc24911fb472d8448bfe9388df973e complete tree
+f2e3ad9dbe86ed14d9cbeab1dd9c2766e3db6ea0 identical testedcca28bd.
+PR40998812532/job123878139582288/0/0,18m35job,sum1055.08s;
+MAIN41015949210/job123932184095288/0/0,18m37job,sum1051.14s.
+All576 rows retained,600s/file/sums NOTwall. Prior286/2 timings retained; FIRST
+exact stylesheet test-only correction disclosed, no unchanged rerun/cancel/skip.
+AutomaticRailway9a3b2d61 exactc972/Detailsselected/Active/successful verified.
+Public15 original44px/security+strictAsk source/currententry guards PASS; all15
+unsigned images inspected. ActualsignedChrome5 GLOBALstructural nativeToday
+Ask1/open1/querydisabled->enabled/close0/focusreturn/contentready/nooverflow.
+No private values/AX/captures/JSON/query/voice/provider/business writes/authtransfer.
+Chrome4 unavailable/absent; current5 selected from inventory, safehealth entries.
+Proof docs/screens/2026-10-30-pr397-release. Docs-only proof starts at actualmerge;
+testedbranchcca left untouched, no newmain/CI/deploy for proof. Whole372/370/412
+NOT complete;455 remains6/9(67%). Continue fresh independent backlog/architect
+answers; no unchanged release redo, nativeDeals/477/Claude-owned work bundle.
+
+Historical pre-release397 status (superseded above):
+2026-10-30 #372 existingDRAFT PR397 pushed c90886c; NOT merged/deployed.
+Fresh full40996908558/job123872036334 completed286/2/0 all288,600s/file,
+17m37job,sum997.95s NOTwall; all288 timing rows retained. Both failures are
+exact stylesheet-list assertions (shellUI75/Today-action-center90) expecting
+only nativeCSS before Ask's two shared stylesheets were intentionally loaded.
+FIRST test-only correction requires EXACT nativeCSS+UIkit+localvoice; no runtime,
+auth/writer/viewport assertion or isolation gate weakened. Both corrected
+actual3size tests and staged privacy gate PASS; fresh full288 still required.
+No unchanged workflow rerun. Deliberate merge
+of actual394+owned d9974d0 proof preserved;
+old2553b07 retained separately. Pure current projection/private GET boundary pass;
+mixed-reference unsigned JV privacy regression failed then scoped withholding
+passed, including public/signed preservation. Initial three-size UI and expanded
+30s/pagehide lifecycle tests pass. Native Today/Email now opens the SAME dialog
+from a44px header icon, keeps More7/native Deals unchanged, and returns focus
+without replacing native content. Native3sizes+shortdesktop/auth/401/nonadmin,
+classic Ask/More/voice/components focused checks pass; expanded Email draft/source/
+search preservation and pagehide pass. Exact6ccb9f9 auditPASS Today98/96,
+Email99/96,classic93/100 performance/access100; all true3sizeFCP<2s, measured
+actual context, no overflow/runtime/auditerrors. Prior85/82/77 and87 failures,
+frame/contrast/owned-close fixes and invalid black images are honestly retained.
+Final15 images+baseline9+footer9 inspected; full288PR/main/
+deployment gates pending. No production private reads/writes/AI/provider/audio. Trace
+issue-372-read-only-demo.md. No whole372/370/412/backlog completion claim.
+
+2026-10-29 #383/D-059 Profile DONE via PR394 RELEASED/VERIFIED. Actualmain
+edbd25545ee5518d37aa50469a364b0ec78a9a92 complete treed0ea751d58c898847ed14b503602754db33f91a0
+identical tested ae372d1. PR40962026192/job123757006952284/0/0,17m43job,
+sum996.55s; MAIN40964786814/job123766387055284/0/0,16m18job,sum915.98s.
+All568rows retained,600s/file/sums NOTwall. AutomaticRailway00549c1d exact
+source/Detailsaria-selected/Active/successful verified. Public15 original44px/
+security/currentasset guards PASS; all15 unsigned images inspected. Actual
+signed Settings GLOBALstructural1form/7fields/uncheckedreview/Saveenabled/
+2PINinputs/2privateSettingssections/nooverflow; Deals19->1->Back->19 with0
+visibleBack. No private values/body/AX/captures/Profile save/generation/send/
+businesswrites/authtransfer. Positive content SYNTHETIC ONLY. Legacy392excluded.
+Proof docs/screens/2026-10-29-pr394-release; earlier failed audit/startup and
+privacy incidents remain disclosed in383 trace. No newmain/CI/deploy for proof.
+Whole455 still6/9(67%),wholebacklogactive. Next: fresh-priority/duplicate review
+before existing bounded read-only397/D-060 work; no native Deals/456/477 bundle.
+
+Historical earlier2026-10-29 #383/PR394 reconciliation was LOCAL, not released. Main7262b11/
+PR481 unchanged. Measurement-phase Lighthouse scope corrected after post-return
+page changes made the earlier observer invalid; old mobile88 failed audit kept.
+Qualified e9b956c audit passed, then self-review reproduced a template pagehide
+cache gap (2 remaining nodes vs0). Repair and three-size lifecycle verification
+PASS. Exactac3b348 audit PASS: Settings100/100,template99/100,allaccess98/FCP<2s;
+fresh full284 PR/main/current-head/deployment/live gates still due.
+Static baseline Team Access label appeared in a synthetic contact preview;
+unsafe uncommitted Settings images removed before stage/push, numeric history
+kept, replacements and optional test captures use validated whole-section masks.
+No real Profile/Gmail read or production write. See current383 trace. Not DONE.
+
+2026-10-29 CAPACITY RETURNED: observed0% five-hour/0% weekly used at resume.
+No agent reset, credit use or purchase. ExistingPR394/383 Profile reconciliation
+resumed after separate392/481 release; not a new duplicate. Owned394checkpoint
+6626a93 and current481proof2f8d45a preserved in a deliberate merge. Five shared
+conflicts resolved to current shell/docs/Calendar and combined profit+Profile
+buyer-email review fingerprints. Current Profile unit/routes/private-parser
+boundary and true1366/400/412 UI tests PASS. UI audit/focused regressions/full
+current inventory/exact merge/main/deployment/read-only gates PENDING; not DONE.
+No private Profile/data/file/production write used. No native Deals migration,
+Claude work,456 or477 bundle. 471/472/478 remain open/unanswered.
+
+Historical2026-10-29 WEEKLY USAGE WARNING: then2% remained (98% used; initialwarning91%). Architect: check the
+live app and this run's verified release evidence. Gabriel alone handles any
+manual weekly reset; Codex will not reset or purchase usage. Continuing normal
+backlog work under the owner's about5% five-hour revert reserve,not stopping
+early for the weekly budget. Thenwindow85%used;PR481merged7262b11 with
+candidate281/0/0+MAIN281/0/0+allpublic/livegatespassed. No earlyweeklyhold.
+
+2026-10-29 #392 DONE via PR481 RELEASED/VERIFIED. Actualmain7262b1114f5db3543cfb13a8cd304ad529a6f99a
+treead2a9394e8e30dcf092d367e132fddcb16a298c3 IDENTICALtested0ccc7b9.
+PR40943640399/job123693179856281/0/0,14m45job,sum813.78s;
+MAIN40946017461/job123701444872281/0/0,12m31job,sum703.91s. ALL562rows,
+600s/file/sumsNOTwall/no fullfailures/reruns/cancel/skips/assertionchanges.
+AutomaticRailwayc39a8dbe-fde5-4d12-9d34-7fd8ea19e5e1 Active/successful/
+Detailsaria-selected/exact7262sourceanchorverified. Public15/security/44px/
+currentcacheguardsPASS/all15unsignedimagesinspected;exactmergedfocused2PASS.
+ActualsignedChrome4STRUCTURALONLY19->Open1->Backloading->19/0open/nooverflow.
+No personal/clock/deposit/AI defaults; actual record address/offer and explicit
+seller/title/notes remain unsigned review fields. Admin-first/no-store/strict
+input/unique-ID/no-writer route. No actual contract generation/profile/file/
+privatecontent/values/productionPOST/businesswrites/authtransfer. Backendonly,
+no newUI/performanceclaim. Trace docs/cycles/issue-392-legacy-contract-safety.md;
+proof docs/screens/2026-10-29-pr481-release. 455still6/9(67%),wholebacklogactive.
+
+2026-10-29 PR480 RELEASED/VERIFIED:455.9 foldedcomps/explicitrowreason only.
+Actualmain5c81e46be528fa177f1679d39c069fc12c5fd80c tree714a6bc identical5999217.
+AutomaticRailwayfbe5008c exactsourceActive/successful/Detailsaria-selected.
+PR40936614384/job123668718693279/0/0,17m07job,sum965.31s;
+MAIN40939426269/job123678552692279/0/0,16m52job,sum949.46s;600s/file,
+ALL558timings,sumsNOTwall/no fullfailures/reruns/cancellations/assertionchanges.
+Public15 unchanged44px/security/exactDeals19+entry/true3sizes andmergedfocused8
+PASS. SyntheticFCP178.4/127.4/124.7ms,LHperformance98/97/access95/95;baseline
+41/99retainednotgreen/no causalclaim. Initialharnessfailure/diag/prewarmfix
+retainedtruthfully. ActualsignedChrome4 1280x529STRUCTURALONLY19->1/closedfold
+3rows/explicitreasonshow+Cancel/focus(no typing/values/Confirm/PATCH)->Back6
+skeletons->19/0open/nooverflow SAMEtransition. No privatecaptures/AX/text/values/
+credentials/businesswrites/authtransfer. Browser3disconnected/absentinventory;
+documentedfreshsoleChrome4connectionrecovery,notSAME3or staletab reselection.
+Proof docs/screens/2026-10-29-pr480-release. 455.9DONE;items1,2,3,6,7,9DONE
+6/9(67%). 4A471/fixture5-472/workflow8B2-478 stillblocked;whole455/backlogactive.
+Independentnext392 legacycontractrepair tracebegun:static literal-redacted
+sourceonly,no privateprofile/files/contracts/generatedoutput inspected. Hardcoded
+defaults/clock+percentage/AIcall stillpresent;no392branch/edit/test/deployyet.
+
+2026-10-29 capacityreturned4%window85%weeklyused(15%left). 455.9 foldedcomps
+LOCALIMPLEMENTATION/new3size test pending;notmerged/deployed/verified. Proposed
+8B4legacyDailyAcquisitionQueue isshadowed by actualdefaultTodayrenderer;no
+deadcodecleanup/manufacturedvisualproof. 8B2stillblocked478/noanswer;8notdone.
+Currentmain/live479unchanged. Owner5%policy/no earlyweeklyhold;no warningyet.
+Trace docs/cycles/issue-455-folded-comps.md. Owned479proof deliberatelycarried;
+477local412ed2e remainsuntouched/unpushed. No dependencies/locks/backendwrites.
+
+2026-10-29 PR479 RELEASED/VERIFIED:455.8B3 buyer matching/near-miss commands.
+Actualmain2a74029a5d08afdf7ef724e25dda740f87b865bd complete tree1d715f21
+identicaltested79c184c. AutomaticRailway100397b8 exactsourceActive/successful/
+authoritativeDetailsselected;no manualactions. PR40898005224/job123532262029
+278/0/0,16m49job,sum948.22s;MAIN40901088880/job123543239344278/0/0,
+17m07job,sum963.93s;sumsNOTwall,600s/file,ALL556rowsretained. No fullfailures/
+reruns/cancellations/changedexistingassertions. Public15 original44px/security/
+exactbuyerJS12/currentassets andmergedfocused6PASS. Synthetic3sizeFCP<2s,
+LHperformance93/100/access98/98;18supplementalvisible-rowimagesinspected,
+originalauditretained. Signed1280x529STRUCTURALONLY80buyers->1/Matchingtab
+selected/0matchrows/0selections/nooverflow;NOpositivepopulatedlivecontentclaim.
+No privatecaptures/text/values/credentials/businesswrites/authtransfer.
+Proof docs/screens/2026-10-29-pr479-release. Whole455.8 NOTcomplete:legacylist
+faces remain;477BLOCKED478(no answer),4A471/fixture5-472/450stillblocked,
+456deferred/nativeDealsunauthorized. Overall5/9(56%). OWNER5%reservepolicy,
+no earlyweeklyhold;checkpoint94%window83%weeklyused(17%weeklyleft,no warning).
+Next independent8B4 trace:actuallegacyDailyAcquisitionQueue itemmetadata in
+dashboard/index.html:7569 prependsgetLeadReferenceId;currentrender callsites
+5382/21127/21199. Purequeuebuilder7428 retains scores/reasons/order/caps;
+referenceformatter7660 reads canonicalreference_id/lead_reference_id or derives
+state/county/date/sequence. RemoveONLYdisplaymetadata afterfulltrace;retain
+data-lead-id/Open/fullrecord/search/source text andallwriters. LegacytableREF
+columns alsoexist but areseparate;do notsilentlybundle table/modelrewrite.
+No8B4branch/sourceedit/test/deployyet. Normalworkcheckpointsaround95%perowner;
+resumeautomaticallynextwindow,notblockedonweeklyreserve orGabrielaction.
+
+2026-10-29 Independent455.8B3 buyer-matchlabels IMPLEMENTED/focused6PASS;
+full278/audit/releasePENDING. Nestedmatch/near-missbuttons nowOpen deal+existing
+location;exactIDs/fullrecordrefs/review/email-selection/value/source/data guards
+unchanged,no477runtimebundled. OnlybuyerJS12new. 477BLOCKEDneeds-architect478,
+retainedlocal412ed2eUNPUSHED(firstfixtureannotationfix/offlinePASS+failedproof);
+remote47170f6 REAL277/1/0 andcompleteUIperfConversation76/76/Bell88/90failed,
+notflaky/environment/green. 478 requestsboundedparentTodaylayoutrepair/proof
+authoritywithoutlowering90+gates. OnlyB2blocked;wholebacklogcontinues. Main/live
+476f6d7f522unchanged. 4558NOTcomplete/overall5of9(56%),legacyfaces remainafterB3.
+Owned476proof deliberatelycarriedas98cb65c,no unrelatedloss. OWNER5%policy/no
+earlyweeklyhold;latest61%primary78%weeklyused,22%weeklyleft/no warningthreshold.
+HISTORICAL PR477 preparation (current-main D065c rebase supersedes its hold):
+HISTORICAL PR477 first CI and unpublished annotation correction:
+2026-10-29 PR477 455.8B2 BLOCKED needs-architect478,notmerged/deployed.
+CompleteUIgateFAILEDConversation76/76/Bell88/90performance(90required),
+access98/98+100/100/allFCP<2s/nooverflow. Baselinealsobelowtarget,NOTwaiver.
+Boundeddiagnostic identifies parentTodayCLS0.4994tools/0.2295publicdesk;478
+requests boundedlayoutrepair/proofauthority withoutloweringgates. Initialtwo
+incompleteharnessruns retained;current-DOM ownershipfix resolvedinitialization.
+Full40892998131 REAL277/1/0(all278),600sfile,17m09job,sum964.65sNOTwall,
+scannerflagsyntheticfixedworkflowkey. FIRSTlocalannotationcorrection passes
+offlinegate;no literal/assertion/policychange;NOTnewremote/fullgreen.
+PR477localcorrection+allfailedproof preserved,NOunchangedfullrerun/pushchurn.
+Main/live476f6d7f522 stillverified. OnlyB2blocked;independentbuyer-match/legacy
+metadata next. 4558NOTcomplete,overall5/9(56%). Usage61%primary78%weeklyused,
+weekly22%left/no under10warning;OWNER5%policyactive/no earlyweeklyhold.
+
+2026-10-29 LOCAL455.8B2 workflowcardmetadata IMPLEMENTED/focused9PASS;
+full278/fourviewaudit/releasePENDING. Approvals/conversation/Pipeline/bellWorkqueue
+standalone reference lines removed;exactIDs/keys/links/review/source text/data/
+history unchanged/no backend/auth/provider/clock/writer changes. Existingtests
+UNCHANGED;newactualfullindex4views3size metadata/source-escaping/no-write proof.
+Main/live476f6d7f522 unchanged. Remainingbuyer-match/legacyfaces afterthisslice;
+4558NOTcomplete,overall5/9(56%). Owned476proof fb81561 deliberatelycarriedonto
+actualmain as30138e0/no unrelatedloss. OWNER5%policy/no weeklyhold. Trace
+docs/cycles/issue-455-workflow-card-metadata.md.
+
+2026-10-29 PR476 RELEASED/VERIFIED 455.8B1TodaymetadataONLY. Actualmainf6d7f522
+complete tree42f41945 identicaltested9874671. AutomaticRailway23b82e52 exact
+sourceActive/successful/Detailsselected. PR40885969508/job123489636449277/0/0,
+13m26job,sum752.98s;MAIN40888440891/job123498351048277/0/0,16m56job,
+sum946.70s;sumsNOTwall,600s/file,ALL554timingsretained/no failedfull/rerun/
+cancellation/changedassertions. Public15 unchanged44px/security/true3sizes/current
+app14+classicToday6 andmergedfocused7PASS. SyntheticFCPall<2s,LHperformance
+99/96native94/100classic/access100/100native98/98classic/noerrors/overflow.
+Signed1280x529STRUCTURALONLY native67actions/0ref-smallnodes/classic67actions/
+Deals19->1->Back6skeletons->19/0open;no privatecontent/values/captures/businesswrites.
+Safeproof docs/screens/2026-10-29-pr476-release. 8B1DONE,remainingconsumerfaces
+NEXT;4558NOTcomplete,overallitems1,2,3,6,7=5/9(56%). Owner5%policy/no weeklyhold.
+
+2026-10-29 capacityreturned1%primary69%weeklyused(31%left),OWNER5%reservepolicy.
+455.8B1 Todaymetadata implementation/focused7 PASS,full277/audit/releasePENDING.
+Native/classicToday standalone reference lines removed;exactroutes/keys/full
+record identity/source text/history/data unchanged. No existing assertions
+changed/no backend/auth/provider/clock/writer/nativeDeals rewrite. Subsequent8B
+faces remain;4558NOTcomplete,overall5/9(56%). Currentmain/live4757a7e354unchanged.
+Trace docs/cycles/issue-455-today-card-metadata.md. Owned475proof7960f50deliberately
+carried onto actualmain as e2ce60b;no unrelatedloss/proofonlydeploy.
+
+2026-10-29 PR475 RELEASED/VERIFIED 455.8A only. Main7a7e354e5f8519bf10f6514dbf9abf9a2602a3fe
+complete tree IDENTICAL testedabcb5a2. AutomaticRailway933e0678 exactsource
+ACTIVE/successful/Details selected. PR40869171909/job123431504145276/0/0,
+14m53job,sum835.19s;MAIN40871367857/job123438978734276/0/0,13m16job,
+sum742.60s;sumsNOTwall,600s/file,ALL552timings retained. First275/1/0 genuine
+oldcompactreference assertion corrected per455.8;ALLlateridentity/history/
+search/privacy/nowrite checks retained,notflaky/environment/reusedsuccess.
+Public15 original44px/security/source3size and mergedfocused7 PASS. Actual
+signed1280x529 structural19->1->Back6skeletons->19/0open;previewstaticlabel/
+Market/nooverflow. No privatecontent/captures/values/credentials/businesswrites.
+FrozenexactsourceUIaudit performance100/100Deals94/90Preview/access98/98both,
+allFCP<2s,true3sizes,SYNTHETICnotlive. Safeproof docs/screens/2026-10-29-pr475-release.
+8A DONE,8Bremainingcardmetadata NEXT;4558NOTcomplete,items1,2,3,6,7=5/9(56%).
+Latestusage94%primary68%weeklyused,weekly32%left(no under10warning). Checkpoint
+around95%perOWNER5%reservepolicy;resume8Bautomaticallywhenwindowresets.
+No oldlarge-reserve/weeklyprotectionhold;wholebacklogactive/notcomplete.
+
+2026-10-29 PR475 first full40866755234 TERMINAL275/1/0(all276),600s/file,
+16m33job,sum914.56s NOTwall. Oldrecord-activity-ui compactreference assertion
+conflicted with455.8;firsttest-onlycorrection requires exactdeal1identity and
+no compactref,retainingALLdetail/timeline/search/privacy/nowritechecks.
+Correctedrecordactivity1366/400/412 PASS. RuntimeUNCHANGED;newfullgate required.
+PR475 remains DRAFT/unmerged/undeployed;main/live474unchanged. Usage83%primary/
+66%weekly used;weekly34%remaining,NOunder10warning. Owner5%reservepolicyactive.
+
+2026-10-29 OWNERusagepolicy ACTIVE:new5%5-hourrevertreserve replaces ALLolder
+largereserveholds. Workbacklog untilwindowexhausts,resumeautomatically;no early
+weeklyconservation. Owneralone handlesmanualreset;weeklyremainingunder10%must
+be flagged HERE forarchitectliveappcheck. Atstartprimary40%used/weekly59%used,
+weekly41%remaining,NOlowweeklywarningthresholdcrossed. Heartbeat15min/quietwhile
+inprogress. AGENTS safety/release/readonly/rollbackrulesUNCHANGED.
+LOCAL455.8A inprogress:fourrequestedphrases+revieweddealcompactreference label,
+canonicaldata/links/fullrecordreferencesunchanged. Remaining8Bcardfacemetadata
+separate;455items1,2,3,6,7 remain5/9(56%),8NOTcomplete. Main/live47471f32fc
+unchangedpendingfull276/audit/release. Trace docs/cycles/issue-455-plain-card-words.md.
+
+2026-10-29 PR474 RELEASED/VERIFIED: main71f32fc4a96a33f1f89f2d1ef7381c146f567543
+complete tree IDENTICAL tested338906f. AutomaticRailway51497a20 exactsource
+Active/successful/Details selected. PR40843985299/job123346898462275/0/0,
+15m59job,sum887.38s;MAIN40846129112/job123353956830275/0/0,15m24job,
+sum864.61s;sums NOTwall,600s/file,ALL550timings retained. No full failures/reruns.
+Public15 true3sizes/original44px/security/currentCSS15+app13 gates and six-file
+exactmerged synthetic journeys PASS. Mobile drawer full-height/outside tap,
+compact44px rows/X/Escape/focus verified synthetically400/412/shortphone.
+Signed1280x585 structural More/Settings/Email/classic19->1->Back->19; viewport
+tool did NOTproduce signed mobile dimensions;no such claim/privatecapture/text/
+values/credentials/businesswrites. Safeproof docs/screens/2026-10-29-pr474-release.
+455.7 DONE;items1,2,3,6,7 are5/9(56%),4A471/fixtureidentity472 blocked,
+next independent8plaincardwords when fullimplementation/releaseANDrollback
+reserve permits. NativeDeals unauthorized;454ownerkey/routine pending/alreadyasked,
+463Notyet/450unanswered/456deferred. Whole455/412/backlogNOTcomplete.
+
+2026-10-29 LOCAL455.7 mobile-menu candidate: native Today/Email mobile navigation
+is full-height at400/412 with compact44px rows, outside-tap/X/Escape dismissal,
+keyboard focus containment/return and existing singleMore handoff. Six focused
+synthetic files pass unchanged existing assertions. Full/audit/live gates pending;
+NOTreleased. Main/live473ccc48ef unchanged. Items1,2,3,6 remain4/9(44%);4A471
+and fixture identity472 blocked. No nativeDeals/backend/auth/provider/data rewrite.
+Trace docs/cycles/issue-455-mobile-menu.md; owned473 proof deliberately preserved.
+
+2026-10-29 PR473 RELEASED/VERIFIED: mainccc48ef1b068e580cbccaa23e6f14e552992cdd8
+complete tree IDENTICAL tested40a64cb. AutomaticRailwaye684a300 exactsource
+Active/successful. PR40822754553/job123278732010274/0/0,16m14job,sum910.15s;
+MAIN40824721901/job123285012346274/0/0,15m50job,sum884.00s; sums NOTwall,
+600s/file,ALL548timings retained. Original public15/three-size44px/security and
+threeasset exactsource gates PASS; merged eight-file synthetic journeys PASS.
+Signed structural controls/counts only: Email49/bodySkeleton->onePanel/disabled
+Reply commands/Close;classic19->1pendingBack->0+sixSkeletons->19;Today+Settings
+same-session/no writes. Optional private body-read DENIED and honored; no text/
+length workaround/private capture/content locator/console-zero claim.
+455.6 DONE;1,2,3,6 DONE4/9(44%).4A blocked471/5runtimeidentity blocked472,
+next independent7mobilemenu when releaseANDrollback reserve permits. Two real
+273/1 regressions retained,original tests unchanged;final audit/source gatePASS.
+Proof docs/screens/2026-10-29-pr473-release;candidate/trace retain all history.
+454real ownerkey/firstupload/routine NOTactive/alreadyasked;463ownerNotyet separate;
+450unanswered/456deferred/Claudeownedcandidates untouched. Whole backlog NOTcomplete.
+
+2026-10-29 FINAL473 remote40a64cb FULL40822754553/job123278732010 SUCCESS
+274/0/0,600s/file,all274timings retained,16m14job,sum910.15s NOTwall.
+Two real273/1 full failures exposed Back then match-focus regressions; two
+targeted product fixes retain ALL original tests. Final exact-source synthetic
+three-size/FCP/LH gates PASS. StillDRAFT/unmerged/undeployed until technical
+release gates;main/live87a6078 unchanged. Local proof may be ahead of tested
+remote;no docs-only push/CI churn.4556 not complete until verified deployment.
+
+2026-10-29 LOCAL455.6 loading-state candidate,NOT released: native Email metadata
+skeleton/body2sStillloading+explicit retries,Today Retry,classic Deals skeleton/
+error Retry. No backend/auth/provider/clock/data writes. Three-size held-read
+synthetic proof and existing six-file mailbox/navigation/Today/clock focused
+journeys PASS; final source/full274/UI audits/release gates still required.
+Trace docs/cycles/issue-455-loading-states.md. Main/live remains verified87a6078.
+455 items1-3 done(3/9),4A blocked471,5 runtime identity blocked472;6 in progress.
+No privacy restriction relaxed; no real credentials/private captures/business writes.
+
+2026-10-28 PR469 FAILED actual live geometry gate; rolled back FIRST by PR470.
+Current main87a6078ccbecd619a9ee25d7fe640eb665c797d6 complete tree equals
+verified46880660c6 and tested rollbackfba9ef9. Automatic Railway09f173c5 exact
+source Active/successful. Rollback PR273/0/0 + MAIN273/0/0,600s/file,all546
+timings retained; unchanged public15/three-size geometry gate and seven focused
+same-source journeys PASS. Public contact sheet inspected. No new speed claim.
+455.4A BLOCKED pending needs-architect #471; cause unknown, no failed-head retry
+or weakened gate. 455 items1-3 remain DONE (3/9,33%); dates NOT shipped.
+Proof: docs/screens/2026-10-28-pr470-rollback and pr469-release; trace
+docs/cycles/issue-469-failed-live-rollback.md. Older candidate notes superseded.
+Browser timeout diagnostics exposed a private excerpt during rollback; content-
+bearing private locators and all private captures are disabled. Numeric DOM only;
+no excerpt copied into proof. No production credentials/business writes.
+454 owner key/first upload/routine remain separately pending;463 owner Not yet
+acknowledged;450 unanswered;456 deferred. Whole backlog ACTIVE, not complete.
+
+2026-10-28 LOCAL455item3 candidate:Today/Email plus one visible More entry for
+seven existing tools,plain names,no Classic view navigation labels. Same fixed
+classic destinations/roles/Back/record behavior;no backend/auth/data writes or
+native Deals. Focused pinned More/shell/navigation/Today/mailbox tests PASS.
+Serialized synthetic UI audit PASS:Today/Email FCP all<2s,LH13.5 performance99/96
+and accessibility100/100 both screens,nooverflow/errors. Exact-head full273 gate
+pending;NOT released. Safe numeric/screens in more-navigation-candidate.
+Main/live4676247e0fe remains verified,455items1+2 done(2/9),whole455 OPEN.
+Owned467 proof carried deliberately;no unrelated branches/work changed.454real
+owner key/firstupload/local routine pending separately;463 owner Notyet,no repeat
+question.456 deferred. Older candidate/release notes below are historical.
+
+2026-10-27 FINAL PR466 candidate d6b65b3b66024ccb7b16752d5423dcac2d03668e
+full40603196905/job122536158786 SUCCESS271/0/0,600s/file,all271 timings retained,
+job15m05s,sum843.38s NOTwall. DRAFT/UNMERGED/UNDEPLOYED,not feature live.
+Initial8861 real269/2 guard regression corrected without changing original
+single-stylesheet assertions;failed timings retained separately,not reused.
+Current nativeCSS13/app9/auth3/key-settings2 and classic-only device JS/CSS1;
+other Email/Today/component versions preserved. Same-source pinned functional,
+privacy/rollback negatives and synthetic before/after performance/access gates
+PASS. Latest usage84%primary/89%secondary:hold release to preserve actual release
+AND rollback verification reserve,no reset credit/purchase. Main/live46545da4ac
+UNCHANGED. Local proof-only checkpoint may be ahead of tested remote:do not push
+docs-only CI churn or mistake it for a newly tested product. Reuse466 when budget
+supports release,check current main/head before ready/merge/automatic exact source/
+GET-only mixed proof/main full271. No real PIN/device/key/settings/business writes,
+no new release/live failure/owner question.455 remainsOPEN;455.2+ and456 deferred.
+
+2026-10-27 PR466 DRAFT/unmerged/undeployed:initial8861a5d full40600660469/
+job122527652316 completed269/2/0,all271 timings retained,600s/file,15m10sjob,
+sum852.30s NOTwall. All4 new remember-device tests PASS;existing shell/Today
+single-stylesheet guards caught the extra native CSS dependency. First actual
+fix preserves those original assertions:classic-only device CSS,native existing
+ws-check/design-system CSS13/app9. Both failed tests+actual signed-server UI
+PASS locally;corrected-native before/after FCP34.9/32.6/34.3ms,performance100/
+access100 PASS,synthetic NOTlive. New exact-source full271/release proof pending;
+do not rerun unchanged8861/reuse its failed gate. Main/live46545da4ac unchanged,
+no real PIN/device/key/settings/business writes. Budget reserve required before
+any merge;455.1 remains in progress,455.2+ and456 deferred,owner463Notyet separate.
+
+2026-10-27 LOCAL455 item1 candidate,NOT released:on item/455-remember-device
+from verified45da4ac plus owned465 proof only. Actual opt-in30day hash-only
+remembered-device ledger,strict current-user/credential-bound verification,
+own Settings revocation/logout,unchecked PIN controls and browser-session optout
+implemented. Focused actual server/privacy/legacy/key Settings and pinned browser
+restart/3size+shortdesktop/own revocation/session-loss/late-dialog safety PASS.
+Visual contrast corrected;serialized before/after FCP<2s for all3screens/3sizes,
+Lighthouseperformance100/100 each/access91classic,100native,98Settings PASS,
+synthetic NOTlive. Full271/currenthead/merge/main/exactautomaticdeploy/approved
+read-only proof still pending. No455PR
+or production changes yet,no real credentials/devices/key/files/settings actions.
+454 owner key/firstupload/routine and463 owner GitHub protection remain separate
+pending actions,not backlog-wide waits.455 item2+ and456 still deferred.
+
+## Latest Run Summary
+
+2026-10-28 PR467/455item2 RELEASED/VERIFIED:main6247e0fe69f998bc24cf6e33f42e35b72c23f8fc
+fulltree identical testedff9434d. AutomaticRailway619e60c5-4dc3-44eb-9b02-a0b1cd912c5b
+Active/successful authoritativeDetails exactsource,no manualbuild/retry/settings.
+PR40662509285/job122728758033272/0/0,600s/file,13m21job,sum723.26s NOTwall.
+MAIN40664837512/job122736605750272/0/0,14m57job,sum837.74s NOTwall;all544
+rows retained. First3886 REAL271/1/0 kept;oldclassicHome journey intentionally
+updated for455nativeToday,remaining safety/source assertions retained,runtime
+unchanged and no failed-gate reuse. Public15 pinned1.44/Chromium1117true3sizes
+root/directapp/sharedPIN/no oldkeypad/private401no-store/health200/noauthtransfer.
+Exactmerge LOCAL sharedlogin/device/navigation3size/mail5size pass. Signeddirect
+Today->classicSettings->Email no secondlogin,ownmetadata0rows,readable1116source
+exactReply/Close in-memory match,classic19->1->BackLoading0->same19/nooverflow.
+First18char email was unreadable-text placeholder,not fullsource;second explicit
+opening verified readable text,no bodybatch. Retained oldclassic HTTP50209:33:09
+BEFORE new-source reload disclosed;currentjourney no new entry,otherappErrors0,
+NOT total-zero historical logs. Opaque BEFOREdisk source/cards/fields inspected.
+No real PIN/login/device/key/file/POST/import/Copy/send/settings/businesswrites.
+Proof docs/screens/2026-10-28-pr467-release.455items1+2 DONE,next455item3 single
+More entry when fullrelease+rollback budget returns;do NOT start release near
+ceiling.454ownerkey/firstupload/localroutine notactive;463ownerprotection Notyet,
+450blocked/456deferred/Claudeuntouched. Whole455/412/backlog notdone. Older467
+candidate text below historical. Preserve proof-only on closedbranch,no redeploy.
+
+2026-10-28 PR467 candidate3886ee3 full40660146565/job122720858009 REAL271/1/0,
+600s/file/all272timings retained,job12m50s,sum720.54s NOTwall. Existing real
+navigation journey assumed classic Home immediately after root;455item2 now
+intentionally opens nativeToday. First test correction updates ONLY entry/Home
+step to nativeToday->classicDeals,retains Email/Back/exactrecord/locked/nonadmin/
+no-write assertions. Product runtime unchanged;notflaky/environment/cancel and
+no reuse of failed gate. Draft/unmerged/undeployed,newheadfull272 required.
+Main/live46638ea175 remains verified. No real PIN/settings/business actions.
+
+2026-10-28 NEXT455item2 LOCAL candidate,notreleased:on item/455-one-login from
+verified466/main38ea175 plus ONLY owned proof. Same shared PIN renderer/submit
+lifecycle mounts on classic/native,old white keypad/global numeric handler
+removed. Existing signed cookie/remembered ledger/backend auth unchanged.
+Direct/app and browserroot now nativeToday;JSONroot/oldpreview URLs/classicdeep
+links stay compatible. Native Home pointsToday;nonadminstill no admin reads,
+fixed available-tools link preserves classic access. Whole455item3nav notbundled.
+Focused original remembered/shell/Today/secure/key-dialog tests PASS,final affected
+shared/home/role gate thenfull272 stillrequired. Exactscreen syntheticbeforeafter
+FCPclassic817.5/126/87.8ms,native134.7/79.7/35.2ms,LHperformance100/100 and
+access100/100 bothchangedscreens,nooverflow/errors;NOTlive. No real PIN/device/
+key/POST/settings/businessactions. Trace issue-455-one-login.md;proof shared-login-
+candidate. Main/live466 unchangedverified;no PR/fullgate/deploy yet,456deferred.
+
+2026-10-28 PR466/455item1 RELEASED/VERIFIED:main38ea175b45dcb9dabc634debee36ec703996715d
+fulltree identical testedd6b65b3. AutomaticRailwayc138421a-3205-40fa-8f8c-24d19fbaa87b
+Active/successful authoritativeDetails exactsource,no manual build/retry/settings.
+PR40603196905/job122536158786271/0/0,600s/file,job15m05s,sum843.38s NOTwall.
+MAIN40654964433/job122703655276271/0/0,job14m59s,sum836.34s NOTwall;all542
+timings retained. Public pinned12 true1366/400/412 GET-only/health200/unsigned401/
+snapshot+key+devices401no-store/unchecked44pxoption. Existing signedChrome own
+device metadata0rows/Settingscontrols,Today chooser/recordedwork,Email48rows/
+18charbody/disabledemptyReply/Close,andclassic19->1->BackLoading0->same19 pass,
+nooverflow/retainedapplicationerrors0. Opaque BEFOREdisk screenshot islands inspected.
+Exactmerged LOCAL PIN/profile/restart/Settings3size/mail5size pass;isolated
+integration passed after an initial aggregate harness failure retained with cause
+not established,no product/assertion changes. Main independently allgreen.
+No real PIN/device/key/file/POST/import/send/settings/businesswrites/authtransfer.
+Owned local proof replayed deliberately ontoactualmerge;proof-only,no newdeploy.
+Proof docs/screens/2026-10-28-pr466-release. Only455item1 DONE;next455item2
+one PIN screen/session,not bundled.454realownerkey/firstupload/localroutine still
+pending/notactive;463ownerprotection Notyet/alreadyasked;450blocked/456deferred.
+Whole455/412/backlog notcomplete. Older draft/budgethold wording is historical.
+
+2026-10-27 PR465 ENGINEERING RELEASED/VERIFIED:main45da4ac identical tested9b39c00,
+automaticRailway9e867208-8538-41c5-8335-a621493b3f5d Active/successful exactDetails.
+PR40549445436/job122348884532267/0/0,600s/file,15m19job,sum851.28s NOTwall;
+MAIN40558101945/job122379491627267/0/0,10m35job,sum579.30s NOTwall,allrowsretained.
+Public12true3sizes/health200/unsignedidentity401/privatekeyGET401no-store;
+same-source Settings3size/CLI/keyPOST/mail5size synthetic PASS. Actual signed
+Settings0keys/Createenabled/emptyclosedreveal;GETcapsvalid/latestABSENT;Today
+chooser/recordedwork,Email49rows/full8509body/emptyReplydisabled/finalGmail/Close,
+classic19->1->BackLoading0->SAME19/0/nooverflow PASS. Browser control interruption
+recovered fresh SAMEbrowser;earlier tab logs unavailable,only retained classic
+applicationerrors0 claimed. Source/fields opaque BEFOREdisk. NO realkey/file/
+upload/import/POST/download/send/settings/businesswrites. Final synthetic
+performance97/100/access94/94 NOTlive;earlier failures retained. Proof/all267+267
+timings docs/screens/2026-10-27-pr465-release.454 owner privatekey/firstrealupload/
+routine integration remainsOPEN,not a phone gate or whole-backlog wait;455next,
+456deferred,463GitHubownerclickseparate. No new deployment for proof-only branch.
+
+2026-10-27 PR465 scoped uploader DRAFT/UNMERGED/UNDEPLOYED remote9b39c00,
+automatic full40549445436/job122348884532 in progress17:27Z,expected267/600s-file.
+No duplicate dispatch. Final serialized exact-product Settings audit PASS:
+FCP398.3/236.6/204.5ms,performance97/100/access94/94,no runtime/audit errors.
+Earlier concurrent76/97 report retained,not relabeled passed;harness now preserves
+null scores/value-free error IDs and benchmark ran without overlapping tests.
+All synthetic,NOT live. Functional/auth/CLI/rollback negatives pass;main/live464
+unchanged. Owned final proof LOCAL-only atop tested remote,do not push docs-only
+CI churn or mistake proofHEAD for product. Fullgate/actual release proof still
+required;no realkey/file/upload/import/POST/settings/business writes or new owner
+question.454OPEN,455/456deferred,463owner GitHub click separate.
+
+2026-10-27 D064/454 LOCAL integrated scoped uploader candidate,NOT released:
+SAME owned branch now wires actual signed-admin create/list/revoke and narrow
+snapshot POST-only key authentication before generic parsers,current issuer
+eligibility/revocation recheck,exactSHA replay/ORIGINAL8field receipts. No generic
+session authority from key. Settings once-only transient key/download with
+session/navigation/late-result clearing;local fixed-endpoint bounded CLI with
+redirect rejection/no retries/counts-time-only output. Actual temp-server admin
+integration,local CLI and Settings1366/400/412 journeys PASS;old a2dc46e rollback
+reader/manual append accepts/preserves new receipts and key history. Synthetic
+LH after100/99 performance,94/94 accessibility;earlier89 failure corrected with
+visible-label-derived accessible names,not hidden. Offline source gate PASS.
+LATEST final-source repeat measured desktop performance76/phone97,access94/94:
+NOT green. Preserve report/diagnose value-free Lighthouse audit errors and
+serialized benchmark contention before merge;earlier100/99 is historical only.
+No real key/file/upload/import/POST/download/send/settings/business writes.
+Full267/current-head/merge/main/automatic deployment/mixed proof still required.
+Main/live464a2dc46e unchanged. Trace issue-454-scoped-assistant-upload.md has
+writer/reader/privacy/rollback/changed assertion details.454OPEN,455/456deferred.
+
+2026-10-27 D064/454 LOCAL controller/audit progress on SAME scoped-upload branch:
+UNREGISTERED key GET/create/revoke handlers now exist;injected-admin synthetic
+tests PASS for no-store/pre-parser/origin/createUUID/domain identity/one-time
+response/replay409/metadata/actor/revoke/read+write failures. Actual existing
+signed-server test seeded fake hash collection:10 outward reads omit fake key/
+hash/id/collection,canonical writer preserves records,logs omit them. Telemetry
+privacy test extended,original assertions retained,PASS/zero SDK network. Scoped
+audit documented;not wholeapp certification or actual management endpoint proof.
+Local Docker guard now excludes private-record-backups identified in source,
+no private contents/presence inspected,no live leak asserted. No server import/
+registration/keyPOST/Settings/CLI/fullsuite/PR/deploy or realkey/production writes.
+Current live/main464a2dc46e unchanged. NEXT actual admin wiring + narrow keyPOST/
+SHA replay/Settings/CLI when implementation+release+rollback budget permits;
+reusebranch,455/456 deferred,463owner click separate. No standalone unwired release.
+
+2026-10-27 D064/454 scoped upload LOCAL PREPARATION,NOT released:branch
+item/454-scoped-assistant-upload from currentmaina2dc46e+owned464proofbe20df2.
+Pure assistant-upload-keys helper implements injected fake entropy/serverclock,
+hash-only store/exact append scope/owner metadata/revoke/collision/auth and static
+error codes. Synthetic unit PASS incl wrong/revoked/corrupt/accessor/future/actor/
+immutability/network-clock-random-write spies. UNREGISTERED/no server imports,
+no actual store/route/Settings/CLI/key creation/privatefiles/production writes.
+NO fullgate/PR/deploy;not independently releasable. New-collection export/privacy
+audit,actual admin/key POST boundary/SHA replay/Settings/local CLI remain next;
+trace docs/cycles/issue-454-scoped-assistant-upload.md. Reuse branch/no duplicate.
+Main/live464a2dc46e remains verified,463owner protection click separate/notwhole
+454block;455/456 deferred. Preserve full release AND rollback reserve before wiring.
+
+2026-10-27 PR464/463 ENGINEERING RELEASED/VERIFIED:maina2dc46e2e125a4e9c340f0934693346a34134024
+full tree identical finaltested99ceb75. AutomaticRailwaye5a29d49-0ccd-49b5-855b-3c7554174074
+Active/successful exactsource Details verified,no manual build/retry/settings.
+PR40490468008/job122143342544262/0/0,600s/file,14m25job/13m28teststep,
+sum806.59s NOTwall,newscanner2.18s. MAIN40492803077/job122150687766262/0/0,
+13m00job/11m49teststep,sum708.56s NOTwall,newscanner1.73s. All262+262 rows
+docs/screens/2026-10-27-pr464-release. Exact merge offline gate+mail5size PASS;
+public pinned12 true1366/400/412/health200/private401no-store. SignedToday latest
+ABSENT/capsvalid;Email48rows/full2117body/emptyReply disabled/finalGmail/Close;
+classic19->1->visibleBackLoading0->same19/0/nooverflow. Zero application errors;
+two pre-merge Grammarly chrome-extension entries recorded separately,not hidden.
+Opaque screenshots BEFOREdisk inspected. No real keys/privatefiles/imports/writes.
+463 implementation DONE;issue remains OPEN ONLY for owner Secret Protection +
+Push protection click. Read-only API still reports both disabled;owner asked once.
+Do not duplicate hardening or make whole454 wait. NEXT454 scoped-key/local uploader
+actual implementation,synthetic only;455 after454,456 deferred. No new key slice
+started without adequate implementation/full release/rollback verification reserve.
+Older463 candidate/462 pending paragraphs are historical,superseded.
+
+2026-10-27 NEXT463 local candidate from verified462/main04c83b6:env/key Git
+ignore,Docker private-context exclusions,pure offline tracked-text/provider/
+entropy/client-env gate with value-free diagnostics. Four fixture annotation
+comments only,no existing assertion/value behavior changes. Focused all-family/
+purity/redaction/ignore negatives PASS;full262/600s-file and release pending.
+No exposed credential claim/no rotations/settings/privatefiles inspected.
+Trace docs/cycles/issue-463-offline-secret-gate.md.454 upload-key/CLI still next
+after hardening,455/456 not advanced. Prior462 remains technically verified.
+
+2026-10-27 PR462 RELEASED/VERIFIED:main04c83b6242179ef34b7077fb0d1d21e7a5e6708b,
+automatic5c68d8e3-927f-4d4e-b631-f27505a3312e Active/successful exactsource
+Details verified. Tested0b08b3e full tree identical to merge. PR40465256100/
+job122058978344261/0/0,600s/file,14m39job,sum814.08s NOTwall. MAIN40486154251/
+job122128322778261/0/0,14m15job/13m20teststep,sum798.82s NOTwall,newtest2.99s.
+All261 rows each retained docs/screens/2026-10-27-pr462-release. Public12 pinned
+true1366/400/412 GET-only/health200/unsigned401/private401no-store;exactmerged
+reply-importer3size and mailbox5size passed. SignedToday1280x585 latestABSENT,
+empty chooser/hidden disabled import,assistantmodel2/sheet3;caps-only GET valid.
+Email47rows/full894body/emptyReply PreviewEditSenddisabled/finalGmail/Closerestored;
+classic19->1->visibleBackLoading0->SAME19/0,zero console errors/overflow. Opaque
+screens before disk,inspected. No real imports/keys/settings/business writes.
+457 fulfilled by this release;454 remains OPEN for scoped-key/local uploader.
+NEXT463 security hardening explicitly after this454 slice/before455;no exposed
+secrets claimed by its audit,no rotation or security-settings changes by Codex.
+455 after454;456 deferred. Older candidate paragraphs below are historical.
+
+2026-10-27 PR462 reply writer/shortlist DRAFT/UNMERGED/UNDEPLOYED:remote
+0b08b3e1f9a414afab042f8f5ded8261282f177e full40465256100/job122058978344
+SUCCESS261/0/0,600s/file,14m39job,sum814.08s NOTwall,newtest2.97s. Actual
+rawPOST->GET/safe future rejection and3size source-only top10/fullsearch tests
+pass. Frozen same-product syntheticFCP136/209.3/111.6ms,performance99/96,
+access100/100 NOTlive. Actual461 rollback reader accepts/preserves new receipts.
+Alltimings/proof docs/screens/2026-10-27-pr462-candidate LOCAL proof-only;doNOT
+push docs-only to churnCI. Preserve release+rollback reserve,no newmerge near
+ceiling. Live remains verified461/ac3b147;454/457OPEN,no owner phone gate.
+Next resume this exact candidate,not duplicate;automatic upload-key/CLI after.
+
+2026-10-27 NEXT454 reply writer/shortlist LOCAL CANDIDATE from verifiedac3b147:
+actual optional nonfuture reply decoder+pure top10reply-only stableprojection+
+reported POF buyer cards/full area-search;old files unknown/unranked. New real
+importer/GET3size test and reader/model focused PASS;actual461 rollback reader
+accepts new8field receipts and preserves history. NOfullgate/PR/merge/deploy
+yet. No privatefiles/keys/production imports/writes. Reserve release+rollback
+budget before merge;457notclosed,automatic scoped-key/uploader next,455/456deferred.
+
+2026-10-27 PR461 stored reply reader prerequisite RELEASED/VERIFIED:mainac3b147,
+automatic594d075e exactsourceActive/successful;PR+MAIN260/0/0each600s/file,
+all260+260timings docs/screens/2026-10-27-pr461-release. Approved435 public
+true3size/signedprivateGET/Today/Email/classic/same-source5sizejourney pass.
+Backend-only,no new UI/Lighthouseclaim or production import/key/write. Raw
+last_reply_at uploads STILLreject;stored additive history validates/preserves.
+NEXT454 enable genuine optional reply writer/projection/top10shortlist using
+this verified rollback reader;then scoped-key/CLI.457answered/notdone,phone
+feedback notgate,455/456deferred,450blocked. Older reader-candidate wording below
+is historical,superseded. No original assertions weakened.
+
+2026-10-27 D064 reply reader compatibility CANDIDATE on current82ce792:
+stored-only optional own/nonfutureISO last_reply_at;raw uploads still reject
+the field until next writer/ranking slice. Actual82ce792 synthetic baseline
+rejects additive history503;new reader preserves it across own-actor GET and
+old-format append/replay. New synthetic reader/route negatives and original
+snapshot/routes PASS. Full frozen-head gate/release pending,no UI/keys/real
+imports/writes/deploy.454/457 remain OPEN,not waiting for architect or phone.
+
+2026-10-27 PR460 first D064 Today correction RELEASED/VERIFIED:main82ce792,
+automaticf5f73806 Active/successful exactsource,PR+MAIN259/0/0 each600s/file.
+Public pinned true3size+signed Today/Email/classic+same-source synthetic pass.
+Plain chooser/secondary manual import,Copy text,hidden filenames,Why/phone,
+zero fee notestimated,reported POF summary shipped. Full evidence/all259+259
+timings docs/screens/2026-10-27-pr460-release. No real imports/copy/send/settings.
+D064/457 ANSWERED;NO phone-wait gate.454 remains OPEN:next compatible optional
+reply timestamp/ranked shortlist,then scoped key/local uploader. Current strict
+rollback reader rejects new buyer fields:stage reader compatibility before
+enabling new-field imports;never corrupt/delete history or infer reply from contact.
+455after454;456deferred;450countsblocked. Older candidate/wait wording superseded.
+
+2026-10-27 D064/454 owner correction CANDIDATE:plain hidden-native chooser,
+secondary manual import,no visible filenames,explicit Copy text with safe failure,
+Why before phone,zero/missing fee Not estimated yet,reported POF summary on Today.
+Actual-importer3size negatives/component UI pass;full final-head gate/live pending.
+D064 at454/457 ANSWERED:phone feedback is not a stop/release gate;optional genuine
+last_reply_at and scoped upload-key/local uploader remain ordered454 next slices.
+No invented reply ranking or automatic-upload claim.455/456 still deferred.
+Prior phone-wait/unanswered457 wording below is historical,superseded byD064.
+
+2026-10-27 PR459 Today assistant surface RELEASED/VERIFIED on main7f3a326,
+automatic7e35879b exact-source Active/successful. PR and merged-main full gates
+each259/0/0,600s/file; public true3size GET-only and signed Today/Email/classic
+proof passed. Final synthetic performance99/96,accessibility100/100;not live.
+No production upload/import/send/toggle. Evidence docs/screens/2026-10-26-pr459-release.
+454 remains OPEN for owner phone acceptance and457 reply-evidence decision;
+contact is not reply.455 follows454;456 deferred;450 blocked. Older candidate
+paragraphs below are historical, superseded by this verified checkpoint.
+
+2026-10-26 owner454 integrated Today CANDIDATE:explicit file selection/import,
+source-labeled assistant sheet before separate canonical work,calls/Messages/
+Email links,stage/detail drawer,reported buyer list/search/POF+approval,device-
+only scoped checks. Real-importer UI1366/400/412 and existing canonicalToday/
+navigation/mailbox regressions PASS;synthetic FCP<2s/Lighthouse100/100,NOTlive.
+Dropped-response experiment found Chromium POST replay;optional actor-scoped
+request UUID now returns identical receipt without second write,new clicks
+still append. Private GET viewer_scope avoids generic browseradmin identity;
+hashed boolean-only local keys,no PII. Legacy receipts/no-ID API preserved.
+No auth/token/provider/paid/canonical-gate changes. Whole454 NOTdone:457 latest-
+reply evidence unresolved,phoneapproval follows finished live surface. Full
+final-head600s/file/selfreview/PR/merge/exactdeploy/435proof still required.
+Trace docs/cycles/issue-454-today-assistant-sheet.md.455after454,456deferred.
+
+2026-10-26 next454 Today LOCAL preparation only:unwired assistant-model pure
+projection consumes actual synthetic importer receipts,keeps provenance/unknown
+money/reported POF/approval separate,ranked calls/text links/stage groups,buyer
+list without fabricated reply rank. Source/identity/date/ref/accessor/link/purity
+negatives and existing snapshot/Today model focused tests PASS. No HTML/app/CSS/
+cache/route/provider/read/upload/storage/UI/fullgate/PR/deploy change. Trace
+docs/cycles/issue-454-today-assistant-sheet.md. NEXT actual Today controller and
+escaped phone-first sheet;454NOTdone,457onlyreplyrank unanswered,455after454,
+456deferred. Live verified458dd04d98 unchanged;reserve release/rollback budget.
+
+2026-10-26 owner454 backend prerequisite DONE/VERIFIED via458;whole454 OPEN.
+Tested03bd898 full40370638496/job121740123029=257/0/0,600s/file;mergedmain
+dd04d989ebf74fe7c208554024b93f6a5bc4fd90 identicaltree,main40385719994/
+job121793323299=257/0/0. AutomaticRailwaye4da6bfb exactsourceActive/successful.
+Public12true3sizesGET/health200,unsignedsnapshot401/no-store;existing signed
+ChromeGET capabilities true/latestabsent only,NO real upload/privatecontents.
+Native emptyReply disabled/Close and classic19->1->BackLoading->19 preserved;
+exactmerge synthetic5size mailbox/3size navigation pass. Safeproof/all257+257
+timings docs/screens/2026-10-26-pr458-release. No settings/send/businesswrites.
+NEXT454 Todayupload/source-labeled8AMsheet;not delivered by this backend PR.
+457 replyranking only unanswered;450 counts blocked;455after454,456deferred.
+
+2026-10-26 owner454 BACKEND prerequisite candidate now registers private admin
+upload/read routes behind existing session gate and early no-store/admin/body
+protection. Scoped privacy/export audit and actual-server synthetic auth/import/
+eight-surface non-leakage/canonical-writer preservation PASS;two focused snapshot
+files also pass. Runtime DB now ignored;no private files or production data used.
+No auth/parser rewrite,provider send/token/settings change. Full final-head gate,
+PR/deploy/live proof pending. Today upload/sheet not implemented;454NOTdone.
+Trace/audit docs/cycles/issue-454-*.md.457replyrankonly still separate,456deferred,
+455notstarted. Live453unchanged;no dependency/lock changes.
+
+2026-10-26 owner454 LOCAL CANDIDATE now has pure v1 byte decoder/validator,
+immutable append-only per-actor import/latest projection and an UNREGISTERED
+admin upload/read route module. Two synthetic unit files PASS exact hash,
+schema/date/ID/path/size/PII-safe atomic rejection/history/nonpromotion/purity
+and local auth/origin/no-store/proxy/storage failures. No server registration,
+private file inspection,real persistence/upload,UI/fullgate/PR/deploy claimed.
+Finish privacy/export audit and actual admin integration next,then Today sheet.
+457onlyreplyrank gap remains unanswered;454otherwise unblocked.456draftgreen
+256/0/0 stays unmerged. Live453f7a7977 unchanged;no dependency/lock changes.
+
+2026-10-26 NEW OWNER PRIORITIES454FIRST(private assistant snapshot/Today8AM
+sheet),455SECOND(separate quick wins),ahead of Email polish except open safety
+fixes.456 native Reports candidate preserved DRAFT/UNMERGED/UNDEPLOYED;one
+final-head hosted gate allowed to finish,not a release. Current local454 branch
+starts deployedf7a7977,prior453proof preserved,NO456productcode. Trace
+docs/cycles/issue-454-assistant-snapshot-import.md covers raw-file hashing,
+existing admin/no-store/strict atomic store/Today boundaries and reported-only
+data separation. No private files or real snapshots read,implementation/import
+or454release claimed. Reply ranking needs actual reply evidence,notlast_contact.
+Count450stillBLOCKED;live453 unchanged. No login/credential/455work started.
+
+456 exacte114cd1 full40331220702/job121600826075 TERMINALGREEN256/0/0,
+600s/file,14m37s,sum816.95s NOTwall. Still DRAFT/UNMERGED,not release approval;
+no jobs running.457 asks ONLY454 buyer reply-ranking evidence vs contact wording;
+the importer and other sheet sections remain unblocked. Current454localtrace
+contains no runtime change,private snapshot data or production write.
+
+2026-10-26 provider-label BACKEND prerequisite453 DONE/VERIFIED. Tested91950fb
+full40315574581/job121547249062=255/0/0,600s/file,12m34s job,sum690.61s
+NOTwall;main40317308765/job121553036720 also255/0/0,12m54s,sum704.25s
+NOTwall. Currentmainf7a797781743f564d3a20db59be5826d0b2fb924 identical tested
+tree;automaticRailway14777ce0-8206-4695-9c77-d4b232f13b4a Active/exactsource.
+Public12true3sizeGETshealth200/unsigned401;exactsource pinned5size mail pass.
+Signed metadata1/exactbody receipt matches with only source/scope/count/boolean
+proof,private names/IDs/JSON never persisted. Native1280x52950rows/full3480char
+body/no defaultcomposer;emptyPreview/Senddisabled/finalunavailableGmail/Close
+restores,0consoleerrors;classic19->Open->Back->same19/0workbench. No writer,
+new request/registry lookup,auth/storage/count/native/cache/send/settings change.
+Safe proof/all255+255timings docs/screens/2026-10-26-pr453-release. WholeB,
+native source-label consumption and412designapproval NOTdone;450unanswered.
+Next bounded source-label projection must use genuine names vs opaque IDs and
+all-member/copy/identity/session negatives,not legacy raw-label guesses.
+
+Historical preparation:
+2026-10-26 D-063B provider-label BACKEND prerequisite local candidate:bounded
+message names (capability-gated existing IMAP fetch) versus opaque REST IDs,
+real adapter/MIME/annotation parity and malformed/unknown/empty/requestcount
+negatives pass,new test plus seven existing regressions. No new requests,
+registry lookup,storage/auth/send/count/writer/native consumer or cache change.
+Native Reports/wholeB/designapproval NOTdone. Full final-head gate/PR/live
+proof still pending;production452 unchanged and count450 remainsBLOCKED.
+
+2026-10-26 next D-063B label provenance TRACE ONLY on local
+item/412-provider-label-provenance from main51a7caf,452 proof preserved.
+Actual adapter does not emit the raw labels used by Reports fixtures;Gmail
+message label IDs require exact mapping,IMAP flags are not custom labels.
+Trace docs/cycles/issue-412-provider-label-provenance.md defines bounded
+adapter/annotation/projection negatives before implementation. No runtime
+change,new PR/provider call/test gate/deploy or live label failure claimed.
+450 still unanswered/BLOCKED;no clock/count repair or C writer begun.
+
+2026-10-26 issue451 DONE/VERIFIED via452. Testedbbbbb5e full40274204079/
+job121413572633=254/0/0,600s/file,15m02s job,sum842.48s NOTwall. Currentmain
+51a7cafdd2a9741ae0ce217854b4f488d552c53a tree identical;automaticRailway
+d7fde76e-6fdf-45d0-9480-eef63f903ff8 Active/successful,Details exactsource.
+Merged-main40276301165 also254/0/0. Public12true1366/400/412GEThealth200/
+unsigned401;actual signedChrome1280x58519cards->exact1record->Loading->same
+19cards/0workbench,filters preserved,0consoleerrors/no overflow. Exactmerge
+actual-route Back3size and navigation/exact-record/locked/nonadmin pass.
+Synthetic baselineca483e7 leaves1card;candidate restores2,FCP79.3/69.6/69.7ms,
+Lighthouse98/98 NOTlive. No businesswrites/settings/authtransfer/manualbuild.
+Safe proof/all254+254 timings docs/screens/2026-10-26-pr452-release. Native
+Deals/designapproval still gated by412;count450 remains unanswered/BLOCKED.
+
+Historical local preparation:2026-10-26 independent451 LOCAL CANDIDATE ONLY on item/451-classic-back-results
+from verifiedca483e7,prior proof preserved. Actual production route fixture
+reproduces Back racing a pending record-only read;old helper ignored record_id
+and masked it. Minimal existing request-ticket/loading/data/focus reset passes
+three-size normal/late/hidden-price cases;no backend/auth/CSP/layout/writer
+change,classic asset16. No full gate/PR/merge/deploy/live fix claimed. Preserve
+release/rollback reserve at79% primary. Existing pipeline UI and actual
+navigation/exact-record/locked/nonadmin regressions also pass. Count450 still
+unanswered/BLOCKED;live449 unchanged. No local jobs or dependency changes.
+
+2026-10-26 rollback449 DONE/VERIFIED after448 FAILED its live count gate.
+Currentmainca483e7042a6f77d16c6d36b9181ab572f9ff647 restores exact verified
+3d41e6d product/tree. Tested rollbacke52bbd3 full40247254613=253/0/0,
+600s/file,13m49s job,sum769.20s NOTwall. Restored main40248641002 also253/0/0.
+AutomaticRailwayfa95c112-05b8-436d-b8b5-eaf0746ac7f3 Active/successful,Details
+exactsource. Public12true3sizeGET/health200/unsigned401;actual signedChrome
+1038x55950rows/full740charbody/emptyReplydisabledPreviewSend/finalunavailable
+Gmail/Close restored,0consoleerrors. Exactsource5size mail/3size reply pass.
+No businesswrites/settings/authtransfer/manualbuild. Safe proof/all253+253
+timings docs/screens/2026-10-26-pr449-rollback.448 PR258/0/0 but MAIN257/1/0
+and live snapshot absent:valid source timestamp117ms ahead of browser clock;
+do not call448 verified. Count slice BLOCKED450 clock-authority answer.
+Independent451:classic19cards/Open deal works butBack did not visibly return;
+trace/reproduce before a separate bounded fix,not a nativeDeals rebuild.
+Whole412OPEN/unapproved. Primary64%;preserve verification/rollback reserve.
+
+2026-10-25 explicit-reader attachment slice IN PROGRESS on
+item/412-attachment-manifests from verified327fd7c,prior446 proof preserved.
+Only metadata from existing MIME read;no new provider calls/download API/file
+content/storage/writers/send/CSS. Real-MIME adapter/annotation/pure projection
+and3size safe reader tests pass;existing source-snippet/chrome5size tests pass.
+Synthetic app FCP48.8/41.3/26.1ms,Lighthouse98/98,reading space unchanged.
+Full final-head and exact live proof pending. List-presence and other B pieces
+remain separate;no nativeDeals before owner design approval.
+
+2026-10-25 source-snippet446 DONE/VERIFIED: testeddb6c5b2 full40215946479/
+job121236979272=251/0/0,600s/file,11m56s job,sum661.98s NOTwall. Exact
+merged/currentmain327fd7c4ec5efcab8e63ef2a86ae7eb8213a68a8 automaticRailway
+ee6eea25-68d7-401e-89a6-28e3c8601e20 Active/successful,Details exactsource.
+Public12true1366/400/412 GETshealth200,unsignedidentity401;exactmerge-source
+snippet3size/five-sizecontainment pass. SignedChromeDOM/image1038x559:
+49loadedrows/no unopenedIMAPpreviews;open4795charbody/Back yields one500char
+snippet EXACTLY matching normalized source. Search clears it. EmptyPreview/
+Senddisabled/finalunavailable/Gmailstatus,allcontrolsfit/Close source restored;
+classic19Open deal/Back,0consoleerrors;GETstatusdisabled/configured/cap30/
+automaticfalse. One source wait exceeded browser observation deadline;the
+same request then completed,no retry/no error/no invented live timing.
+No realPreview/Send,drafttyping,settings/authtransfer/businesswrites. Safe
+proof/all251timings docs/screens/2026-10-25-pr446-release. Unopened IMAP
+previews and B attachments/totals/cursors/labels/search remain separate;412
+OPEN/no nativeDeals before owner design approval. No manual build consumed.
+
+2026-10-25 source-snippet slice IN PROGRESS on item/412-source-backed-snippets
+from current74dfd39,preserving prior445 proof. Actual provider/parser origins,
+exact identity/clock pure500char projection and explicit-open-only native cache;
+no body batches/storage/newproviderrequests/writers/CSS/send changes. Source/
+UI negatives and existing chrome/loading/read-state suites pass;synthetic3size
+FCP51.5/49.1/27.5ms,Lighthouse98/98,reader unchanged. Full final-head and live
+proof pending. Unopened IMAP previews and other B pieces remain separate.
+
+2026-10-25 run checkpoint:445 release complete;clean retained branch includes
+safe proof/all249 timings. Usage75% at completion;retain release-verification
+reserve instead of starting another merge/deployment. Next snippet writer/
+reader trace expanded in docs/cycles/issue-412-mail-data-trace.md: existing
+explicit body reads only,parser availability provenance before excerpt cache,
+no50-body metadata fetch. No snippet implementation or additional CI claimed.
+No local jobs remain;do not rerun unchanged445 gates. Parent412 remains OPEN.
+
+2026-10-25 D-063B read-state prerequisite445 DONE/VERIFIED: tested5c54245
+cloud40196573234/job121178621729=249/0/0,600s/file,13m47s job,sum772.72s
+NOT wall. Exact merged/currentmain74dfd395649c86b7bff416f63b0d88cd5efa2e81
+automaticRailway5caaadc7-677c-44d5-9444-1a753ba46f18 Active/successful,
+authoritativeDetails source link verified. Public12true3sizes health200/
+unsignedidentity401;exact merge-source pinned5size journey passed. Existing
+signed Chrome1038x503:metadata/body parity readfalse/unreadtrue/originimap_flags,
+sourceconnected;3085charbody,list49loadedthreads,modelcachev2,rail56x447 with
+identical scroll dimensions;emptyPreview/Senddisabled/finalunavailable status,
+all controls fit/Close restores,classic19cards/Open deal/Back pass,0consoleerrors.
+SignedGETenabledfalse/configuredtrue/automaticfalse/cap30. No totals inferred from loaded
+rows;no additional automatic requests/providerwriters/settings/businesswrites.
+Unknown/malformed states proven hermetically,not forged in production. No CSS/
+layout change or new-screen performance claim. Proof docs/screens/2026-10-25-pr445-release.
+Whole412/designapproval/B totals/snippets/attachments/cursors/search remain
+OPEN;next separately bounded sourced snippets,not C/nativeDeals. Old666ed87
+CI40196486177 concurrency-cancelled after sparse-label negative fix,not failure.
+
+2026-10-25 D-063B read-state prerequisite IN PROGRESS,not released. Branch
+item/412-mail-read-state from currentddab0a8 preserves444 release proof.
+IMAP/Gmail missing/malformed flags/labels now remain unknown with null origin;
+valid states retain provider origin through actual annotate and native grouping.
+No added provider calls/writes/counts/layout/CSS changes. New hermetic adapter/
+projection negatives and existing mailbox/thread/participant/layout tests pass;
+full final-head gate and exact live verification pending. B snippets,attachment
+manifests,totals,cursors and search remain later separately bounded work.
+
+2026-10-25 repair444 DONE/VERIFIED: testedc2a9b49 cloud40192129550/
+job121165162664=248/0/0,600s/file,13m47s job;769.22s per-file sum NOT wall.
+Merged/currentmainddab0a8acf7097f5b9992e8ef4db4a6a2509be18 automatically deployed
+1d8e39bd-22a3-4f73-a4d0-999d820c81f6 Active/successful; authoritative Details
+links exact source. Public12 true1366x768/400x915/412x915 root/classic/Email/
+Today checks pass,health200,unsignedidentity401. Exact merge-source pinned
+five-size mailbox test passes,including1038x503/1366x600. Actual signedChrome
+1038x503/image1038x503:49loadedrows,rail56x447/scroll56x447,all foldercommands
+>=44px,Mail labels opens full role drawer,full3085char reader,bottom Reply.
+Empty composer fields/buttons/status fit;Preview/Send disabled;Close restores
+source. Local unmatched search0/clear49;classic19 Open deal actions remain.
+Signed GET enabledfalse/configuredtrue/automaticfalse/cap30;0consoleerrors.
+No real preview/send,draft typing,auth transfer,settings or business writes.
+Screenshots opaque-mask source and composer inputs before disk.442 corrected;
+441 remains historically failed and443 verified rollback is retained.412 OPEN,
+owner design approval outstanding before native Deals. NEXT D-063B separately
+traced read-only sourced metadata;C/default-OFF writer boundaries unchanged.
+Proof docs/screens/2026-10-25-pr444-release. No manual build/retry consumed.
+
+2026-10-25 repair442 IN PROGRESS on item/442-mail-rail-containment from
+verifiedrollbackd78f77f. New red1038x503 regression reproduced oldrail failure;
+fixed systemfolders + reachable Maillabels drawer eliminate inner scroll;
+short explicit composer(<=650px) fits all fields/commands/status while close
+restores source/draft. Five-size44px/containment and six focused suites pass;
+original768/915 reading-height assertions unchanged. Only D-063A reintroduced,
+no backend/auth/send/data changes. Full final-head gate/live acceptance pending.
+
+2026-10-25 rollback443 DONE/VERIFIED: tested1186d10 cloud40189589041/
+job121157540722=247/0/0,600s/file,13m29s; exact merged/currentmaind78f77f2ced1ebf6a3929056656b166151ed2a34
+automaticRailway2cefb141-a0be-4b5e-bc9b-c1e9d9df7332 Active/successful,
+Details links exact source. Product tree matches healthy32c0c2a. Pinned
+public12root/classic/Email/Today1366x768/400x915/412x915 pass,health200,
+unsignedidentity401,no authtransfer/writes. Same merge-source synthetic3size
+original Email/body/draft/session journey passes. SignedChrome1038x503:
+restored30rows/no failedrail,full3085-char body/replacingreader/bottomReply,
+emptyPreview/Edit/Senddisabled,GETstatusenabledfalse/configuredtrue/cap30/
+automaticfalse;classic19cards/OpenDeal work,0consoleerrors. DOM1038x503/
+image1023x496 named truthfully,PII masked before disk. No real preview/send/
+draft typing/settings/business writes. Proof docs/screens/2026-10-25-pr441-rollback.
+442/412 OPEN;441 failed live gate,not accepted. NEXT bounded short-height
+rail/drawer/44px/composer-status repair within approved D-063A;B/C still later.
+
+2026-10-25 PR441 LIVE VERIFICATION FAILED442 after exact mergeded1ee8c
+automatically deployed563cd3de-8826-4c7d-90b8-9026b63c139b Active/source
+verified. Health/auth/public12 checks and same-merge synthetic3sizes passed,
+but actual signed1038x503 shows folder rail client41x432/scroll44x644,
+horizontal inner scroll and off-screen role filters;41px buttons below44.
+Green248 tests did not cover this short-desktop containment gap. No backend,
+auth,send or business-data failure. AGENTS7 rollback branch now reverts ONLY
+441 product to verified32c0c2a;prior proof/decisions retained as history.
+Do NOT call441 released/accepted.442 records failure and bounded repair.
+Rollback needs its own full gate/merge/exactdeploy/read-only verification first.
+
+2026-10-25 quota reset; actual-thread medium/default verified.441 preflight
+browser3 existing signed classic controls initially worked,then reload/same
+handle observations timed out;native dedicated WholesaleOS window fallback
+requested app approval but timed out. No auth transfer/settings/merge/deploy.
+Trace found an UNMERGED context-link fixture gap: backend thread-view emits
+conversation.records,not stored refs. Fixed consumer against actual annotate
+output,canonical unique buyer/deal kind/id/ref only;forged/unlinked/missing/
+duplicate-record negatives and three-size chrome/loading tests pass. New
+final-head full gate required;prior9a5b3e8 green is historical,not borrowed.
+
+2026-10-25 phase-A final441 ready-for-review,UNMERGED/UNDEPLOYED.
+Architect439 APPROVED A->B->C; D-063 recorded. Final remote9a5b3e84efdc806ff0bbbfe498ac2ccf883f5c31
+hosted40155677969/job121056598346 passed248/0/0,600s/file,14m12s job.
+All248 timings preserved;788.34s per-file sum is NOT wall time. Earlier99fe999
+run40155479079 was concurrency-CANCELLED after source-count correction,not
+a test failure. New pending/failed ranges hidden;source-confirmed empty0 stays.
+Focused disabled-icon/title and loading negatives pass. No jobs remain.
+Primary92%: NO new merge/deploy at verification reserve. Browser discovery
+works but fresh production-tab Page.navigate times out; owner asked to reconnect
+extension/leave dashboard unlocked,never share PIN. No new deployment attempted.
+Scope is ANSWERED439,not the old435 viewport problem. Need recovered signed
+browser and quota before exact merge/automaticdeploy/approvedmixedproof.
+Final icon-layout synthetic99fe999 FCP60.9/35.2/34ms,Lighthouse98/98 stored
+outside repo .wholesaleos-release-proof/pr441-final-synthetic;not final9a5 live
+or same-SHA proof. Repeat bounded synthetic on eventual exact merged source.
+Parent412 OPEN/unapproved;next B data then C capability-gated writes perD063.
+
+2026-10-25 architect439 comment6392281483 APPROVES phased A->B->C;441 may
+finish gates and release under read-only A. D-063 records the full boundary.
+Unsupported existing controls now use truly disabled icons and exact Gmail
+fallback tooltips;no provider writer/send gate changes. This CHANGED product
+needs a new exact full suite;old248green only proves a4dbae6. Preflight browser
+inventory works but fresh production-tab navigation times out at CDP; do not
+merge/start deployment without available signed verification and quota reserve.
+This is not the superseded435 viewport-size blocker or a product regression.
+
+2026-10-25 next Gmail chrome slice PREPARED,not merged/deployed/approved.
+item/412-gmail-mailbox-chrome wires loaded-only search/five sourced categories,
+folder rail/drawer,dense rows,local selection and collapsible sourced context.
+Focused tests and pinned synthetic1366/400/412 proof pass;FCP56.6/47.3/65.5ms,
+Lighthouse98/98,zero external/writes. Draft441 finala4dbae6 hosted40151794301/
+job121044673698 passed248/0/0,600s/file,13m45s;all248 timings preserved.
+No merge/deployment:439 still unanswered. This is not whole-Gmail approval.
+Affected439 commands/Compose/pagination need architect scope; no fake actions,
+no native Deals. See docs/cycles/issue-412-gmail-layout.md for trace/assertion
+changes and separate440 release proof. No local test process remains running.
+
+2026-10-25 reading foundation440 DONE/RELEASED (bounded slice ONLY).
+Final88987d1 hosted40148742280/job121035596735=247/0/0,600s/file,
+13m34s; exact merge32c0c2acb31770c9dfb72d454ff306eb8ba69a4d automatic
+Railway5bf4a856-69b3-4222-a9b5-f0169f6bee63 Active/successful with exact
+source link in Details. Public12 root/classic/Email/Today checks at true
+1366x768,400x915,412x915 pass;health200,unsigned identity header401.
+Signed Chrome actual894x521:30 messages,1145-char selected body,full623px
+reader replaces623px list,no default composer;Reply after source text,
+Back restores list. Explicit empty Reply keeps Preview/Send disabled and
+unavailable status;Close works,0consoleerrors.19classiccards hydrate/Open
+deal works. Signed screenshot DOM894x521/image879x512 named truthfully,
+private regions masked before disk. Same merge-source synthetic3size full
+Email/body/draft/401 suite passes; product tree matches tested head. Before/
+after synthetic FCP65.7/40.1/38ms,Lighthouse100/100,not live timings.
+Proof docs/screens/2026-10-25-pr440-release; no manual retry/send/settings.
+
+Whole Gmail migration412 remains OPEN,not owner-approved. Continue next
+ordered rail/search/dense-list/context slice on item/412-gmail-mailbox-chrome.
+Unsupported command/metadata/new-thread boundaries remain affected-slice439
+BLOCKED pending architect answer;no native Deals. Dormant426 reconciliation
+46e2787 targets prior3d19945,exact cloud40148890614=247/0/0,NO standalone
+deployment; do not churn unchanged math merely as each UI main advances.
+
+2026-10-25 usage reset; exact thread medium/default verified. Currentmain
+3d19945 unchanged,clean retained release checkpoint0039d44 preserved.
+Found owner/architect412 comment6389032123: copy Gmail STRUCTURE,not another
+compact split pane. No need to wait for the earlier screenshot clarification.
+New item/412-gmail-email-layout starts from main and preserves release proof.
+Full contract/trace/phases in docs/cycles/issue-412-gmail-layout.md.
+Affected mailbox writes/new-thread Compose are BLOCKED in needs-architect439:
+there is no approved archive/delete/star/snooze/move/label writer,global search,
+authoritative total/cursor or attachment manifest. Never fake those controls.
+Independent preparation: pure sourced five-category/loaded-search/range model,
+full-width list replaced by full-width reader at all sizes,bottom-only explicit
+Reply,no default composer. Original body/history/draft/401 assertions retained;
+new source/identity/count/search/purity negatives and expanded UI assertions pass.
+Pinned synthetic baseline=currentlive3d19945 including its CSS; new --layout
+preserves --reply/proof-dir. Initial verifier-local variable shadowing failed,
+fixed without a threshold change; serialized proof passes FCP65.7/40.1/38ms,
+Lighthouse100/100,1366/400/412,no writes/external. Not live/Gmail-comparison
+proof,not a full Gmail migration or release. Rail/search/dense rows/context,
+439 answer,full final-head gate,exact live/owner approval remain required.
+Parent412 OPEN; no new native Deals,send,setting or business-data write.
+
+2026-10-24 PR424 D-061 composer DONE/RELEASED technically, default OFF.
+Final7fb1627 cloud40128437151/job120974771738 passed246/0/0,600s/file,
+13m54s,all246 timings accounted for. Merge/currentmain3d19945330db68ea980fc69acbffd5bde065b203
+automatically deployed Railwaya268bd00-558d-4a8d-987d-d5f1291f7f9b;
+Active/successful Details source link matches exact SHA. Public12 exact-size
+root/classic/Email/Today checks pass1366x768,400x915,412x915,health200;
+unsigned identity header status401. Existing signed Chrome894x577 reads
+30messages and a full323-character selected body; empty Reply makes Preview
+and Send visibly disabled,unavailable status/Gmail retained. Signed GETflags:
+enabledfalse/configuredtrue/automatic_send_allowedfalse/cap30. No typed
+draft,real preview/send or settings/secrets/business writes.0 console errors.
+Recovered one stale browser input tab without credentials/owner action;
+fresh actual894x521 classic25cards hydrate/Open deal workbench opens.
+Same merge source pinned synthetic reply1366/400/412 acceptance/uncertainty/
+session negatives pass. Candidate tree identical; synthetic before/after
+FCP52.1/36/34.5ms,Lighthouse98/100,Send/status fit. Not live timing.
+Proof docs/screens/2026-10-24-pr424-release; prior427/425 proofs committed.
+
+OWNER FEEDBACK2026-10-24: corrected live Email still needs another layout
+adjustment; NOT approved. Asked which space/width/controls remain problematic
+and requested a marked screenshot. No new native Deals migration until that
+bounded correction is live and approved. Preserve dormant426 (no standalone
+deploy),deferred413/430,county ranking pause and Claude433/434 ownership.
+Stop new releases at verification reserve; no running local job or test remains.
+This latest proof-only checkpoint does not alter released product source.
+
+2026-10-24 PR425 Today action center DONE/RELEASED (technical gates).
+Final07d86a4 hosted40126530095/job120969066010 passed244/0/0,600s/file,
+13m46s job,all244 timings accounted for. Exact merge5b8b89ec77e3563329b0719f04e81fe62cc36a7b
+is Active/successful Railway30578f86-9af4-4438-9dea-0ac7298e44f2; Details
+links exact source, automatic build/no manual retry. Under approved435:
+12 public root/classic/Email/Today checks at true1366x768,400x915,412x915
+pass,health200/signed-out boundary/zero write attempts. Existing Chrome
+actual894x577 shows73 actions,9 pending rows,3 urgency groups; pending and
+action drawers open/close withX/Escape,exact record links remain. Empty
+best-deal/activity panels stay honest, no fabricated data. Classic25 cards
+hydrate/Open deal works; compact Email30rows/full6318-char body retains
+128px pane top. No console errors. Same merge source pinned synthetic
+Today1366/400/412 click-through passes; candidate product tree identical,
+synthetic FCP223/117.9/46.4ms/Lighthouse100/100 (not live timing).
+Proof docs/screens/2026-10-24-pr425-release;427 live evidence is on main.
+Owner compact Email design approval still pending before native Deals.
+Next existing424 reconciles source-only reviewed composer; default OFF,
+no real preview/send or credential/settings/business-data write authorized.
+
+Historical preparation (superseded by the current release summary):
+2026-10-23 UTC run: independent existing PRs reconciled with main9f4caaf,
+tested and self-reviewed, NONE merged/deployed this run.427 remote e254d61
+passed241/0/0 (39876284871,13m18s);425 remote9dc3c85 passed244/0/0
+(39906473578,13m13s);424 remote1248de7 passed243/0/0 (39907243516,
+13m21s). All600s/file; every file has a duration in docs/test-results/
+2026-10-23-reconciliation/timings.json. No skipped/unaccounted files.
+Both425 and424 retain431 Home/classic labels/navigationv2 and actual journey
+negatives. Synthetic Today proof254/183.6/233.6ms,Lighthouse100/100;
+composer46.5/57.7/51.1ms,Lighthouse98/100. One overlapping Today screenshot
+run failed unchanged<2s paint; recorded honestly, then one serialized pass;
+only failure diagnostics changed. No existing safety assertion weakened.
+
+Release order remains427,425,424,426. These are independent branch gates,
+NOT a tested combined release; reconcile each with actual preceding main
+before its own release. All remain DRAFT/unmerged. Current production is
+431/9f4caaf via exact automatic a00779c6-f5c4-49e7-916f-cb7bc02cca43;
+health200/partial live navigation passed previously, but required live sizes
+remain pending in needs-architect435 (no answer yet). Do not waive/guess
+viewport sizes or roll back healthy code for missing tool evidence. No new
+native Deals until corrected Email is live and owner-approved.428 rotation
+still needs owner confirmation; no secret value inspected or changed.
+No local test/watch process remains running; no production Preview/Send,
+capture, batch, evidence confirmation, paid/settings action or business write.
+This documentation/timing checkpoint is local-only, not a new gated product.
+
+2026-10-23 independent424 PREPARATION ONLY: reconcile existing reply composer
+with main9f4caaf/navigation431, retaining both script sets and default-OFF
+transport. No production preview, Send or setting change.431/422 is active
+and healthy, but required responsive live proof remains pending435.427
+tested e254d61 remains first;425 reconciled9dc3c85 full cloud gate is running.
+424 stays DRAFT/unmerged behind those checks; no sensitive-item outage waiver.
+Historical capacity-pause notes below do not describe current provider state.
+All nine focused reply/security/mailbox/UI/navigation files pass together.
+Serialized local stub-only composer proof passes1366/400/412; FCP46.5/57.7/
+51.1ms,Lighthouse98/100. No send route is used. Full updated-head cloud gate
+is required; no previous242/0/0 substitution. No production action occurred.
+
+2026-10-21 02:59Z D-061 phase1 MERGED through PR422, main7b36ed2,
+release BLOCKED on workspace deployment pause (#423). Exact-head cloud
+39533634399: SUMMARY passed=240 failed=0 skipped=0 total=240;600s/file,
+12m13s test step/13m12s job; county-notice284.05s, new policy/API1.13s,
+participants1.11s. More than10m after merge no new deployment exists;
+Railway shows Limited Access / Deploys have been paused temporarily, while
+public status is Fully Operational and service Wait for CI is OFF. Cause
+documented as a temporary capacity-priority pause, not unpaid billing:
+https://docs.railway.com/deployments/reference#deployments-paused---limited-access
+Queued builds resume automatically; do not upgrade or trigger duplicates.
+Active remains verified
+PR421/373855d on24fb22b2-659c-42f2-8852-4481d7090eb6. Old health200 is
+not new release proof. No deployment retry, variable change or rollback.
+Keep415/412 OPEN. Complete exact-main/default-OFF GET + read-only live
+verification when builds resume; no production send/preview is authorized.
+
+Independent phase2 draftPR424 on item/415-reply-composer, NOT released:
+source-only GET reply defaults, exact preview/edit/review/explicit Send,
+receipt-version matching, uncertainty terminal state,35s client timeout and
+session-loss clearing. Default OFF and Open in Gmail remain. New1366/400/412
+synthetic interaction/context tests pass; existing read-only assertions stay
+unchanged (one GET-status fixture stub added). Synthetic before/after images,
+paint35-47ms and Lighthouse98 desktop/100 phone; not live measurements.
+Full242-file final-head gate pending. Do not merge phase2 until422 is live.
+
+
+2026-10-24 PR427 compact Email DONE/RELEASED (technical gates); owner design
+approval remains pending, so no new native Deals migration. Final348c67a
+hosted40124274140 passed241/0/0,600s/file,13m36s job. Merge/current-main
+bc6151ff50979e2d082ff34a429f3b6ead68d2e3 deployed automatically as
+af5c5186-44a1-4359-8402-5f37044b2774; authoritative Details shows successful
+and links this exact SHA. No manual retry consumed. Public root/classic/Email
+9 checks at measured1366x768,400x915,412x915 pass; health200, signed-out
+boundary intact. Existing signed Chrome at actual894x577:30 messages,
+full6318-character body, folders/People/Alerts/Back, classic25 hydrated cards
+and Open deal work;0 console errors. Mail panes now start at128px.
+Same deployed source synthetic Email proof: reader573/695/695px,
+FCP160.1/45.1/33.3ms, Lighthouse98/100. These are SYNTHETIC timings,
+not live performance. Evidence docs/screens/2026-10-24-pr427-release.
+No send, typed draft, capture, batch, confirmation, setting/secret or business
+write. Next existing PR425 reconciles with this main, preserving427 Email,
+navigationv2,today-modelv1 and cachev6; actual changed-head full gate required.
+Prior435 blockers/outage/draft notes below are historical, not current state.
+
+Historical preparation notes (superseded by the latest release summary below):
+2026-10-23 independent425 PREPARATION: reconciled existing Today branch with
+current main9f4caaf, preserving431 navigation/Home/classic labels and the
+actual classic/native journey test. No new item or duplicate branch.427
+remains ahead in the release order, tested241/0/0 on e254d61; local checkpoint
+94daaaa preserves partial live proof.431/422 exact source is active/healthy,
+but required live sizes remain blocked by Chrome viewport issue435. No merge
+or deployment of425 is authorized by this local integration. Earlier424-first
+notes below are historical; D-062 order429,427,425,424,426 now governs.
+Focused model/pending/service/components/shell/Today/journey passes. One
+overlapping screenshot proof failed the unchanged<2s paint assertion; the
+serialized run after both jobs ended passed254/183.6/233.6ms and Lighthouse
+100/100. Only failure diagnostics changed, not the threshold. Full updated
+cloud head is still pending; no earlier243/0/0 substitution or release claim.
+
+2026-10-21 #412/#416 Today follow-up LOCAL on the existing PR425 branch:
+added the first-section Hey Gabriel panel for recorded unsent drafts,
+waiting conversations, reported bounces and reminders. Unique existing
+record links only; unknown send outcomes require checking Sent mail,
+and reported bounces never claim confirmed current delivery status.
+No new business writer, network source or send/approval control. New pure
+projection and expanded1366/400/412 browser negatives pass with the existing
+dependency runtime. Refreshed Lighthouse13.5.0 accessibility100 desktop/phone;
+synthetic first paint99.2/35.6/87.2ms. Full243/243 hosted gate passed on
+7f52520 (run39655779023),0 failures/skips,600s/file,test11m55s/job12m52s;
+county-notice255.88s,pending0.16s,Today0.29s,shell6.72s,new UI3.27s.
+All per-file timings are under docs/test-results/issue-412-today-action-center.
+PR424 remains first in the owner order; release waits on
+Railway workspace capacity#423. Model/effort verified from this thread's
+latest context; persisted thread_settings service_tier is default/standard.
+No variable, billing, credential, capture, message or production write.
+Read-only Railway recheck18:48Z still shows Limited Access/Deploys paused
+temporarily and active421/373855d, so no release is claimed. Autopilot's
+saved checkpoint now reflects424 then425 and the correct persisted-tier
+lookup; no repeated implementation-settings blocker. Documentation-only
+proof follows the tested product commit; product source is unchanged.
+
+2026-10-21 #412 Today action center LOCAL on item/412-today-action-center.
+Native Today now presents the existing read-only action projection, existing
+reviewed-deal ranking and allowlisted last-24-hour activity together. Actions
+are grouped by canonical overdue/due/review/waiting/upcoming data; waiting days
+are computed only from a recorded last-out timestamp. Best-deal value/spread
+remain existing reviewed estimates with explicit labels. No sends, approvals,
+captures or data writes were added. Focused pure, service, component and
+synthetic1366/400/412 Playwright checks pass; screenshots are under
+docs/screens/2026-10-21-today-action-center. Permission-enabled full suite:
+SUMMARY passed=242 failed=0 skipped=0 total=242 (600 seconds per-file cap);
+Dallas foreclosure adapter completed in 17.75 seconds. Synthetic Lighthouse
+13.5.0 accessibility score is 100 at desktop and 412x915 mobile; synthetic
+first contentful paint is 63.5/61.1/48.4 ms at 1366/400/412 widths. Draft PR
+#425 hosted full-suite workflow #81 (run 39546559662) passed on head
+ccd924cd22c89bc8d6283280d38609be8f312dee. Exact deployment, live verification
+and owner screen sign-off remain pending; this is not released.
+
+2026-10-24 architect435 APPROVED and technical gate completed for431/422.
+Exact active Railwaya00779c6/source9f4caaf Details verified. Public root/
+classic/native Email9 live checks pass at true1366x768,400x915,412x915 with
+pinned Playwright1.44.0/Chromium1117; health200 and signed-out boundary intact.
+Existing-session Chrome journey passes at actual894x577: Home,Deals,explicit
+Email entry,list/full body,labeledDeals,Back. Default-OFF reply flags intact.
+Same9f4caaf synthetic actual-app journey passes all3 sizes,locked/nonadmin,
+exact identity,zero writes/external/errors. Safe proof under
+docs/screens/2026-10-24-pr431-approved-proof; no cookie/credential transfer.
+Owner phone screenshot is non-blocking per435; compact Email owner sign-off
+is still pending, not implied. Resume ordered427 final gate/release,then425,
+424,426. Earlier viewport BLOCKED notes below are historical, now superseded.
+No product dependency/lockfile change, manual build,send,capture,batch,
+confirmation,settings/secret or business-data write occurred.
+
+2026-10-23 checkpoint:431 MERGED and exact source9f4caaf DEPLOYED, but
+responsive live acceptance remains PENDING (tooling issue435), not DONE.
+Final431 hosted39873996904 passed241/0/0; automatic Railway deployment
+a00779c6-f5c4-49e7-916f-cb7bc02cca43 Details reports Active/success and
+links9f4caafe2fd82f858b2e125f27d62bdfe69b6e22. Hobby recovery is public.
+Health/nativeEmail200. Signed-admin reply status: disabled,configured,
+automatic send false,cap30. NO manual build; retry authorization UNCONSUMED.
+Partial live root/classic Deals/More Email/native Email29rows/labeled Deals/
+Back works. Leads hydrate. Required live1366/400/412 is NOT established:
+viewport.set reports success but DOM remains1280x551; screenshots1280x551
+and1265x545. Safe content-masked screenshots preserved; raw images never
+written. No rollout rollback for a tool limitation masquerading as app failure.
+435 is needs-architect; keep429/423 open until complete live proof.428 remains
+owner-controlled rotation, not verified complete. No secret/settings change.
+
+Next427 reconciled head e254d61fc9b803206a6ee874db12db141715e5da passed
+updated hosted39876284871/job120162564792:241/0/0,600s/file,13m18s job.
+New synthetic1366/400/412 proof retains573/695/695px reader and98/100
+Lighthouse. PR427 stays DRAFT/unmerged pending prior live gate435; no owner
+Email sign-off. This checkpoint is local-only documentation/proof, not a new
+product head or release. Continue independent existing425 preparation while
+435 is unresolved; no new native Deals or sensitive-item merge. No local
+test/watch job remains running. tests/.tmp absent; no dependency change.
+
+2026-10-23 UTC #429 PR431 MERGED - deploy pending/live checks pending.
+Exact614e4c8 passed hosted39873996904:241/0/0,600s/file,job12m47s,
+test11m42s. Merge9f4caafe2fd82f858b2e125f27d62bdfe69b6e22. Official
+Railway status23:22Z reports Hobby recovery. Automatic build
+a00779c6-f5c4-49e7-916f-cb7bc02cca43 started from431; monitor the SAME
+handle, no duplicate/manual deployment. Retry authorization UNCONSUMED.
+422 and431 remain unverified until exact-source/live1366/400/412 gates.
+Keep429/423 open for verification;428 owner-controlled rotation remains open.
+Next PR427 is reconciled with this main, retaining classic labels/home/entry
+and Email density; full updated-head gate required, no sign-off claimed.
+
+2026-10-21 #412 owner Email review: NOT approved; screenshot shows excess
+top chrome and stacked reader controls. Bounded reading-space correction on
+item/412-email-reading-space, isolated from the finance branch. Email uses
+native hover titles instead of a permanently empty help row, a compact
+message header and phone reading mode that keeps folders/Back/Reply but
+returns People/Alerts with Back. Errors/loading stay visible. No source
+content, mailbox transport, auth or send gate changed. Synthetic1366/400/412
+before/after proof gives150px more desktop reading height and185px on phones.
+Focused regressions pass; product83d822a hosted gate39662951658 passed
+240/0/0,600s/file,test11m51s/job13m07s. Email UI4.21s/loading5.07s,
+shell6.47s/county-notice257.04s; full per-file timings committed.
+Lighthouse98 desktop/100 phone. Release remains pending.
+Railway423 release prerequisites still apply; do not call this live or start
+the next Deals screen before the corrected Email receives owner sign-off.
+PR427 stays draft. Latest deployment mirror still has no exact422 release,
+and Railway browser control timed out during this run; no successful live
+verification or current provider recovery is claimed. No duplicate build.
 2026-10-22 #429 PR431 REVIEW/FOLLOW-UP: selected Claude's narrow classic-label
 implementation; alternate430 remains draft and is not combined into431.
 Integrated84d46b0 Vary: Accept/no-store correction. Closed the identified
@@ -846,6 +2408,11 @@ Mark the status here as part of each item's PR.
 
 ## Current Owner Order (D-056, GitHub 2026-10-13)
 
+Owner update 2026-11-09 (D-066; run order now at the top of this file, D-067) supersedes the pause below for source and comps work: after the
+open needs-architect items are answered, do B-23 (public distress lists importer), then B-24 (paid data
+provider adapter, switch off), then comps (B-07, B-21) and the match engine (B-19). No new UI polish
+slices before B-23.
+
 Owner update2026-10-15 supersedes the slice order below: #366 D -> A -> G -> C
 -> F -> B -> E -> I -> H -> J, one PR per letter, live click-through1366/412.
 Notify Gabriel when C and B are live for his #341 sign-off. County ranking
@@ -908,6 +2475,13 @@ One bounded slice per PR, full tests, self-review, deploy/read-only verification
 No production email link/send/confirmation or triage apply as a release test.
 
 ## Run log
+
+2026-10-21: D-061 API#422 merged7b36ed2 after240/240 exact-head green;
+release blocked#423, no new source ever ran. Old421 remains healthy; no
+rollback or forbidden setting action. Continued independent composer
+implementation/test locally; source-based defaults, preview/review, explicit
+send and durable API receipts, zero real mail.415/412 remain open. No capture,
+batch, confirmation, outreach, production preview/save or business write.
 
 2026-10-15: #366A released in#368;mainffa3dd0,deploy7108050258 success60s,
 health/dashboard200,192passed/0failed/0skipped. Live1366/412 More/account and
@@ -2662,3 +4236,68 @@ Acceptance
   - The header shows "Admin · undefined".
   - Outreach Hub says "Run scrape to find real buyers", which is legacy wording.
   - Deal Matching stays on "Loading matches..." (replaced by B-19).
+
+## B-23 · Public distress lists importer (D-066) · TODO
+
+Goal: the app pulls free public distress lists every day, like the operator did by hand on 2026-11-09:
+foreclosure notices, trustee sales, tax sales, tax-delinquent lists, lis pendens, probate, code cases and
+land bank inventories.
+
+Source list: `docs/knowledge/county-source-specs-2026-11-09.json` (207 sources in 46 counties; 153 open,
+54 blocked or gated, each with url, format, fields, cadence, allowlisted host and access).
+
+Acceptance
+- Generic source kinds `foreclosure_notice`, `trustee_sale`, `tax_sale`, `tax_delinquent`, `lis_pendens`,
+  `probate`, `code_case`, `land_bank` in the source-kind registry (D-053 `trustee_sale_list` maps to
+  `trustee_sale`). One county source profile per source; no county or state names in generic code (D-013).
+- Readers by format: HTML search results, PDF lists, CSV/XLSX, ArcGIS REST layers, Socrata/JSON. One
+  generic reader per format, configured by the profile.
+- First 15 profiles, in order: Mecklenburg tax-foreclosure map layer; Dallas and Tarrant clerk notices
+  (publicsearch.us); publicsearch.us lis pendens for Dallas, Tarrant, Collin, Denton and Bexar; Bexar
+  clerk foreclosure PDF; DeKalb tax sale list; Douglas GA delinquent list; Guilford tax-foreclosure layer;
+  Charlotte code cases; Ellis and Kaufman notice files; San Antonio 311 property maintenance; Austin code
+  complaints; Rowan delinquent spreadsheet; Shelby tax-sale CSV; Nashville code violations.
+- Every row becomes a lead in the right lane (D-009, never dropped) with source_kind, source_url, page or
+  row reference, document/case number, captured date and the evidence text. Dates as written go through
+  `resolve-source-sale-date.js`; ambiguous dates stay quarantined.
+- Network: allowlisted hosts only, about 1 request per second, stop on 401/403/429 and mark the source
+  unavailable; never behind a login, CAPTCHA or click-through; sources whose terms forbid automation
+  stay manual (marked in the profile).
+- Fixes found 2026-11-09: Ellis host moved to www.elliscountytx.gov; Collin URLs in the repo return 403;
+  Dallas should point at dallas.tx.publicsearch.us; Detroit land bank should use the DLBA_For_Sale layer.
+- Tests: a fixture per format; wrong host rejected; 429 stops the run; row references kept; duplicate
+  rows merge with an audit trail; no owner names in logs or aggregate reports.
+- Verification: read-only run counts per source ("rows found / new leads / blocked") on the live app.
+
+---
+
+## B-24 · Paid data provider adapter: comps, property detail, skip trace (D-066) · TODO (switch stays off)
+
+Goal: one provider interface so the app can use the vendor Gabriel picks, without code changes per vendor.
+
+Acceptance
+- Provider registry entry plus environment switch, off by default; key only in Railway; per-call cost
+  logged; monthly cap that stops calls.
+- Comps: closed sales only, with address, date, price, beds, baths, living area, year built, distance and
+  the provider's source label. Reject AVMs, list prices and estimates as comps. Texas results are labeled
+  estimates and can never satisfy a comp or ARV gate (AGENTS.md section 5, D-066).
+- Skip trace: numbers stored as "Possible number, not confirmed" with provider, date, phone type and any
+  DNC or litigator flag (D-006). Rejected or do-not-call numbers never count as a route.
+- List import (pre-foreclosure, probate, tax-delinquent, absentee, vacant) feeds the same lead lanes as B-23.
+- Tests use fixtures from the vendor's published examples; no live calls in tests; a spy proves no call
+  happens while the switch is off.
+
+---
+
+## Deferred Follow-Up
+
+- Commit a lockfile (D-067b follow-up) so CI and production install the same package versions.
+- Email date with an impossible calendar day (#499, D-067d): in `receivedTime`, reject a named-month mail
+  date whose day, month or year does not match in the header's own offset, and show "Time not confirmed".
+  Add no new parser dependency.
+- Owner display day for sale urgency (#500, D-067d): inject the owner's UTC-7 day and add a real-calendar
+  check in `saleDateInfo`. The backend stays the authority for "sale date passed".
+- Classic Today layout shift (CLS) on Conversations/Notifications. D065b/#487
+  records existing baseline debt, not a477 regression. Address separately at
+  the bottom of the queue; preserve current safety gates and report an actual
+  before/after comparison when that performance item is implemented.

@@ -1,0 +1,27 @@
+{
+  "source_sha": "45da4ac36c79ce4c560429698d52685d04293a16",
+  "synthetic_only": true,
+  "production_writes": 0,
+  "rows": [
+    {
+      "test": "assistant-key-upload.test.js",
+      "status": "passed",
+      "seconds": 2.31
+    },
+    {
+      "test": "upload-assistant-snapshot.test.js",
+      "status": "passed",
+      "seconds": 1.97
+    },
+    {
+      "test": "assistant-upload-settings-ui.test.js",
+      "status": "passed",
+      "seconds": 31.89
+    },
+    {
+      "test": "workspace-mailbox-chrome.test.js",
+      "status": "passed",
+      "seconds": 29.96
+    }
+  ]
+}

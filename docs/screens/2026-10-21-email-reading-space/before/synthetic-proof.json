@@ -1,0 +1,33 @@
+{
+  "synthetic_only": true,
+  "widths": [
+    {
+      "width": 1366,
+      "first_contentful_paint_ms": 45.60000002384186,
+      "reading_height": 423,
+      "reading_top": 345.1875,
+      "body_top": 423.1875,
+      "sendFits": true,
+      "overflow": false
+    },
+    {
+      "width": 400,
+      "first_contentful_paint_ms": 44.39999997615814,
+      "reading_height": 510,
+      "reading_top": 405.1875,
+      "body_top": 504.1875,
+      "sendFits": true,
+      "overflow": false
+    },
+    {
+      "width": 412,
+      "first_contentful_paint_ms": 27.399999976158142,
+      "reading_height": 510,
+      "reading_top": 405.1875,
+      "body_top": 483.1875,
+      "sendFits": true,
+      "overflow": false
+    }
+  ],
+  "accessibility": []
+}

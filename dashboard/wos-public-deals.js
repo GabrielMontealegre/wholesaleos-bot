@@ -194,8 +194,8 @@
   }
 
   function marketSelectHtml() {
-    return '<label style="font-size:12px;color:#374151;display:flex;align-items:center;gap:6px;">Market ' +
-      '<select id="wos-public-deals-market" style="border:1px solid #cbd5e1;border-radius:7px;padding:6px 8px;background:#fff;color:#111827;font-size:12px;">' +
+    return '<label style="font-size:12px;color:#374151;display:flex;align-items:center;gap:6px;white-space:nowrap;max-width:100%;">Market ' +
+      '<select id="wos-public-deals-market" style="border:1px solid #cbd5e1;border-radius:7px;padding:6px 8px;background:#fff;color:#111827;font-size:12px;min-width:0;max-width:100%;">' +
       MARKET_PRESETS.map(function (market) {
         return '<option value="' + esc(market.key) + '"' + (market.key === selectedMarketKey ? ' selected' : '') + '>' + esc(market.label) + '</option>';
       }).join('') + '</select></label>';
@@ -482,9 +482,9 @@
   function manualUploadSlot(slot) {
     return '<div class="wos-manual-upload-slot" data-evidence-type="' + esc(slot.key) + '" style="border:1px solid #dbeafe;border-radius:7px;padding:7px;background:#f8fafc;">' +
       '<div style="font-size:11px;font-weight:700;color:#1e3a8a;margin-bottom:5px;">' + esc(slot.label) + '</div>' +
-      '<select class="wos-manual-source" style="width:100%;box-sizing:border-box;border:1px solid #cbd5e1;border-radius:6px;padding:5px;background:#fff;font-size:10px;">' + slot.sources.map(function (source) { return '<option value="' + esc(source) + '">' + esc(source) + '</option>'; }).join('') + '</select>' +
+      '<select class="wos-manual-source" aria-label="' + esc(slot.label) + ' source" style="width:100%;box-sizing:border-box;border:1px solid #cbd5e1;border-radius:6px;padding:5px;background:#fff;font-size:10px;">' + slot.sources.map(function (source) { return '<option value="' + esc(source) + '">' + esc(source) + '</option>'; }).join('') + '</select>' +
       '<input class="wos-manual-source-url" type="url" placeholder="Paste the exact page URL" style="width:100%;box-sizing:border-box;border:1px solid #cbd5e1;border-radius:6px;padding:5px;margin-top:5px;font-size:10px;">' +
-      '<input class="wos-manual-file" type="file" accept="image/png,image/jpeg,image/webp" style="width:100%;font-size:10px;margin-top:5px;">' +
+      '<input class="wos-manual-file" aria-label="' + esc(slot.label) + ' screenshot file" type="file" accept="image/png,image/jpeg,image/webp" style="width:100%;font-size:10px;margin-top:5px;">' +
       '<button type="button" class="wos-manual-upload" style="width:100%;padding:5px 7px;margin-top:5px;border-radius:6px;border:1px solid #2563eb;background:#2563eb;color:#fff;font-size:10px;font-weight:700;cursor:pointer;">Upload screenshot</button>' +
       '<div class="wos-manual-upload-message" style="font-size:10px;color:#6b7280;margin-top:4px;">PNG, JPG or WebP, max 8MB.</div></div>';
   }
@@ -1404,7 +1404,7 @@
       }
     }
     return panelBox('Daily Deal Machine',
-      selectedMarketLabel() + ' - free public sources only - snapshot cache, not saved leads.',
+      selectedMarketLabel() + ' - free public sources only - Preview: not saved yet.',
       '<div style="margin-bottom:4px;">' + statusChip + '</div><div>' + statChips + fullIdentityCountChips(data) + '</div>' + meta + ocrLine + reextractionLine + phoneEvidenceLine + errLine + blockers + coverageTable(batch),
       autoRun.enabled ? '#86efac' : '#fca5a5');
   }
@@ -2070,7 +2070,7 @@
         if (!current) return;
         var autoBox = document.getElementById('wos-public-deals-auto');
         if (currentPage() === 'findme_scout' && autoBox) autoBox.checked = !!(data && data.auto_run && data.auto_run.enabled);
-        render(current, data || {}, note || (data && data.has_snapshot ? '' : 'Snapshot cache only - nothing here is a saved lead.'));
+        render(current, data || {}, note || (data && data.has_snapshot ? '' : 'Preview: not saved yet.'));
       })
       .catch(function (err) {
         if (requestMarketKey !== selectedMarketKey) return;
@@ -2611,14 +2611,14 @@
     if (needsRebuild && page === 'dashboard') {
       section.innerHTML =
         '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-bottom:8px;gap:8px;">' +
-        '<h2 style="margin:0;font-size:17px;">Today\'s Deal Desk <span style="font-size:11px;font-weight:500;color:#6b7280;">free sources - snapshot cache, not saved leads</span></h2>' +
+        '<h2 style="margin:0;font-size:17px;">Today\'s Deal Desk <span style="font-size:11px;font-weight:500;color:#6b7280;">free sources - Preview: not saved yet</span></h2>' +
         marketSelectHtml() +
         '</div><div class="wos-public-deals-body" style="max-height:620px;overflow:auto;">Loading public deals...</div>';
     } else if (needsRebuild) {
       section.innerHTML =
         '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-bottom:8px;gap:8px;">' +
-        '<h2 style="margin:0;font-size:17px;">Best Public Deals <span style="font-size:11px;font-weight:500;color:#6b7280;">free sources - preview snapshot, not saved leads</span></h2>' +
-        '<div style="display:flex;align-items:center;gap:10px;">' +
+        '<h2 style="margin:0;font-size:17px;">Best Public Deals <span style="font-size:11px;font-weight:500;color:#6b7280;">free sources - Preview: not saved yet</span></h2>' +
+        '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;max-width:100%;">' +
         marketSelectHtml() +
         '<label style="font-size:12px;color:#374151;display:flex;align-items:center;gap:4px;cursor:pointer;">' +
         '<input type="checkbox" id="wos-public-deals-auto"> Auto-refresh every 20 min</label>' +

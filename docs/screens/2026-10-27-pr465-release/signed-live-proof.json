@@ -1,0 +1,91 @@
+{
+  "source_sha": "45da4ac36c79ce4c560429698d52685d04293a16",
+  "get_only": true,
+  "production_writes": 0,
+  "settings": {
+    "createEnabled": true,
+    "fieldEmpty": true,
+    "height": 529,
+    "metadataRows": 0,
+    "overflow": false,
+    "revealClosed": true,
+    "width": 1280
+  },
+  "key_management": {
+    "count": 0,
+    "metadataOnly": true,
+    "noSecret": true,
+    "ok": true
+  },
+  "snapshot_capabilities": {
+    "canImport": true,
+    "hasLatest": false,
+    "maxBytes": 1048576,
+    "ok": true,
+    "schemaVersion": 1,
+    "viewerScopeValid": true
+  },
+  "today": {
+    "chooserEnabled": true,
+    "height": 529,
+    "importDisabled": true,
+    "importHidden": true,
+    "overflow": false,
+    "pickerEmpty": true,
+    "pickerHidden": true,
+    "recordedWorkVisible": true,
+    "width": 1280,
+    "recordedWorkOpened": true
+  },
+  "email": {
+    "bodyLength": 8509,
+    "defaultComposer": false,
+    "height": 529,
+    "loadedRows": 49,
+    "overflow": false,
+    "replyEnabled": true,
+    "width": 1280,
+    "emptyReply": {
+      "editDisabled": true,
+      "fieldsFit": true,
+      "overflow": false,
+      "previewDisabled": true,
+      "sendDisabled": true,
+      "sendPresent": true,
+      "unavailableGmail": true
+    },
+    "closeRestored": {
+      "bodyLength": 8509,
+      "composerAbsent": true,
+      "replyEnabled": true
+    }
+  },
+  "classic": {
+    "before": {
+      "cards": 19,
+      "workbenches": 0
+    },
+    "toolInterruption": "Prior tab control ended during Open;fresh SAME-browser journey used. No application failure inferred.",
+    "open": {
+      "backVisible": true,
+      "cards": 1,
+      "workbenches": 1
+    },
+    "backLoading": {
+      "cards": 0,
+      "loading": true,
+      "workbenches": 0
+    },
+    "restored": {
+      "cards": 19,
+      "loading": false,
+      "overflow": false,
+      "workbenches": 0
+    }
+  },
+  "console": {
+    "retainedClassicApplicationErrors": 0,
+    "retainedClassicExtensionErrors": 0,
+    "earlierTabLogsUnavailableAfterControlInterruption": true
+  }
+}

@@ -1,0 +1,273 @@
+{
+  "synthetic_only": true,
+  "baseline": "87a6078ccbecd619a9ee25d7fe640eb665c797d6",
+  "sizes": [
+    {
+      "mode": "before",
+      "view": "today",
+      "width": 1366,
+      "fcp": 352.5,
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "mode": "before",
+      "view": "today",
+      "width": 400,
+      "fcp": 172.5999999642372,
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "mode": "before",
+      "view": "today",
+      "width": 412,
+      "fcp": 189.80000001192093,
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "mode": "before",
+      "view": "email",
+      "width": 1366,
+      "fcp": 197.70000004768372,
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "mode": "before",
+      "view": "email",
+      "width": 400,
+      "fcp": 103.90000003576279,
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "mode": "before",
+      "view": "email",
+      "width": 412,
+      "fcp": 43.89999997615814,
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "mode": "before",
+      "view": "deals",
+      "width": 1366,
+      "fcp": 545.6999999880791,
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "mode": "before",
+      "view": "deals",
+      "width": 400,
+      "fcp": 145.80000001192093,
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "mode": "before",
+      "view": "deals",
+      "width": 412,
+      "fcp": 178.69999998807907,
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "mode": "after",
+      "view": "today",
+      "width": 1366,
+      "fcp": 121.69999998807907,
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "mode": "after",
+      "view": "today",
+      "width": 400,
+      "fcp": 115.80000001192093,
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "mode": "after",
+      "view": "today",
+      "width": 412,
+      "fcp": 102,
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "mode": "after",
+      "view": "email",
+      "width": 1366,
+      "fcp": 111.39999997615814,
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "mode": "after",
+      "view": "email",
+      "width": 400,
+      "fcp": 33.69999998807907,
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "mode": "after",
+      "view": "email",
+      "width": 412,
+      "fcp": 34.299999952316284,
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "mode": "after",
+      "view": "deals",
+      "width": 1366,
+      "fcp": 103.19999998807907,
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "mode": "after",
+      "view": "deals",
+      "width": 400,
+      "fcp": 79.89999997615814,
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "mode": "after",
+      "view": "deals",
+      "width": 412,
+      "fcp": 94.29999995231628,
+      "overflow": false,
+      "errors": []
+    }
+  ],
+  "lighthouse": [
+    {
+      "mode": "before",
+      "view": "today",
+      "width": 1366,
+      "version": "13.5.0",
+      "performance": 99,
+      "accessibility": 100,
+      "runtimeErrorCode": null,
+      "auditErrors": []
+    },
+    {
+      "mode": "before",
+      "view": "today",
+      "width": 412,
+      "version": "13.5.0",
+      "performance": 96,
+      "accessibility": 100,
+      "runtimeErrorCode": null,
+      "auditErrors": []
+    },
+    {
+      "mode": "before",
+      "view": "email",
+      "width": 1366,
+      "version": "13.5.0",
+      "performance": 99,
+      "accessibility": 100,
+      "runtimeErrorCode": null,
+      "auditErrors": []
+    },
+    {
+      "mode": "before",
+      "view": "email",
+      "width": 412,
+      "version": "13.5.0",
+      "performance": 96,
+      "accessibility": 100,
+      "runtimeErrorCode": null,
+      "auditErrors": []
+    },
+    {
+      "mode": "before",
+      "view": "deals",
+      "width": 1366,
+      "version": "13.5.0",
+      "performance": 98,
+      "accessibility": 98,
+      "runtimeErrorCode": null,
+      "auditErrors": []
+    },
+    {
+      "mode": "before",
+      "view": "deals",
+      "width": 412,
+      "version": "13.5.0",
+      "performance": 100,
+      "accessibility": 98,
+      "runtimeErrorCode": null,
+      "auditErrors": []
+    },
+    {
+      "mode": "after",
+      "view": "today",
+      "width": 1366,
+      "version": "13.5.0",
+      "performance": 99,
+      "accessibility": 100,
+      "runtimeErrorCode": null,
+      "auditErrors": []
+    },
+    {
+      "mode": "after",
+      "view": "today",
+      "width": 412,
+      "version": "13.5.0",
+      "performance": 96,
+      "accessibility": 100,
+      "runtimeErrorCode": null,
+      "auditErrors": []
+    },
+    {
+      "mode": "after",
+      "view": "email",
+      "width": 1366,
+      "version": "13.5.0",
+      "performance": 99,
+      "accessibility": 100,
+      "runtimeErrorCode": null,
+      "auditErrors": []
+    },
+    {
+      "mode": "after",
+      "view": "email",
+      "width": 412,
+      "version": "13.5.0",
+      "performance": 96,
+      "accessibility": 100,
+      "runtimeErrorCode": null,
+      "auditErrors": []
+    },
+    {
+      "mode": "after",
+      "view": "deals",
+      "width": 1366,
+      "version": "13.5.0",
+      "performance": 98,
+      "accessibility": 98,
+      "runtimeErrorCode": null,
+      "auditErrors": []
+    },
+    {
+      "mode": "after",
+      "view": "deals",
+      "width": 412,
+      "version": "13.5.0",
+      "performance": 100,
+      "accessibility": 98,
+      "runtimeErrorCode": null,
+      "auditErrors": []
+    }
+  ],
+  "notes": "Exact source-switch; synthetic GET-only APIs; content masked before disk; serialized audits, no real credentials/production traffic."
+}

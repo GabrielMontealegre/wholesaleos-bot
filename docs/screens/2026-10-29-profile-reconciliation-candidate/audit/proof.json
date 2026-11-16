@@ -1,0 +1,462 @@
+{
+  "synthetic_only": true,
+  "baseline": "7262b1114f5db3543cfb13a8cd304ad529a6f99a",
+  "source_sha": "ac3b348a01026670cc471d295cff869d886ab5a6",
+  "sizes": [
+    {
+      "mode": "before",
+      "view": "settings",
+      "width": 1366,
+      "fcp": 218.89999999850988,
+      "overflow": false,
+      "actualPage": "settings",
+      "profileForms": 0,
+      "templateForms": 0,
+      "preview": 0,
+      "errors": []
+    },
+    {
+      "mode": "before",
+      "view": "settings",
+      "width": 400,
+      "fcp": 112.60000000149012,
+      "overflow": false,
+      "actualPage": "settings",
+      "profileForms": 0,
+      "templateForms": 0,
+      "preview": 0,
+      "errors": []
+    },
+    {
+      "mode": "before",
+      "view": "settings",
+      "width": 412,
+      "fcp": 92.60000000149012,
+      "overflow": false,
+      "actualPage": "settings",
+      "profileForms": 0,
+      "templateForms": 0,
+      "preview": 0,
+      "errors": []
+    },
+    {
+      "mode": "before",
+      "view": "email",
+      "width": 1366,
+      "fcp": 106.39999999850988,
+      "overflow": false,
+      "actualPage": "gmail",
+      "profileForms": 0,
+      "templateForms": 1,
+      "preview": 0,
+      "errors": []
+    },
+    {
+      "mode": "before",
+      "view": "email",
+      "width": 400,
+      "fcp": 89.39999999850988,
+      "overflow": false,
+      "actualPage": "gmail",
+      "profileForms": 0,
+      "templateForms": 1,
+      "preview": 0,
+      "errors": []
+    },
+    {
+      "mode": "before",
+      "view": "email",
+      "width": 412,
+      "fcp": 83.29999999701977,
+      "overflow": false,
+      "actualPage": "gmail",
+      "profileForms": 0,
+      "templateForms": 1,
+      "preview": 0,
+      "errors": []
+    },
+    {
+      "mode": "after",
+      "view": "settings",
+      "width": 1366,
+      "fcp": 99.89999999850988,
+      "overflow": false,
+      "actualPage": "settings",
+      "profileForms": 1,
+      "templateForms": 0,
+      "preview": 0,
+      "errors": []
+    },
+    {
+      "mode": "after",
+      "view": "settings",
+      "width": 400,
+      "fcp": 80.5,
+      "overflow": false,
+      "actualPage": "settings",
+      "profileForms": 1,
+      "templateForms": 0,
+      "preview": 0,
+      "errors": []
+    },
+    {
+      "mode": "after",
+      "view": "settings",
+      "width": 412,
+      "fcp": 81.60000000149012,
+      "overflow": false,
+      "actualPage": "settings",
+      "profileForms": 1,
+      "templateForms": 0,
+      "preview": 0,
+      "errors": []
+    },
+    {
+      "mode": "after",
+      "view": "email",
+      "width": 1366,
+      "fcp": 95.5,
+      "overflow": false,
+      "actualPage": "gmail",
+      "profileForms": 0,
+      "templateForms": 1,
+      "preview": 1,
+      "errors": []
+    },
+    {
+      "mode": "after",
+      "view": "email",
+      "width": 400,
+      "fcp": 234.39999999850988,
+      "overflow": false,
+      "actualPage": "gmail",
+      "profileForms": 0,
+      "templateForms": 1,
+      "preview": 1,
+      "errors": []
+    },
+    {
+      "mode": "after",
+      "view": "email",
+      "width": 412,
+      "fcp": 137.69999999552965,
+      "overflow": false,
+      "actualPage": "gmail",
+      "profileForms": 0,
+      "templateForms": 1,
+      "preview": 1,
+      "errors": []
+    }
+  ],
+  "lighthouse": [
+    {
+      "mode": "before",
+      "view": "settings",
+      "width": 1366,
+      "observed": {
+        "actualPage": "settings",
+        "profileForms": 0,
+        "legacyCompanyInfo": true,
+        "templateForms": 0,
+        "preview": 0,
+        "previewOpen": false
+      },
+      "afterGathering": {
+        "actualPage": "settings",
+        "profileForms": 0,
+        "legacyCompanyInfo": true,
+        "templateForms": 0,
+        "preview": 0,
+        "previewOpen": false
+      },
+      "metrics": {
+        "first-contentful-paint": 556.971,
+        "largest-contentful-paint": 1583.565,
+        "cumulative-layout-shift": 0.0029431964097760078,
+        "total-blocking-time": 169.92800000000125,
+        "speed-index": 1604
+      },
+      "selectors": [
+        "div#app > div.main > div#content > section#email-connection"
+      ],
+      "version": "13.5.0",
+      "performance": 88,
+      "accessibility": 98,
+      "runtimeErrorCode": null,
+      "auditErrors": []
+    },
+    {
+      "mode": "before",
+      "view": "settings",
+      "width": 412,
+      "observed": {
+        "actualPage": "settings",
+        "profileForms": 0,
+        "legacyCompanyInfo": true,
+        "templateForms": 0,
+        "preview": 0,
+        "previewOpen": false
+      },
+      "afterGathering": {
+        "actualPage": "dashboard",
+        "profileForms": 0,
+        "legacyCompanyInfo": false,
+        "templateForms": 0,
+        "preview": 0,
+        "previewOpen": false
+      },
+      "metrics": {
+        "first-contentful-paint": 87.53,
+        "largest-contentful-paint": 517.982,
+        "cumulative-layout-shift": 0.015885813252112635,
+        "total-blocking-time": 25.707000000000022,
+        "speed-index": 414
+      },
+      "selectors": [
+        "div#app > div.main > div#content > div",
+        "div.main > div#content > section.wos-drive-status > p"
+      ],
+      "version": "13.5.0",
+      "performance": 100,
+      "accessibility": 94,
+      "runtimeErrorCode": null,
+      "auditErrors": []
+    },
+    {
+      "mode": "before",
+      "view": "email",
+      "width": 1366,
+      "observed": {
+        "actualPage": "gmail",
+        "profileForms": 0,
+        "legacyCompanyInfo": false,
+        "templateForms": 1,
+        "preview": 0,
+        "previewOpen": false
+      },
+      "afterGathering": {
+        "actualPage": "dashboard",
+        "profileForms": 0,
+        "legacyCompanyInfo": false,
+        "templateForms": 0,
+        "preview": 0,
+        "previewOpen": false
+      },
+      "metrics": {
+        "first-contentful-paint": 117.882,
+        "largest-contentful-paint": 471.649,
+        "cumulative-layout-shift": 0,
+        "total-blocking-time": 21.122000000000014,
+        "speed-index": 424
+      },
+      "selectors": [
+        "div.email-thread-scroll > button.email-thread-row > span.email-subject-line > strong"
+      ],
+      "version": "13.5.0",
+      "performance": 100,
+      "accessibility": 98,
+      "runtimeErrorCode": null,
+      "auditErrors": []
+    },
+    {
+      "mode": "before",
+      "view": "email",
+      "width": 412,
+      "observed": {
+        "actualPage": "gmail",
+        "profileForms": 0,
+        "legacyCompanyInfo": false,
+        "templateForms": 1,
+        "preview": 0,
+        "previewOpen": false
+      },
+      "afterGathering": {
+        "actualPage": "dashboard",
+        "profileForms": 0,
+        "legacyCompanyInfo": false,
+        "templateForms": 0,
+        "preview": 0,
+        "previewOpen": false
+      },
+      "metrics": {
+        "first-contentful-paint": 246.317,
+        "largest-contentful-paint": 788.16,
+        "cumulative-layout-shift": 0,
+        "total-blocking-time": 95.99599999999992,
+        "speed-index": 728
+      },
+      "selectors": [
+        "div.email-thread-scroll > button.email-thread-row > span.email-subject-line > strong"
+      ],
+      "version": "13.5.0",
+      "performance": 99,
+      "accessibility": 98,
+      "runtimeErrorCode": null,
+      "auditErrors": []
+    },
+    {
+      "mode": "after",
+      "view": "settings",
+      "width": 1366,
+      "observed": {
+        "actualPage": "settings",
+        "profileForms": 1,
+        "legacyCompanyInfo": false,
+        "templateForms": 0,
+        "preview": 0,
+        "previewOpen": false
+      },
+      "afterGathering": {
+        "actualPage": "settings",
+        "profileForms": 1,
+        "legacyCompanyInfo": false,
+        "templateForms": 0,
+        "preview": 0,
+        "previewOpen": false
+      },
+      "metrics": {
+        "first-contentful-paint": 129.121,
+        "largest-contentful-paint": 578.096,
+        "cumulative-layout-shift": 0.0029431964097760078,
+        "total-blocking-time": 30.920000000000016,
+        "speed-index": 493
+      },
+      "selectors": [
+        "div#app > div.main > div#content > section#email-connection"
+      ],
+      "version": "13.5.0",
+      "performance": 100,
+      "accessibility": 98,
+      "runtimeErrorCode": null,
+      "auditErrors": []
+    },
+    {
+      "mode": "after",
+      "view": "settings",
+      "width": 412,
+      "observed": {
+        "actualPage": "settings",
+        "profileForms": 1,
+        "legacyCompanyInfo": false,
+        "templateForms": 0,
+        "preview": 0,
+        "previewOpen": false
+      },
+      "afterGathering": {
+        "actualPage": "settings",
+        "profileForms": 1,
+        "legacyCompanyInfo": false,
+        "templateForms": 0,
+        "preview": 0,
+        "previewOpen": false
+      },
+      "metrics": {
+        "first-contentful-paint": 115.038,
+        "largest-contentful-paint": 544.611,
+        "cumulative-layout-shift": 0.015885813252112635,
+        "total-blocking-time": 13.909000000000049,
+        "speed-index": 453
+      },
+      "selectors": [
+        "div#app > div.main > div#content > div",
+        "div.main > div#content > section.wos-drive-status > p"
+      ],
+      "version": "13.5.0",
+      "performance": 100,
+      "accessibility": 98,
+      "runtimeErrorCode": null,
+      "auditErrors": []
+    },
+    {
+      "mode": "after",
+      "view": "email",
+      "width": 1366,
+      "observed": {
+        "actualPage": "gmail",
+        "profileForms": 0,
+        "legacyCompanyInfo": false,
+        "templateForms": 1,
+        "preview": 1,
+        "previewOpen": true
+      },
+      "afterGathering": {
+        "actualPage": "gmail",
+        "profileForms": 0,
+        "legacyCompanyInfo": false,
+        "templateForms": 1,
+        "preview": 1,
+        "previewOpen": true
+      },
+      "metrics": {
+        "first-contentful-paint": 248.402,
+        "largest-contentful-paint": 823.611,
+        "cumulative-layout-shift": 0,
+        "total-blocking-time": 81.71800000000002,
+        "speed-index": 748
+      },
+      "selectors": [
+        "div.email-thread-scroll > button.email-thread-row > span.email-subject-line > strong"
+      ],
+      "version": "13.5.0",
+      "performance": 99,
+      "accessibility": 98,
+      "runtimeErrorCode": null,
+      "auditErrors": []
+    },
+    {
+      "mode": "after",
+      "view": "email",
+      "width": 412,
+      "observed": {
+        "actualPage": "gmail",
+        "profileForms": 0,
+        "legacyCompanyInfo": false,
+        "templateForms": 1,
+        "preview": 1,
+        "previewOpen": true
+      },
+      "afterGathering": {
+        "actualPage": "dashboard",
+        "profileForms": 0,
+        "legacyCompanyInfo": false,
+        "templateForms": 0,
+        "preview": 0,
+        "previewOpen": false
+      },
+      "metrics": {
+        "first-contentful-paint": 225.654,
+        "largest-contentful-paint": 736.777,
+        "cumulative-layout-shift": 0,
+        "total-blocking-time": 82.43800000000005,
+        "speed-index": 656
+      },
+      "selectors": [
+        "div.email-thread-scroll > button.email-thread-row > span.email-subject-line > strong"
+      ],
+      "version": "13.5.0",
+      "performance": 100,
+      "accessibility": 98,
+      "runtimeErrorCode": null,
+      "auditErrors": []
+    }
+  ],
+  "notes": "Actual fullindex fixed Settings and classic Email/template routes; APP.page asserted. Template fixture driver clicks actual Load/summary, no state freeze or source initializer. GET-only synthetic endpoints; no production/private data. Baseline Settings input fields opaque BEFORE screenshot; no full Lighthouse DOM/HTML reports retained.",
+  "sources": [
+    {
+      "file": "index.html",
+      "normalized_sha256": "e9b2400f88224de0f053ee8c7b1dd64de94de107b518376aa5a4a3a317b95eab"
+    },
+    {
+      "file": "wos-operator-profile.js",
+      "normalized_sha256": "5756c303abfe0e15b587946798ee52707842dae9373b9f5aff2f7a8c32d27c0c"
+    },
+    {
+      "file": "wos-email-templates.js",
+      "normalized_sha256": "fc4af3f91e78e26f566a1a635ad18757978561c1be157c8ff68ccfe71e86b4a0"
+    },
+    {
+      "file": "wos-ui-kit.css",
+      "normalized_sha256": "a6d4f808e581d5daaad2dbb06ece4e0035431d4e40b65dc6d664580609ff3797"
+    }
+  ]
+}

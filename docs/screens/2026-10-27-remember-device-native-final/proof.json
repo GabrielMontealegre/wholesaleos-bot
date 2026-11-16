@@ -1,0 +1,115 @@
+{
+  "synthetic_only": true,
+  "baseline": "45da4ac36c79ce4c560429698d52685d04293a16",
+  "sizes": [
+    {
+      "mode": "before",
+      "view": "native-login",
+      "width": 1366,
+      "fcp": 252.5,
+      "overflow": false
+    },
+    {
+      "mode": "before",
+      "view": "native-login",
+      "width": 400,
+      "fcp": 61.599999994039536,
+      "overflow": false
+    },
+    {
+      "mode": "before",
+      "view": "native-login",
+      "width": 412,
+      "fcp": 40.900000005960464,
+      "overflow": false
+    },
+    {
+      "mode": "after",
+      "view": "native-login",
+      "width": 1366,
+      "fcp": 34.900000005960464,
+      "overflow": false
+    },
+    {
+      "mode": "after",
+      "view": "native-login",
+      "width": 400,
+      "fcp": 32.599999994039536,
+      "overflow": false
+    },
+    {
+      "mode": "after",
+      "view": "native-login",
+      "width": 412,
+      "fcp": 34.30000001192093,
+      "overflow": false
+    }
+  ],
+  "lighthouse": [
+    {
+      "mode": "before",
+      "view": "native-login",
+      "width": 1366,
+      "version": "13.5.0",
+      "performance": 100,
+      "accessibility": 100,
+      "runtimeErrorCode": null,
+      "auditErrors": [],
+      "metrics": {
+        "first-contentful-paint": 139.234,
+        "largest-contentful-paint": 182.181,
+        "total-blocking-time": 0,
+        "cumulative-layout-shift": 0
+      }
+    },
+    {
+      "mode": "before",
+      "view": "native-login",
+      "width": 412,
+      "version": "13.5.0",
+      "performance": 100,
+      "accessibility": 100,
+      "runtimeErrorCode": null,
+      "auditErrors": [],
+      "metrics": {
+        "first-contentful-paint": 37.254,
+        "largest-contentful-paint": 79.964,
+        "total-blocking-time": 0,
+        "cumulative-layout-shift": 0
+      }
+    },
+    {
+      "mode": "after",
+      "view": "native-login",
+      "width": 1366,
+      "version": "13.5.0",
+      "performance": 100,
+      "accessibility": 100,
+      "runtimeErrorCode": null,
+      "auditErrors": [],
+      "metrics": {
+        "first-contentful-paint": 60.392,
+        "largest-contentful-paint": 102.052,
+        "total-blocking-time": 0,
+        "cumulative-layout-shift": 0
+      }
+    },
+    {
+      "mode": "after",
+      "view": "native-login",
+      "width": 412,
+      "version": "13.5.0",
+      "performance": 100,
+      "accessibility": 100,
+      "runtimeErrorCode": null,
+      "auditErrors": [],
+      "metrics": {
+        "first-contentful-paint": 55.331,
+        "largest-contentful-paint": 91.215,
+        "total-blocking-time": 0,
+        "cumulative-layout-shift": 0
+      }
+    }
+  ],
+  "notes": "Exact source,read-only synthetic APIs,self-only CSP/font stub;no real credentials or production traffic;no raw Lighthouse report persisted."
+}

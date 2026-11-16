@@ -42,13 +42,24 @@ function response(status, body) {
   assert.strictEqual(clientAuth.applyAuthenticatedUser(app, accepted.user), true);
   assert.strictEqual(app.unlocked, true);
   assert.strictEqual(Object.prototype.hasOwnProperty.call(clientAuth.authHeaders(app, false), 'x-user-id'), false);
+  const remembered = await clientAuth.authenticate(adminPin, { remember_device: true, fetch_impl: async (_url, request) => {
+    assert.strictEqual(JSON.parse(request.body).remember_device, true);
+    assert.strictEqual(request.headers['X-WOS-Device-Action'], '1');
+    assert.match(request.headers['X-WOS-Remember-Request'], /^[a-f0-9-]{36}$/);
+    return response(200, { ok: true, user: { id: 'admin', role: 'admin' } });
+  } });
+  assert.strictEqual(remembered.ok, true);
+  const rejectedLogout = await clientAuth.logout(app, { fetch_impl: async (_url, request) => {
+    assert.strictEqual(request.headers['X-WOS-Device-Action'], '1'); return response(503, { ok: false });
+  } });
+  assert.strictEqual(rejectedLogout.ok, false); assert.strictEqual(rejectedLogout.code, 'SIGNOUT_UNCERTAIN'); assert.strictEqual(app.unlocked, false);
 
   const dashboardHtml = fs.readFileSync(path.join(root, 'dashboard', 'index.html'), 'utf8');
   const rootHtml = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
   const clientSource = fs.readFileSync(path.join(root, 'dashboard', 'wos-dashboard-auth.js'), 'utf8');
   const serverSource = fs.readFileSync(path.join(root, 'server.js'), 'utf8');
   for (const html of [dashboardHtml, rootHtml]) {
-    assert.ok(html.includes('wos-dashboard-auth.js?v=2'));
+    assert.ok(html.includes('wos-dashboard-auth.js?v=3'));
     assert.ok(!html.includes('montsan_pin'));
     assert.ok(!html.includes('Default PIN:'));
     assert.ok(!html.includes('Fallback local check'));

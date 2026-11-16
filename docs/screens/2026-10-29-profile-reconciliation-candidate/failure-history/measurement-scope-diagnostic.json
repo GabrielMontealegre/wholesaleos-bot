@@ -1,0 +1,44 @@
+{
+  "synthetic_only": true,
+  "baseline": "7262b1114f5db3543cfb13a8cd304ad529a6f99a",
+  "source_sha": "e9b956c15ce70e6f59595e89b7c3900d96fd7772",
+  "sizes": [],
+  "lighthouse": [
+    {
+      "mode": "before",
+      "view": "settings",
+      "width": 1366,
+      "observed": {
+        "actualPage": "settings",
+        "profileForms": 0,
+        "legacyCompanyInfo": true,
+        "templateForms": 0,
+        "preview": 0,
+        "previewOpen": false
+      },
+      "afterGathering": {
+        "actualPage": "leads",
+        "profileForms": 0,
+        "legacyCompanyInfo": false,
+        "templateForms": 0,
+        "preview": 0,
+        "previewOpen": false
+      },
+      "metrics": {
+        "first-contentful-paint": 528.385,
+        "largest-contentful-paint": 1138.212,
+        "cumulative-layout-shift": 0.006627065429195543,
+        "total-blocking-time": 121.52800000000002,
+        "speed-index": 1171
+      },
+      "selectors": [],
+      "version": "13.5.0",
+      "performance": 95,
+      "accessibility": 98,
+      "runtimeErrorCode": null,
+      "auditErrors": []
+    }
+  ],
+  "notes": "Actual fullindex fixed Settings and classic Email/template routes; APP.page asserted. Template fixture driver clicks actual Load/summary, no state freeze or source initializer. GET-only synthetic endpoints; no production/private data. Baseline Settings input fields opaque BEFORE screenshot; no full Lighthouse DOM/HTML reports retained.",
+  "diagnostic_only": true
+}

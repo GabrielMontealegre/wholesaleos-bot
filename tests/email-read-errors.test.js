@@ -66,6 +66,7 @@ async function run(){
         fs.mkdirSync(dir,{recursive:true});await page.screenshot({path:path.join(dir,'synthetic-read-error-'+width+'.png')});
       }
       failure=null;await page.locator('.email-thread-row').click();await page.locator('[data-email-body]').waitFor();
+      await page.locator('[data-email-compose-open]').click();
       assert.equal(await page.locator('[data-email-send]').isDisabled(),true);
       await page.locator('[data-email-back]').click();
       failure={status:401,code:'admin_required'};await page.locator('.email-thread-row').click();
