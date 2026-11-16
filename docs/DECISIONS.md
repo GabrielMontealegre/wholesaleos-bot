@@ -36,6 +36,615 @@ must be distinct properties by canonical address identity (fail closed when a mi
 locality makes that ambiguous) --
 AGENTS 3 precedence, D-005, D-010, D-011, D-015, D-031, D-032, A-018 -- 2026-10-22.
 
+ASSUMED 2026-11-03: active-notice-address-origin and after-sale-frozen-chain
+use existing fixed-clock helper at their existing frozen corpus reference
+2026-10-02T12:00:00Z, restored in finally. Their fixed May-past/November-future
+2026 cases must not change intent with the ambient date. Source dates,
+addresses, provenance/negative/network/immutability assertions and all backend
+code stay unchanged. Original302/3/0 full result is retained; unrelated shared
+login cause unproven, no retry/weakening. -- AGENTS4 incidental date scaffolding,
+existing historical clock-helper convention; first exact-head hosted gate required.
+
+ASSUMED 2026-11-03:455.4B2 applies shared strict timestamp display only to
+recorded Ask/Activity labels. Ask uses its explicit snapshot now; Activity
+uses the display clock. Strict date-only history/due values keep their literal
+day/year, no invented midnight or numeric-slash parsing. Unconfirmed future
+instants show Time not confirmed while preserving the entire source row and
+prose. Existing interaction import five-minute tolerance, event/source/JV gates,
+server filtering, sorting and writers remain unchanged. Activity's explicit
+From/To query bounds must match the fixed UTC-7 display day, not browser-local
+midnight. A Tokyo-browser regression proved the mismatch (Nov2T15Z versus
+Nov3T07Z). Correct only front-end from_ts/to_ts construction, reject invalid
+ranges without fetching or showing stale/false-zero rows; measured zero stays
+visible. No source-event inference or deadline math change.
+-- AGENTS3/4/5, owner455 dates and truthful read-only filtering.
+
+ASSUMED 2026-11-03:455.4B reuses the shared UTC-7 timestamp display for
+assistant sheet/Decision Desk/Settings metadata only. Date-only reported days
+retain their literal UTC date and include year. Future reported walk appointments
+use a separate strict scheduled-time label with month/day/time and different
+year, never weaken recorded-activity future rejection. No importer/schema,
+deadline arithmetic, ranking, canonical state, provider or writer change.
+-- AGENTS3/4/5, owner455 dates, existing487 future walk allowance.
+
+Architect454 addendum6617488378 read once2026-11-03: visible deal board,
+velocity, reported numbers and reply-in-place are future bounded scope; D065
+order explicitly unchanged. It does not turn on send/paid drafting, authorize
+private reads or prove missing stage/message histories. Preserve snapshot
+compatibility and source truth; don't infer the requested eleven-stage history
+from existing six-stage values or free text. Record any genuine contract STOP
+when that slice is reached; current455.4B display work remains independent.
+
+OWNER 2026-11-03: Gabriel explicitly authorizes git fetch origin and rebase or
+pull onto origin/main at the start of this and every future run until revoked.
+Continue unfinished BACKLOG top to bottom under AGENTS, merge only when all
+checks pass, allow automatic deployment and bounded read-only section7 proof.
+This supersedes the prior no-fetch hold and its execution rejection; the first
+authorized fetch succeeded and main remains326ad472. It does not authorize
+paid services, outreach, secrets, private-content probes or production business
+writes. Existing CI-per-changed-head rules and honest failure history remain.
+
+OWNER/ASSUMED 2026-11-03: Direct readability feedback targets the classic Email
+screen. Use full-width list-to-reader navigation, compact top folder/role
+controls, collapsed older messages and explicit reply, not a three-pane layout
+or always-open composer. Show only exact-linked recorded conversation status
+with an explicit Recorded label; missing/ambiguous status is never guessed.
+No send activation, new provider request, workflow writer or native rewrite.
+Keep all prior private-data/release restrictions. -- direct owner UI request,
+AGENTS3/4/5, additive presentation and exact existing conversation projection.
+
+D-065c -- Architect #487 comment6594135767,2026-11-02: the CI limit is per
+head commit, not per PR. Never retry unchanged heads hoping for green. Push
+490's committed real fix and run CI once on that new head; green permits
+ready/merge/automatic deploy/section7 verification under recorded owner approval.
+A different failing test permits one more fix commit/run; the same test failing
+twice requires needs-architect and continuation. Rebase477 onto current main,
+resolve conflicts and run once on its changed head; green releases underD065b,
+failure means DEFERRED, no third attempt. This supersedes the earlier whole-PR
+CI-cap interpretation, not failed results, safety gates or execution denials.
+
+ASSUMED: #472 uses own boolean test_data/synthetic/fixture:true only. Reject
+typed imports after existing authorization and reject whole successful JSON
+responses before display; never remove stored rows or silently filter totals.
+Exact-schema snapshot byte imports retain their existing rejection path. Do
+not parse names, filenames, CSV strings or source text as test identity. A
+reviewed dashboard asset allowlist plus build/startup checks and exclusion of
+tests from the image is the packaging guard; recorded-data Ask remains valid
+despite its historic demo filename. No auth/provider/UI rewrite. -- #472
+answer6551370318,D-065,AGENTS3/5,2026-11-01.
+
+ASSUMED: D-065/#471 authorizes one new current-main reintroduction of only
+the shared timestamp display policy: rolling age<=7 days keeps weekday/time;
+older timestamps show month/day, adding year when different. Strict UTC-Z,
+real-calendar and future rejection, UTC-7 day arithmetic, deadlines, source
+records and all writers remain unchanged. Preserve current488/486 assets and
+owned469/470 evidence; do not replay their documentation/private screenshots.
+Serialize unsigned Remember-device case/rectangle before its unchanged44px/
+in-viewport assertion. If the reintroduction fails acceptance, defer; no third
+attempt. Nonshared455.4B timestamp readers remain separate. --487/471,2026-11-01.
+
+OWNER 2026-11-01: Explicitly approves merge and automatic deployment of PR486,
+PR477 and later codex-task PRs once AGENTS checks pass. This resolves the
+previous486 execution-approval hold, not failed tests or safety restrictions.
+If a merge remains blocked, leave its PR open, report the number, continue487.
+Prior issue360 comment denial and all private-data/business-action boundaries
+remain unchanged. Reconcile487's cache17 with486's stripe removal; do not
+replace it with the older cache16. -- direct owner instruction, AGENTS2/3/5.
+
+ASSUMED: #487 walk_plan remains optional/null and otherwise has exact rung,
+nullable bounded status and nullable UTC-ISO scheduled_at (future allowed).
+A signed_partner_buyer label alone cannot prove the required buyer agreement.
+Allow optional buyer_agreement {buyer_id,non_circumvention_signed,signed_at,
+reference} only for that rung: exact buyer ID must join this snapshot's buyers,
+the signed flag is true/false/null, signed_at is null or not after generated_at,
+and reference is nullable reported record reference. Display the buyer-walker
+rung/status/time only when the exact join, true flag, signed time and reference
+are all present. Otherwise retain the imported report but show only that buyer
+agreement confirmation is needed, never its free-form walker detail. This is
+an assistant-reported agreement record, NOT legal verification or canonical
+agreement authority. Do not reuse JV flags, buyer approval/POF or parse names
+as signing evidence. No new document reader, writer, booking or provider.
+-- AGENTS3/5,#487 comment6553264253 --2026-11-01.
+
+ASSUMED: #487 follow-up engine consumes an explicit recorded-interaction
+projection {id,ref,agent_id,kind,step,at,source_kind}; kind is questions,
+follow_up or reply, step is F1-F4 only for follow_up, at is a canonical UTC day,
+and source_kind is recorded_interaction. This is an internal input contract,
+not proof of provider authorship or permission to send. Exact outreach-agent
+joins, unique events and valid prior steps are required; missing questions or
+agent identity withhold a follow-up. Any reply (or reported answered=true)
+stops all properties for that agent. Daily cap includes questions and all
+follow-ups across properties. Several eligible properties yield one stable
+priority/ref recommendation, never drafts, prices, networking or automation.
+Same-day reply ordering is unknown at day precision and safely stops rather
+than rejecting a legitimate same-day reply. Historical sends after a reply on
+a later day refuse. No automatic sequence restart. -- AGENTS3/4/5,#487 --2026-11-01.
+
+ASSUMED: D-063B next bounded native consumer is existing WOS reports filtering
+from453 per-message IMAP name receipts, not raw labels or guessed REST custom
+names. Require complete valid receipts on every thread member and consistent
+duplicates; preserve role/listing precedence and loaded-only scope. No new
+provider request, role/identity/count authority, label writer, native Deals or
+owner design sign-off. -- AGENTS2/3/5,D-063/#439/#412 --2026-10-30.
+
+ASSUMED: D-060 Ask uses the same read-only dialog above native Today/Email via
+an icon header command and a narrow host adapter. Closing restores the existing
+native screen, search and draft rather than redirecting through an artificial
+classic entry route. Record/Calendar exits use existing canonical links; More
+stays seven destinations, native Deals and per-deal chat stay excluded. Native
+voice hooks only the Ask question. -- AGENTS2/3/5,D-060/#390 --2026-10-30.
+
+ASSUMED: Reconcile existing397/D-060 demo onto verified394 using current
+canonical projections, shared UI kit/icons and private read/lifecycle boundaries.
+Mixed references touching any unsigned JV withhold entire linked report/event
+details through the existing signed-evidence gate, never regex-censor source
+text or relax the gate. Preserve public/signed originals and all caps/totals.
+No per-deal chat/AI/provider/key/writers/native Deals/downstream sign-off implied.
+Current Calendar and owned394 proof win over stale branch conflicts; preserve
+old2553b07 separately. -- AGENTS2/3/5,D-060/#390,#372/#412 --2026-10-30.
+
+ASSUMED: Reconcile existing394/D-059 Profile onto current481, preserving both
+owned checkpoints and current profit-review/version/auth/source/value gates.
+Only reviewed canonical JV/template/buyer-email drafts may consume Profile;
+legacy392 remains excluded even after its separate repair. Settings stays on
+the actual classic route; use shared form/token rules in existing UI kit, not
+a new one-off stylesheet or native Settings/Deals migration. Preserve current
+Calendar assertions rather than replaying the old unrelated driver correction.
+Private Profile authorization/no-store precede a bounded value-free JSON parser.
+No real Profile save, private value/file/signature read or production contract/
+message action is a verification step. -- AGENTS2/3/5, D-059,412 --2026-10-29.
+
+ASSUMED:455.9 uses nativeclosed comparable-sales details and row-local explicit
+reason disclosure;opening orCancel cannot write/refetch or markreview complete.
+OnlyConfirm exclusion invokes the existing key/index/reason-boundPATCH. Preserve
+allcomps/source/value/review/identity semantics. Proposed8B4legacyDashboard
+nodes are shadowed by currentTodayrenderer;do not editdeadpaths orclaim8done.
+Independent9 mayproceed while8B2 awaits478. --AGENTS2/3,owner455.9--2026-10-29.
+
+ASSUMED:455.8B3 independentbuyer matching/near-missfaces use Open deal+existing
+location;exactIDs/projections/sharing gates/fullrecordrefs/subjects/history remain.
+Do not bundleblocked477workflowcode;onlyitsreviewedboundary478blocksB2,notthis
+consumer. No sourcecode-like stringcensorship/nativeDeals. --AGENTS2/3--2026-10-29.
+Historical owned PR477 display-boundary assumption:
+ASSUMED:455.8B2 removes only standalone reference metadata on Approvals,
+conversationcards,Pipeline and notificationWorkqueue. Canonicaldata/keys/refs/
+links/fullrecord/search/history/source labels/messages/alerts remain intact.
+Buyer-match and legacyfaces are laterbounded8B work;do not call whole8done.
+--AGENTS2/3/owner455.8/data provenance--2026-10-29.
+
+ASSUMED: Continue455.8B as ordered consumer-boundary PRs;B1 removes standalone
+reference metadata from native/classicToday only, preserving exact handlers,
+refs/keys, record/search/history and source text. Buyer/match/approval/conversation/
+pipeline/notification/legacy faces remain subsequent slices. No regex censorship
+or backend/nativeDeals rewrite. --AGENTSsection2/3,owner455.8--2026-10-29.
+
+OWNER2026-10-29: Work backlog24/7 until finished. Replace old large usage reserve
+with about5%of5-hour window for revert/redeploy;pause normal work at window
+exhaustion and resume automatically after reset. Do not conserve weekly usage
+early;Gabriel alone handles his one manual reset. When weekly remaining UNDER10%,
+write warning in run summary at TOPdocs/BACKLOG.md forarchitectliveappcheck.
+Noagentreset/purchase. AGENTS safety/oneitemPR/fullgreen/readonlyverification/
+rollbackFIRST still apply. Historicallarge-reserveholds below are superseded.
+
+ASSUMED: Split455.8 into ordered boundedPRs underAGENTSsection2.8A covers four
+requested wording examples and compact reviewed-deal reference label;8B covers
+remaining card-face metadata. Remove display metadata,not canonical IDs/routes/
+history or arbitrary source/name/message strings. Fullrecord identity remains
+available.8A alone does NOTcomplete455.8. --Owner455.8/additiveconsistency--2026-10-29.
+
+ASSUMED:455.7 changes only native mobile navigation at the existing720px
+breakpoint. Left-edge full-height drawer keeps a48px outside tap strip and
+compact44px rows; More/Account/Record dialogs and fixed tool URLs remain intact.
+No native Deals or session/data authority change. --Owner455.7,AGENTS additive
+architecture consistency--2026-10-29.
+
+ASSUMED:455item3 keeps Today and Email as native primary destinations and
+groups all seven existing non-native tools,including Settings,under one visible
+More entry. More uses the existing dialog/component/icon/navigation contracts;
+it does not rebuild Deals or add backend/auth/data authority. Classic routes and
+their role checks remain unchanged. Full-height mobile navigation and other455
+items are separate. --Owner455item3,AGENTS additive consistency--2026-10-28.
+
+ASSUMED:455item2 uses one shared PIN renderer and submit lifecycle on existing
+classic/native entry URLs,not a new authentication endpoint or return-URL router.
+This preserves exact classic tool destinations and user/admin restrictions while
+making direct/app and the root browser home nativeToday. Legacy preview URLs and
+JSON status clients remain compatible. Existing shared signed cookie/30day
+device revocation contracts do not change;455item3 navigation is separate.
+--Owner455item2,AGENTS additive architecture/data safety--2026-10-28.
+
+ASSUMED:455 item1 uses opt-in fixed30day version2 device cookies,hash-only private
+revocation records and current canonical credential binding. Generic and old
+45da4ac verifiers reject version2,so rollback cannot bypass revocation. Explicit
+unchecked new PIN forms use browser-session cookies with renewal preserving that
+choice;clients omitting the option retain existing14day behavior. Separate login
+UUID replay identity never extends expiry;server eligibility remains authoritative.
+No fingerprint/raw credential storage or credential-writer rewrite. Native/classic
+login consolidation belongs to455 item2,not this PR. Owner close-window cause not
+reproduced. --455 item1,AGENTS conservative additive safety--2026-10-27.
+
+ASSUMED:D064 upload credential is accepted ONLY by the existing private snapshot
+POST with its dedicated custom header;Cookie/Origin/Authorization mixtures reject,
+never fall back to signed admin. Key identity never becomes req.currentUser.
+Current issuer admin eligibility/revocation checked again after raw body intake.
+Separate actor+fileSHA receipt domain preserves original eight fields/manual UUID
+contract and original replay provenance. Local CLI endpoint is fixed HTTPS with
+redirect:error,not configurable from a key file/CLI URL. No retries or hidden
+scheduler;owner alone creates/saves real key. Settings wraps existing renderer;
+label-only accessibility repair never reads or changes legacy field values.
+--D064 scoped import/one-time disclosure,AGENTS safety/architecture--2026-10-27.
+
+ASSUMED:D064 key creation must not generate a second active secret on transparent
+POST replay or redisplay a stored secret. Before HTTP wiring,derive the public
+key identity from signed actor+fresh create-action UUID in a separate domain,
+inject fresh32byte secret,and reject repeated identity rather than overwrite.
+This is only key-creation transport safety;uploader request identity remains exact
+fileSHA,browser import UUID/origin guards and existing8field receipts unchanged.
+Current pure helper is local/unregistered;new collection privacy/audited route/
+Settings/CLI/full release proof still pending. No actual keys/settings touched.
+--D064 one-time disclosure,AGENTS privacy/history and known Chromium POST replay--2026-10-27.
+
+ASSUMED:D064 reply shortlist includes only explicit own last_reply_at values,
+descending timestamp/source-order ties,max10;all other buyers remain searchable.
+Timestamp truth is assistant-reported,not independently provider-verified;approval/
+POF remain reported. Compare to recorded server import clock as authorized,not
+last_contact/browser clock/generation clock. Unknown optional field is omitted
+on disk and null only in projection. Compatible461 reader already deployed;
+new writer retains8field envelopes and old-reader history preservation proof.
+--D064/457 optionA and AGENTS data truth--2026-10-27.
+
+ASSUMED:D064 optional reply timestamp rolls out reader-first then writer/ranking,
+because actual82ce792 rejects additive stored buyer fields and cannot safely
+read future imports on rollback. Unknown means omitted;present value must be an
+own primitive ISO timestamp <=recorded server imported_at. Upload remains strict
+until the later writer slice. Existing8field envelopes/history/actors unchanged.
+No migration,deletion,contact-to-reply inference or new operator gate.
+--AGENTS safety/data truth and D064/457--2026-10-27.
+
+## D-067 - Unblock the gates: CI decides, frozen slices ship or get cut (Architect, 2026-11-09)
+
+Gabriel, 2026-11-09, told the architect to unblock Codex. Codex merged nothing from 2026-11-06 to
+2026-11-09 and opened issues #495-#505. Most of them describe the same local result: 209 passed, 97 failed.
+
+**a. GitHub CI is the required gate. A local run is a pre-check only.** The required full gate is the
+GitHub Actions "Full test suite" run on the PR head. Evidence: CI run 42628317216 (2026-11-09, docs-only
+PR #506 on main f2294a7) passed every file Codex named as failing locally. That includes
+remembered-device-ui/routes/integration, email-template-approvals-ui, match-profit-ui, jv-signing-review-ui,
+filter-hygiene-ui, lead-geography-ui, local-voice-ui, api-session-gate, shared-dashboard-login,
+assistant-decision-answer-routes, ask-native-entry-ui, plain-card-words-ui, workspace-more-navigation,
+upload-assistant-snapshot and operator-profile-boundary. The only two failures came from D-067b. So the 97
+local failures (ERR_NETWORK_ACCESS_DENIED, `fetch failed` on loopback, EPERM/EACCES, fixture start or health
+timeouts, destroyed execution context) are classified as **the local sandbox blocking loopback network,
+child servers and the browser**. They are not product defects. This classification is proven by the CI run
+and is not a guess.
+- When a local run fails only with these sandbox error types, push the branch, open the PR and let CI run
+  once. A local sandbox failure is not a gate failure and does not count toward D-065c.
+- D-065c still applies to CI runs: one CI run per head and no unchanged retries. If the same test fails twice
+  in CI on two different heads, the slice is DEFERRED (not BLOCKED). Note it in the backlog and move on. Open a
+  `needs-architect` issue only when a CI failure shows a real assertion failure that you cannot explain.
+- Stop gate forensics. Write no more log audits, lifecycle traces or flag counts like #505. They cost budget
+  and ship nothing. Never edit a test, timeout or fixture to make the local sandbox pass.
+- AGENTS.md §5 is unchanged. Tests that protect auth, provenance, money, dates or no-send keep every assertion.
+
+**b. Dependency pin first (B-25, codex-task #507).** `wasm-feature-detect` 1.10.0, published 2026-11-09,
+crashes the tesseract OCR worker on Node 20. With no lockfile, CI and the next production deploy
+(`node:20-slim`, `npm install`) both pick it up. The fix is one line in package.json:
+`"overrides": {"wasm-feature-detect": "1.9.0"}`. Ship it before any other PR. Every other PR waits for it.
+
+**c. Frozen local slices: one CI attempt each, then ship or cut.** After B-25, rebase each frozen branch on
+main, push it, open the PR and run CI once. If it is green, merge, deploy and run the §7 check. If it fails,
+make one real fix commit and give it one more CI run. If it is still red, mark it DEFERRED and continue. Order:
+#495 device labels, #496 template labels, #497 JV and profit labels, #498 active Today filter, #501 source-card
+words, #502 batch decision model, #504 note voice, #505 skip-trace preflight (#494).
+- #501: you may update both duplicate cache-version assertions in
+  `tests/dashboard-public-deal-queue.test.js` (the one near line 874 and the duplicate near line 931) from 57
+  to 58 in one commit. This is incidental scaffolding under AGENTS §4. Keep each assertion and its message.
+  This is the one changed head that the slice gets.
+- PRs #433 (negotiation planner) and #434 (exit-strategy engine) already passed CI and the #436-#438
+  findings are fixed in them. Rebase them on main (they now conflict), run CI once and merge if green. They
+  are pure modules with no UI.
+
+**d. Cut from item 455 (date-display polish ends here).** No new 455 date slices start after the ones in (c).
+- #499 (email date with an impossible calendar day, such as "30 Feb", becomes 2 March): this is a real but
+  rare edge case. The frontend timestamp follow-on is **cut**. The `receivedTime` real-calendar check moves to
+  Deferred: after parsing a named-month mail date, reject it when its day, month or year does not match in the
+  header's own offset, and show "Time not confirmed". Add no new parser dependency.
+- #500 (the browser's local day drives sale urgency): **cut. Change nothing now.** Gabriel's browser runs
+  at UTC-7 (Cabo), so his display day already matches. The backend `repairSaleDateUrgency` stays the authority
+  for "sale date passed". Deferred: option 1 (inject the owner's UTC-7 day and add a real-calendar check in
+  `saleDateInfo`). The browser must never be the authority for whether a sale has passed.
+
+**e. Item 494 is folded into B-24.** The skip-trace button and the paid provider call belong to B-24's
+single provider interface, which is off by default. Ship the pure preflight from #505 under (c) if CI is
+green. Build no separate provider path.
+
+**f. Item 454 board contract (#503). Version 1 shows reported stages only. It is scheduled after B-19.**
+1. *Identity.* Add an optional `canonical_ref` to the snapshot deal. It is a namespaced record reference such
+   as `deal:<id>` or `lead:<id>`, resolved through the existing unique-reference resolver in record-activity.
+   If exactly one record matches, the deal is linked. If none or several match, it shows "Not linked" and
+   stays reported-only. Never bind by address, file path or equal IDs. Two snapshots show the same deal only
+   when they carry the same `canonical_ref`. No migration and no automatic merge.
+2. *Stages.* Add an optional `board_stage`, with values new, analyzed, questions_sent, they_answered,
+   offer_sent, negotiating, ready_to_sign, under_contract, buyer_committed, closed and dead. Add an optional
+   `dead_reason` shown as text. Both are additive and optional, and the version-1 snapshot stays valid. When
+   `board_stage` is missing, the deal stays in today's six-stage group. Never remap it from free text. Every
+   card says "Reported by assistant, <snapshot date>". A "Confirmed" mark appears only for three stages, and
+   only when the linked reviewed deal's operator status shows it: under_contract needs `contract_verified`,
+   buyer_committed needs `buyer_committed`, closed needs `closed`. The mark is labeled "Confirmed by operator".
+   Mail-server acceptance, JV stages, prices, drafts and free text never confirm a stage.
+
+**g. Older issues.** #450: option A is approved. Compare a snapshot's `captured_at` against the server time
+sent in the same response, measure age from when the browser received it, and keep rejecting forged, future
+and stale snapshots against that server time. No skew window. Scheduled after B-19 with the rest of #412
+phase B. #409: option 1. The explicit canonical JSON file is the transport for pipeline and outcome
+reports. Build no Markdown or legacy adapter. The assistant routine will emit that JSON. #360: superseded by
+(a). #209: a 502 on the first leads load within about 2 minutes of a Railway deploy, when the next load
+hydrates, is deploy rollout noise. Note it in the PR and don't open an incident. A 502 outside a deploy
+window reopens #209 with its timestamp, URL and status.
+
+**h. Still Gabriel's (not decided here).** #428 credential rotation: is it done? Turning on the D-061 reply
+Send switch. Picking and paying for the B-24 provider. Any outreach.
+
+## D-066 - Deal-closing features first: public distress lists and a paid data provider (Gabriel, 2026-11-09)
+
+Gabriel, 2026-11-09: "I want the software to do exactly the same" (pull public distress lists like the
+Dallas foreclosure notices and Charlotte code cases), and "we need to pay for the best one to get those
+comps and to also be able to do skip tracing", with an API the app can call.
+
+1. **Order.** After the open needs-architect items are answered, the next feature work is B-23 (public
+   distress lists importer), then B-24 (paid data provider adapter, off until enabled), then comps
+   (B-07, B-21) and the match engine (B-19). This supersedes the P0 pause on new source and comps work
+   for these items. UI work already in flight may finish; no new UI polish slices start before B-23.
+2. **D-012 amended.** A paid data provider may be enabled once Gabriel picks one and signs up himself.
+   Research (private, 2026-11-09) recommends PropertyRadar Team (about $249/month: comps, 500
+   skip-trace lookups, distress lists, API) or RealEstateAPI plus Tracerfy (about $640/month). The
+   adapter ships off: registry entry plus environment switch, key only in Railway, monthly cost cap.
+3. **Texas comps.** No vendor found sells real Texas closed prices by API to a non-licensee. Provider
+   values in Texas are estimates: labeled, never comps, never ARV (AGENTS.md section 5). Texas comps stay
+   in the operator lane (agent partner, local helper).
+4. **Texting skip-traced numbers** keeps every D-054 rule (Send button or approved batch of 20 or fewer,
+   DNC and do-not-contact check, quiet hours, carrier registration). Skip-traced numbers are "Possible
+   number, not confirmed" with their source (D-006).
+
+## D-064 - Assistant Today Follow-Through (Architect, 2026-10-27)
+
+Authoritative answers:454 architect comment at2026-10-27T01:35:37Z and457
+comment6431546292. Phone feedback is not
+a release gate; continue1366/400/412 technical proof without repeated questions.
+Replace native file-picker chrome with a plain chooser; hide internal filenames
+on cards but retain stored provenance. Add explicit Copy text; show no earnings
+claim when both fee bounds are missing/zero. Calls/texts put reason before number.
+Optional buyer last_reply_at must be a genuine non-future ISO reply timestamp,
+never derived from last_contact; old v1 files remain valid,missing means unranked.
+Automatic imports are separately ordered work in454: owner-created/revocable,
+hash-only scoped upload key in Settings; local exact-byte capped uploader; latest
+Today receipt auto-read;manual import secondary. No real key creation/inspection,
+private file reads,production upload or scheduling as technical verification.
+
+ASSUMED: split D064 into reviewable ordered sub-PRs under AGENTS section2:
+first existing-schema Today corrections,then compatible reply-evidence support,
+then scoped-key/uploader integration.454 stays OPEN until all delivered. Text
+v1 has no reason field; say Why: Not reported in this file rather than invent
+a motivation or reuse draft text as evidence. No temporary contact-based buyer
+rank. POF summary is explicitly reported/unknown,not independently verified.
+--454/D064 truth and privacy precedence--2026-10-27.
+
+2026-10-27 PR459 implementation checkpoint: assistant imports remain private,
+source-reported intelligence, never canonical buyer/deal/POF/readiness authority.
+Actor-bound request UUID encodes replay identity in the existing opaque receipt
+id; persisted receipts retain the original eight fields for458 rollback compatibility.
+Explicit new imports append; transport replay returns its original receipt.
+Viewer-scoped device checks are not delivery receipts.454 owner phone acceptance
+and457 reply-ranking evidence remain outstanding; no fabricated reply timestamps.
+
+ASSUMED:454 manual upload is one logical action with a fresh client UUID.
+Chromium transparently replays POST after a dropped response (reproduced in
+the actual local route),so an optional actor-scoped request UUID returns the
+same exact SHA/filename receipt without another write. New clicks remain new
+append-only imports;conflicts reject,legacy receipts/calls stay valid. Encode
+identity in the existing opaque id,NOT an extra receipt field;the original
+eight-field schema remains readable by verified458 on rollback. Add only
+private GET viewer_scope derived from the actual signed actor for anonymous
+device-check keys,because the existing browser helper uses generic admin ID.
+No authentication rewrite/token/provider authority or private text in storage
+--454 append-only truth/privacy and observed transport evidence--2026-10-26.
+
+ASSUMED:454 Do this next orders nonempty reported needs_gabriel by newest
+reported deal updated_at,stable source order on ties;no missing urgency inferred.
+Calls/emails preserve reported rank;contact is never reply evidence (457 open).
+Rows without a source_file use the truthful snapshot filename,not an inferred
+related deal file. Private Today projection remains separate from canonical
+workflows and uses within-receipt server dates,not a cross-machine future test
+--owner454/AGENTS provenance and unchanged safety gates--2026-10-26.
+
+2026-10-26:454 backend prerequisite458 verified on exactmaindd04d98 with
+PR257/0/0+MAIN257/0/0 and approved435 GET-only mixedproof. Signed-admin private
+assistant receipts remain separate from canonical buyers/deals/POF/value gates.
+No real production upload used as verification;latest is absent until explicit
+owner import. Todayupload/sheet is next;whole454/designapproval not complete.
+457 contact-versus-reply gap blocks only that ranking,not independent sections.
+
+2026-10-26:454 backend privacy audit now covers runtime static/export/aggregate
+readers,error telemetry and actual-session synthetic regressions. Mount only
+the new snapshot namespace's existing admin/no-store/payload guard before
+generic parsers;keep its routes behind the unchanged shared API session gate.
+Reject unsupported upload types before parser errors can reflect private bytes.
+Canonical projections/writers remain independent and preserve import history;
+no new token,shared auth change or production import --454/AGENTS privacy.
+
+ASSUMED:454 snapshot uploads remain a separate assistant-reported collection,
+not canonical buyer/deal/POF/value/readiness updates. Validate/hash exact bounded
+UTF8 bytes with injected backend clock,retain every import and choose newest
+import per actor. A source_file is only a reported safe relative reference,
+never opened or promoted to external evidence. Unknown nullable facts remain
+null;unknown structured fields reject. Real persistence waits for privacy/export
+audit and actual admin integration tests --454,AGENTS source/privacy invariants
+and existing strict atomic-store conventions --2026-10-26.
+
+2026-10-26: PR453 source-label backend prerequisite verified atmainf7a7977,
+automatic14777ce0 exactsource;PR255/0/0 andMAIN255/0/0. Actual bounded signed
+metadata/body provenance agrees without exporting private labels. Native label
+consumption remains separately gated;no writer/send/native-cache change. Count
+clock repair450 remains unanswered;do not reintroduce failed448 unchanged.
+
+ASSUMED: D-063B provider labels first preserve bounded per-message IMAP names
+versus opaque REST label IDs in a separate provider_labels receipt. Add only
+the existing IMAP fetch's capability-gated label attribute; no registry request,
+native category consumer, writer, scope, storage or clock contract changes.
+Missing/malformed stays null, not empty; thread unions cannot certify all
+members. Native source-label consumption remains a separately gated slice --
+D-063, AGENTS source truth and verified ImapFlow2.3/Gmail contracts --2026-10-26.
+
+OPEN needs-architect450:choose authoritative clock for count snapshots after
+448's failed live gate. Strict browser-vs-server future comparison rejects a
+genuine backend capture measured117ms ahead after response. Recommend same-
+server capture/load authority plus receipt-relative age and existing tickets,
+not silently accepting arbitrary future values. NO repair approved/implemented
+yet. AGENTS7 rollback449 restored/verified exact pre448 tree FIRST. Count
+repair BLOCKED;independent451 acquisition Back race is now traced,reproduced
+against the actual route and fixed/verified via452 with existing request tickets.
+This is not a native Deals migration. No writer/send/auth-scope/settings change
+is authorized.
+
+ASSUMED: D-063B attachment manifests first expose only allowlisted metadata
+from an already explicit bounded MIME read. No download/content/base64/headers
+or unopened-list presence is implied. Unknown arrays/fields stay unknown;real
+zero-byte parts remain0. Inline parts are labeled,not rendered;filenames are
+escaped and unsafe names withheld. Reader uses shared styles,no new CSS layer;
+existing D-061 text-only send schema stays unchanged -- D-063,AGENTS privacy/
+source truth and official MailParser contract --2026-10-25.
+
+ASSUMED: D-063B snippets initially use already-returned Gmail provider preview
+or an exact-identity parsed body the operator explicitly opened. Native opened
+excerpts are500-character session-only derived text,cleared on request/session/
+view invalidation;unopened IMAP previews remain unavailable. This avoids a50-body
+metadata batch and separates actual parser availability from fallback display
+strings. No new read request,writer,storage or send authority -- D-063,AGENTS
+source truth/privacy and bounded provider load --2026-10-25.
+
+ASSUMED: D-063B starts with a small read-state provenance prerequisite before
+folder totals. Already-returned IMAP flags/Gmail label IDs are the only evidence;
+absent/malformed values remain null, not inferred read/unread. Native grouping
+requires all members known read to say read; a confirmed unread member remains
+unread. This adds no request, cache persistence, mailbox writer or count. Other
+B snippets/attachments/cursors/search remain ordered separate pieces -- D-063,
+AGENTS data truth and the documented provider flag gap --2026-10-25.
+
+2026-10-25: #442 short-window containment is verified repaired by PR444 on
+exact main ddab0a8, automatic deployment1d8e39bd-22a3-4f73-a4d0-999d820c81f6.
+Fixed system folders never use inner scrolling; long labels remain available
+through the explicit Mail labels drawer. Only <=650px explicit composer focus
+temporarily replaces the source pane; Close restores it. Original tall-viewport
+reader-height assertions remain unchanged. Five-size synthetic plus truthful
+1038x503 signed live checks supplement approved #435 mixed proof. PR441's
+failure and verified rollback443 remain history, not relabeled success. D-063A
+technical release is not whole412/design approval; B then capability-gated C
+remain separate. No send/auth/backend/settings/business-data change.
+
+## D-063: Phased Gmail Capability Boundaries
+
+Architect439 comment6392281483 (2026-10-25) approves A -> B -> C and permits
+441 to finish gates/merge/release under A. A is read-only Gmail structure:
+rail/dense full-width list/replacing reader/collapsed history/bottom Reply/
+bounded search/categories/sourced context. Unsupported controls are visibly
+disabled icons with "Not available yet: open in Gmail" tooltips plus a Gmail
+fallback per thread. Counts/snippets/chips require sources; unknown is not0.
+D-061 remains unchanged; owner design approval is still required before Deals.
+
+B follows in separately traced/tested read-only pieces: sourced snippets,
+attachment manifests, provider unread totals/cursor pagination, provenanced
+provider/WOS labels and bounded mail search. Cross-search may only read existing
+read-only lead/buyer APIs, never provider discovery or fabricated totals.
+
+C follows B, one capability/PR/boundary/default-OFF owner switch. C1 reversible
+mark/star/archive/label/snooze(label+date)/Trash-only writes require idempotency,
+per-action audit,10-second Undo,1request/second,stop401/403/429. No permanent
+delete/empty Trash. C2 new-thread Compose/Forward must EXTEND D-061: exact
+preview/review/explicit message confirm,no automatic send,30/hour cap,recipient
+validation,operator-picked attachments <=10MB total,reviewed Profile signature.
+Legacy generic send/reply stays410. Each C PR needs forged/stale/duplicate/
+rate-limit/provider-error tests and stop policy. No production test sends,
+credential/settings changes or business writes are authorized for verification.
+
+2026-10-25: architect/owner412 comment6389032123 is the current detailed
+Gmail-structure contract and supersedes the earlier clarification request.
+Implement its read-only visual foundations independently; unsupported mailbox
+mutation/new-thread Send capabilities remain affected-slice BLOCKED439.
+No visual request relaxes D-061 or authorizes production writes. Full Gmail
+comparison/owner approval and later native Deals gates remain outstanding.
+
+Owner2026-10-24: live compact Email still needs another layout adjustment.
+Technical427/425/424 releases are not design approval; keep new native Deals
+migration gated. Request the remaining space/width/control detail or marked
+screenshot before changing the layout further. Existing D-061 transport stays
+default OFF; no production Preview/Send or settings change is authorized.
+
+Historical pre-answer435 assumption (superseded by architect decision below):
+ASSUMED: missing exact-size live evidence from the Chrome viewport tool is
+not proof of an application regression. Keep the affected acceptance gates
+pending in435 and preserve the healthy exact-source deployment; never claim
+1366/400/412 from actual1280-wide output or silently substitute synthetic
+proof. Independent draft-branch reconciliation/testing may continue, but is
+not a waiver to merge/deploy the next screen or enable sending -- AGENTS3/5/7,
+data truth and conservative behavior; architect question435 --2026-10-23 UTC.
+
+ASSUMED: continue D-061 phase2 implementation/tests locally while phase1's
+merged release is blocked by workspace deployment availability (#423), but
+keep its PR draft/unmerged until exact phase1 deployment and read-only
+verification pass. A workspace Limited Access banner alongside fully
+operational public status is not proof of billing trouble or permission
+to change settings. Preserve the healthy running version; no automatic
+deploy retries or false live claim -- AGENTS3/7/10 --2026-10-21.
+
+Provider evidence for423: Railway's official deployments reference says the
+exact Limited Access indicator is temporary resource-allocation priority
+for higher tiers, with existing deployments unaffected and queued builds
+processing automatically when capacity returns. Public operational status
+is consistent with this. No upgrade, billing change or duplicate manual
+build; unlike the earlier incident418, no unreplayed-trigger claim applies.
+https://docs.railway.com/deployments/reference#deployments-paused---limited-access
+--2026-10-21.
+
+ASSUMED: source-only reply defaults use a separate signed-admin GET context
+route, only after explicit Reply and enabled status; never persist a preview
+merely to populate fields. User-typed additions are explicit preview input.
+35s client timeout covers response-body reading as well as headers; a lost
+send response is uncertain and cannot auto-retry. Composer keeps uncertainty
+across local close/reopen; durable API attempt gates survive reload/restart.
+No new credentials, sending enablement or production test send --D-061,
+AGENTS3/5 --2026-10-21.
+
+ASSUMED: #416's Hey Gabriel pending panel reads existing saved buyer drafts,
+canonical open conversations and uniquely linked bounce activity. A bounce
+report has no stored resolution, so label it reported and disclose that current
+mailbox delivery status is not connected. Never infer delivery, a resolved
+bounce, why a provider refused a send, or a new contact action. Unknown/sending
+drafts direct the operator to check Sent mail; no retry control is added.
+Use the existing PR425/shared Today system. Historical424-first order is
+superseded by D-062:427,425,424,426 -- AGENTS3/5,#412/#416 --2026-10-24.
+
+## Architect Decision: Live Viewport Proof (435)
+
+Issue435 comment6388258726,2026-10-24: required live viewport proof equals
+exact-size pinned Playwright checks on the deployed SHA for unauthenticated
+screens and health, plus truthful-size existing signed-in Chrome observations
+and an exact-size synthetic actual-app journey against that same source.
+Required public sizes1366x768,400x915,412x915 must be measured and included in
+screenshot filenames. Never transfer cookies/credentials to authenticate the
+headless browser. Owner phone screenshots are helpful but NON-BLOCKING.
+Mask private names,phones,emails,street addresses before persisting images.
+No rollback of healthy source solely for viewport tooling limitations.
+After this evidence, complete431/422 live checks and continue427,then backlog.
+
+ASSUMED: Gabriel's2026-10-21 annotated Email screenshot makes the compact
+reading-space correction the next UI priority before the Deals migration.
+Email-only native hover titles replace its reserved blank help strip; Today
+help is unchanged. On phones an open message keeps Inbox/Sent/More folders,
+Back/Reply/Gmail, while Back restores category tabs and the folder summary.
+Error/loading/unavailable-reference status is never hidden. This changes
+layout only, not message contents, role/source labels, auth or send gates.
+Keep release prerequisites under423 and explicit owner sign-off -- AGENTS3/5/7,
+owner feedback and #412 ordered migrations --2026-10-21.
 ## D-062: Bounded Merges During Railway Build Outage
 
 Architect#423 answer6350507039,2026-10-22: continue backlog work. A full-suite
@@ -242,6 +851,16 @@ CLI with offline dry-run/counts by reason by default; explicit submit uses
 the existing signed pending path and preserves operator edits/approvals.
 No PII output, no automatic submit or approval. Fixture-only tests. Read-only
 live reconciliation follows the first separately authorized real submission.
+
+ASSUMED: #392 legacy fill has no reviewed date, buyer, jurisdiction, deposit or
+signature input authority in its four-field request schema. Leave those terms
+blank even when unreviewed similarly named record fields exist; retain actual
+record address/offer and explicit seller/title/notes without stored writes.
+Replace unconsumed legacy legal text export with an unsigned field worksheet,
+not a signed/legal instrument. D-059 and AGENTS truth/provenance take precedence
+over unsupported historical defaults. Independent #392 follows #455.9 while
+#455.4A/#455.5/#455.8B2 await #471/#472/#478; do not edit shadowed legacy UI,
+native Deals or Claude-owned #433/#434 to manufacture progress. -- 2026-10-29
 
 D-059 -- Architect#383 and Gabriel,2026-10-19: profile I is limited to
 storage and canonical reviewed JV/template/email draft consumers. Legacy
@@ -625,7 +1244,7 @@ ASSUMED: #283's first-panel requirement is a release gate; the old public panel'
 | D-008 | 2026-09-30 | **One CRM timeline per lead**: every interaction logged with date, time and who (Gabriel or which VA): acquired, opened, closed, reopened, calls, texts, notes. Plus lead clocks: sale/event date, stale date, last touch. |
 | D-009 | 2026-09-30 | **Passed sale dates are not dead leads.** They move to an "After the sale" lane (postponed, still-owner, bank-owned, sold to investor, redemption) — never discarded. |
 | D-010 | 2026-09-30 | **Loan interest rate matters** (low rate → subject-to). It is a call question; a typical-rate clue from the loan date is allowed, labeled. |
-| D-012 | 2026-09-30 | **No paid services yet.** Everything must work free first. |
+| D-012 | 2026-09-30 | **No paid services yet.** Everything must work free first. Amended 2026-11-09 by D-066: a paid data provider may be enabled once Gabriel picks and signs up. |
 | D-013 | 2026-10-01 | **Generic adapters for every state.** No county-specific naming in new code; Dallas, Ellis, etc. are profiles. |
 | D-014 | 2026-09-26 | **VA materials** exclude MAO, spreads, buy boxes and title companies. |
 | D-015 | 2026-09-26 | **Offer math**: MAO = ARV × band% − repairs − fee. Band: 70% under $120k ARV; above that, the course chart up to 80–83%. Repairs before condition is known: $20/sq ft light to $50/sq ft heavy, labeled estimate. |
@@ -907,3 +1526,29 @@ zeroes or approved templates mislabeled as drafts. Unsigned JV address and
 subject coordinates stay withheld; stored data remains intact. Sign-out only
 adds UI cache cancellation before the unchanged auth action. No production
 decision is used as a test -- AGENTS sections3/5,D-043,D-056 -- 2026-10-13.
+
+ASSUMED: The #412 Today action queue derives overdue/due-today ordering only from
+the canonical projected due_date; a waiting-on-someone-else group requires the
+recorded waiting_on_deal status, and elapsed waiting days require last_out.
+Missing timestamps stay unmeasured. A recorded message remains reported activity,
+not proof of delivery. Queue and best-deal actions only open their existing
+record; they never send, approve, capture or change business data. Existing
+reviewed-deal evaluation remains the sole source of displayed value/spread --
+AGENTS sections3/5 and #412/#416 read-only Today scope -- 2026-10-21.
+ASSUMED:455.6 loading placeholders represent pending reads, not synthetic business
+rows. Retry is an explicit operator GET, never an automatic provider retry. The
+two-second email label is local, current-selection-bound and does not repaint or
+persist data. Existing auth/clock/source/draft authority remains unchanged; Deals
+uses the existing classic destination, not an unapproved native screen.
+--Owner455.6,AGENTS source truth/additive consistency--2026-10-29.
+
+ASSUMED: #487/#454 v2 uses value_fixed for reported value after repairs and a
+nullable numeric buyer_number in open-item numbers; existing v1 per-deal buyer
+object remains unchanged. Agent id is explicit for outreach.agent_id joins;
+null means unknown, never inferred. Open-item/agent IDs join the snapshot ID
+namespace, outreach refs are unique queue references. Future due/follow-up days
+are allowed; reported happened/last-touch dates cannot exceed generated_at.
+These are local validation contract choices, not provider facts or send
+authority. Full base/extension validation, exact-byte receipts and v1 reader
+compatibility must be wired before exposing v2 imports -- D-065/#487,AGENTS
+truth and conservative additive compatibility --2026-11-01.

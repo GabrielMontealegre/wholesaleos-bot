@@ -1,0 +1,68 @@
+{
+  "privateScreenshotsTaken": 0,
+  "authTransfer": false,
+  "today": {
+    "chooserEnabled": false,
+    "clockCache2": true,
+    "importHidden": false,
+    "locked": false,
+    "nativeCacheUnchanged": true,
+    "overflow": false,
+    "pickerEmpty": true,
+    "topbar": false
+  },
+  "todayReady": {
+    "chooserEnabled": true,
+    "importDisabled": true,
+    "importHidden": true,
+    "oneMore": true,
+    "overflow": false,
+    "pickerEmpty": true,
+    "pickerHidden": true
+  },
+  "recorded": {
+    "noISO": true,
+    "overflow": false,
+    "visible": true
+  },
+  "email": {
+    "allPlain": true,
+    "defaultComposer": false,
+    "labelCount": 49,
+    "noISO": true,
+    "olderDateLabels": 0,
+    "overflow": false,
+    "rows": 49,
+    "opened": {
+      "bodyLength": 2882,
+      "placeholder": false
+    },
+    "labelKinds": {
+      "older": 0,
+      "recent": 49,
+      "unknown": 0
+    },
+    "sourceComparison": "Private body read was rejected by safety review;not retried.Live checks use only allowed length/booleans,exact source preservation is synthetic-only.",
+    "reply": {
+      "bodyEmpty": true,
+      "editDisabled": true,
+      "fieldsFit": true,
+      "overflow": false,
+      "previewDisabled": true,
+      "sendDisabled": true
+    },
+    "afterClose": {
+      "bodyLength": 2882,
+      "composerGone": true,
+      "overflow": false,
+      "replyRestored": true
+    }
+  },
+  "liveGate": {
+    "passed": false,
+    "assertion": "Unsigned Remember-this-device44px/in-viewport geometry",
+    "cause": "Not established;rollback470 initiated before diagnosis",
+    "source": "bb3163b832d0691cb39f567515953f75a1922f9d"
+  },
+  "notes": "Initial Today/Email observations preceded hydration;later ready states recorded separately.No exact private source-content assertion;that proposed read was rejected and not bypassed.No private screenshots."
+}

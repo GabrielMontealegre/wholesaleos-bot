@@ -1,0 +1,59 @@
+{
+  "base_sha": "ebace1c986b3702a84bfd245e37552df76c5851c",
+  "screens": [
+    {
+      "file": "synthetic-clock-1366.png",
+      "sha256": "260ae49b326b2d79613c3ddeee79f816188fb598c8f37b84051ee06ed1b468d0",
+      "synthetic": true,
+      "inspected": true
+    },
+    {
+      "file": "synthetic-clock-400.png",
+      "sha256": "70ab92a90c2b54ac004a4b6df799b990f7ebc856dbea9b876a1ca8b58e899baa",
+      "synthetic": true,
+      "inspected": true
+    },
+    {
+      "file": "synthetic-clock-412.png",
+      "sha256": "e4d8ca0f8ba380297a04fdde6eba8e5c898b92895ca6f721d7fdbf4c38c8622f",
+      "synthetic": true,
+      "inspected": true
+    },
+    {
+      "file": "synthetic-email-1366.png",
+      "sha256": "3938136fd0edb9b9a4356ff9c428dd71aa88a59ce3a37e603e4bf430585f973f",
+      "synthetic": true,
+      "inspected": true
+    },
+    {
+      "file": "synthetic-email-400.png",
+      "sha256": "52b18391b4179469312b4deca6f8528741b8928c8fb2d0358ae006ec4c2f2b37",
+      "synthetic": true,
+      "inspected": true
+    },
+    {
+      "file": "synthetic-email-412.png",
+      "sha256": "8e3be0029465a892832ab15e0b5e8ed2f8fd08123fec331a1dcd26b884de4952",
+      "synthetic": true,
+      "inspected": true
+    },
+    {
+      "file": "synthetic-today-1366.png",
+      "sha256": "1cd540977070170f06e7db55cdefcd57fab0e8c1c99d6c7efc5b979871b2d395",
+      "synthetic": true,
+      "inspected": true
+    },
+    {
+      "file": "synthetic-today-400.png",
+      "sha256": "54127dbbd04bf0bfb3694b0627c6a1542a80efbc0661a8adb36b0b5ab2baf6bf",
+      "synthetic": true,
+      "inspected": true
+    },
+    {
+      "file": "synthetic-today-412.png",
+      "sha256": "262dd2dbdc62c749796dd2cf5bcf60aab1477607ec114e866f6e4717325122ef",
+      "synthetic": true,
+      "inspected": true
+    }
+  ]
+}

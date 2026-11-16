@@ -1,0 +1,68 @@
+{
+  "source_sha": "71f32fc4a96a33f1f89f2d1ef7381c146f567543",
+  "structural_only": true,
+  "private_screenshots": 0,
+  "private_body_text_or_composer_values_read": false,
+  "credentials_transferred": false,
+  "business_writes": false,
+  "today": {
+    "app13": true,
+    "css15": true,
+    "height": 585,
+    "menuButton": true,
+    "moreButtons": 1,
+    "openDialogs": 0,
+    "overflow": false,
+    "width": 1280
+  },
+  "more": {
+    "closeCount": 1,
+    "moreOpen": true,
+    "openDialogs": 1,
+    "toolLinks": 7
+  },
+  "moreClosed": {
+    "focusReturned": true,
+    "openDialogs": 0
+  },
+  "settings": {
+    "height": 585,
+    "locked": false,
+    "overflow": false,
+    "settingsRoute": true,
+    "unusedRevealSelectorCount": 0,
+    "width": 1280
+  },
+  "email": {
+    "app13": true,
+    "composer": 0,
+    "height": 585,
+    "moreButtons": 1,
+    "overflow": false,
+    "rows": 49,
+    "width": 1280
+  },
+  "dealsBefore": {
+    "cards": 19,
+    "loading": 0,
+    "open": 0,
+    "overflow": false
+  },
+  "dealsOpen": {
+    "cards": 1,
+    "open": 1,
+    "overflow": false,
+    "backVisible": true
+  },
+  "dealsAfter": {
+    "cards": 19,
+    "loading": 0,
+    "open": 0,
+    "overflow": false
+  },
+  "notes": [
+    "Actual signed viewport1280x585. Browser viewport override did not affect this tab; reset reported detached debugger. Fresh SAME-Chrome3 tab restored structural checks at default size. Mobile400/412 journeys are synthetic only.",
+    "Initial optional reveal selector was absent(count0); its empty flag is NOT authoritative key-state proof. Initial Back attribute selector also absent; actual static Back command was visible and clicked.",
+    "Counts do not prove all-record identity; exact source/record preservation is synthetic only. No console logs collected."
+  ]
+}

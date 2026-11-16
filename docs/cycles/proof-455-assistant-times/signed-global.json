@@ -1,0 +1,20 @@
+{
+  "source_sha": "bca8fefc962b5cf17c6c981565b6df29a842675c",
+  "scope": "GLOBAL shell readiness, public navigation/control state and geometry only",
+  "shell": true,
+  "ready": true,
+  "retryControl": false,
+  "assistantPresent": true,
+  "emailEntryPresent": true,
+  "scheduledClockAssetPresent": true,
+  "refreshEnabled": true,
+  "refreshGeometry": {"width":44,"height":44},
+  "noHorizontalOverflow": true,
+  "initial_observation": {"ready":false,"assistantPresent":false,"refreshEnabled":false,"scheduledClockApiPresent":false},
+  "clock_evidence": "Final DOM has cache3 script; public bytes match merge. No page-global API execution claim.",
+  "live_mail_or_key_records_opened": false,
+  "private_content_values_json_ax_captures": false,
+  "provider_actions_business_writes_auth_transfer": false,
+  "temporary_tab_closed": true,
+  "positive_changed_screen_proof": "docs/screens/2026-11-03-assistant-plain-times"
+}

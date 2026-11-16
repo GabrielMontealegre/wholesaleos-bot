@@ -15,7 +15,7 @@
   const time=value=>clock?clock.formatTime(value,now):'Unknown';
   const provenance=row.source_kind==='imported_report'?'Reported conversation, not an independently verified contact outcome.':row.source_kind==='operator_input'?'Explicit operator record, not an automatic contact action.':'Recorded conversation context; no contact outcome inferred.';
   return '<article class="cv-row" data-conversation-id="'+esc(row.id||'')+'" data-urgency="'+priority+'"'+(/^#[0-9a-f]{6}$/i.test(color)?' style="--role-color:'+color+'"':'')+'><div class="cv-heading">'+role+'<h3>'+esc(row.person)+'</h3>'+(priority<2?'<span class="cv-age'+(priority===0?' cv-overdue':'')+'">'+(priority===0?'Overdue':'Due today')+'</span>':'')+'</div>'+
-   '<p title="'+esc(provenance)+'">'+esc((row.refs||[]).join(' / '))+(row.refs?.length?' | ':'')+esc(({hot:'Waiting on you',to_send:'To send',follow_up:'Follow up',waiting_on_deal:'Waiting on deal',closed:'Closed'})[row.status]||'Status not recorded')+'</p>'+
+   '<p title="'+esc(provenance)+'">'+esc(({hot:'Waiting on you',to_send:'To send',follow_up:'Follow up',waiting_on_deal:'Waiting on deal',closed:'Closed'})[row.status]||'Status not recorded')+'</p>'+
    (row.what_they_said?'<p>They said: '+esc(row.what_they_said)+'</p>':'')+
    (row.email_evidence?'<p>Latest linked email subject: '+esc(row.email_subject||'No subject')+'</p><small title="'+(row.email_evidence.persisted?'Saved reply; source retained.':'Read-only preview; nothing saved.')+'">Checked '+esc(time(row.email_evidence.captured_at))+'</small>':'')+
    (row.next_step?'<p>Next: '+esc(row.next_step)+'</p>':'')+

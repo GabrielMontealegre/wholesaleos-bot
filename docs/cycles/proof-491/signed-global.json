@@ -1,0 +1,18 @@
+{
+  "source_sha": "42f8c591053a5259c85f123f69401ae5e2cbbf98",
+  "scope": "GLOBAL shell readiness, public navigation/control state and geometry only",
+  "shell": true,
+  "ready": true,
+  "retryControl": false,
+  "assistantPresent": true,
+  "emailEntryPresent": true,
+  "refreshEnabled": true,
+  "refreshGeometry": {"width":44,"height":44},
+  "noHorizontalOverflow": true,
+  "live_mail_opened": false,
+  "private_content_values_json_ax_captures": false,
+  "provider_actions_business_writes_auth_transfer": false,
+  "temporary_tab_closed": true,
+  "positive_changed_screen_proof": "docs/screens/2026-11-03-classic-email-reading-room",
+  "browser_recovery": "Previously selected Chrome3 absent; current inventory exposed Chrome4, selected without private initial snapshot."
+}

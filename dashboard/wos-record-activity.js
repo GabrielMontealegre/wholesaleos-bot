@@ -3,8 +3,14 @@
   var payload = null; var missing = null; var reserve = null; var receipt = null; var message = ''; var loading = false;
   var filters = { ref: '', type: '', from: '', to: '' }; var searchSequence = 0; var searchTimer;
   function esc(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function(c) { return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]; }); }
-  function date(v) { var n = new Date(v); return Number.isFinite(n.getTime()) ? n.toLocaleString('en-US', { month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit',timeZoneName:'short' }) : 'Time not recorded'; }
-  function rows(items) { return (items || []).map(function(e) { return '<li><b>' + esc(e.type.replace(/_/g,' ')) + '</b> <span>' + esc([e.deal_ref,e.buyer_ref,e.match_ref].filter(Boolean).join(' / ')) + '</span><p>' + esc(e.summary) + '</p><small>' + esc(date(e.ts)) + ' | ' + esc(e.who) + ' | ' + esc(e.channel) + ' | ' + esc(e.attribution === 'imported_report' ? 'Imported report' : e.attribution === 'operator_report' ? 'Operator reported' : e.attribution === 'legacy_card_history' || e.attribution === 'legacy_record' ? 'Historical record' : 'Recorded action') + '</small></li>'; }).join('') || '<li>No recorded activity.</li>'; }
+  function date(v) { var clock=root.wosCardClock;if(!clock)return 'Time not confirmed';var label=typeof v==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(v)?clock.formatDate(v):clock.formatTime(v,new Date().toISOString());return label==='Unknown'?'Time not confirmed':label; }
+  function rows(items) { if(!items)return '<li>Activity not loaded.</li>';return items.map(function(e) { return '<li><b>' + esc(e.type.replace(/_/g,' ')) + '</b> <span>' + esc([e.deal_ref,e.buyer_ref,e.match_ref].filter(Boolean).join(' / ')) + '</span><p>' + esc(e.summary) + '</p><small>' + esc(date(e.ts)) + ' | ' + esc(e.who) + ' | ' + esc(e.channel) + ' | ' + esc(e.attribution === 'imported_report' ? 'Imported report' : e.attribution === 'operator_report' ? 'Operator reported' : e.attribution === 'legacy_card_history' || e.attribution === 'legacy_record' ? 'Historical record' : 'Recorded action') + '</small></li>'; }).join('') || '<li>No recorded activity.</li>'; }
+  function dayEdge(value,end) {
+    if(!root.wosCardClock||root.wosCardClock.formatDate(value)==='Unknown')return null;
+    // Date filters use the same fixed UTC-7 day as the displayed times.
+    var at=Date.parse(value+'T00:00:00Z')+7*3600000+(end?86400000-1:0),iso=new Date(at).toISOString();
+    return /^\d{4}-/.test(iso)?iso:null;
+  }
   root.wosRecordTimeline = function(kind,id,ref) { return '<details data-record-timeline data-kind="' + esc(kind) + '" data-id="' + esc(id) + '"><summary>Activity' + (ref ? ' - ' + esc(ref) : '') + '</summary><ul class="ra-timeline" role="status"><li>Open history to load recorded activity.</li></ul></details>'; };
   root.parseRecordImport = function(value) {
     var parsed;
@@ -35,8 +41,10 @@
     if(loading || !document.getElementById('wos-record-activity')) return;
     loading=true;var signature=JSON.stringify(filters);
     var query={ref:filters.ref,type:filters.type};
-    if(filters.from)query.from_ts=new Date(filters.from+'T00:00:00').toISOString();
-    if(filters.to)query.to_ts=new Date(filters.to+'T23:59:59.999').toISOString();
+    var from=filters.from?dayEdge(filters.from,false):'',to=filters.to?dayEdge(filters.to,true):'';
+    if((filters.from&&!from)||(filters.to&&!to)||(from&&to&&from>to)){loading=false;payload=null;message='Choose a valid date range.';paint();return;}
+    if(from)query.from_ts=from;
+    if(to)query.to_ts=to;
     Promise.all([get('/api/dashboard/record-activity?'+new URLSearchParams(query)),get('/api/dashboard/record-refs')]).then(function(values) { if(signature!==JSON.stringify(filters))return;payload=values[0]; missing=values[1].missing; reserve=values[1].deal_reserve; message=''; }).catch(function(e) { if(signature===JSON.stringify(filters))message=e.message; }).finally(function() { loading=false;if(signature!==JSON.stringify(filters))load();else paint(); });
   }
   root.renderRecordActivity = function() { setTimeout(load,0);return markup(); };

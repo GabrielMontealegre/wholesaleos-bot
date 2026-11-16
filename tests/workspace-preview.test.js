@@ -17,8 +17,9 @@ for (const forged of ['__proto__', 'constructor', '//evil.test', '<script>', 'gm
 }
 assert.equal(navigation.recordHref('WOS-FL-1012'), '/dashboard/?record_ref=WOS-FL-1012');
 // #429: one home, one shell. Rebuilt screens stay in the shell; every other key is a labeled classic view.
-assert.equal(navigation.home, '/dashboard/');
-assert.equal(APP_HOME, navigation.home, 'Server and shell agree on the single home');
+assert.equal(navigation.home, '/app', 'Home opens nativeToday;explicit classic tool links remain separate');
+assert.equal(APP_HOME, '/app', 'Owner455item2 makes the native Today screen the browser home');
+assert.equal(APP_HOME, navigation.home, 'Server and native shell agree on Home');
 assert.equal(navigation.navHref('today'), '/app?preview=1');
 assert.equal(navigation.navHref('email'), '/app?preview=1&view=email');
 for (const key of ['today', 'email']) assert.equal(navigation.isClassic(key), false);
@@ -49,7 +50,7 @@ function home(accepted) {
 }
 const browserHome = home('html');
 assert.equal(browserHome.status, 302);
-assert.equal(browserHome.target, '/dashboard/');
+assert.equal(browserHome.target, '/app');
 assert.equal(browserHome.headers['Cache-Control'], 'no-store');
 assert.equal(browserHome.headers.Vary, 'Accept', 'The redirect is marked as varying on Accept');
 assert.equal(statusCalls, 0, 'A browser visit must not compute the status payload');
@@ -75,7 +76,8 @@ function response(query) {
   return result;
 }
 for (const query of [{}, { preview: 'true' }, { preview: ['1', '1'] }, { preview: { a: '1' } }]) {
-  assert.equal(response(query).target, '/dashboard/');
+  assert(response(query).file.endsWith(path.join('workspace', 'index.html')), 'Native app no longer requires the old preview switch');
+  assert.equal(response(query).target, undefined, 'Opening app never redirects to the classic PIN screen');
 }
 const preview = response({ preview: '1' });
 assert(preview.file.endsWith(path.join('workspace', 'index.html')));
@@ -111,4 +113,4 @@ wrongRole.root.APP.unlocked = true;
 wrongRole.root.APP.currentUser.role = 'user';
 wrongRole.tick();
 assert.equal(wrongRole.calls.length, 0);
-console.log('workspace-preview: one home for browsers, JSON root for clients, labeled classic keys, strict opt-in route, CSP, allowed classic views, signed-admin deferred navigation and exact record precedence passed');
+console.log('workspace-preview: native Today browser home, JSON root for clients, classic tool compatibility, direct app route, CSP, allowed classic views, signed-admin deferred navigation and exact record precedence passed');

@@ -11,6 +11,9 @@ function run(){
  global.fetch=()=>{throw Error('no network')};Date.now=()=>{throw Error('inject clock')};fs.writeFileSync=()=>{throw Error('no write')};
  try{
   const result=annotate(messages,store,{now});assert.equal(new Set(result.map(m=>m.thread_key)).size,1);assert.ok(result.every(m=>m.conversation.role==='buyer'));
+  assert.equal(result[0].conversation.status,null,'missing status is never inferred from direction or subject');
+  for(const status of conversations.STATUSES)assert.equal(annotate(messages,{...store,conversations:[{...row,status}]},{now})[0].conversation.status,status);
+  for(const status of ['__proto__','toString','approved','sent',true])assert.equal(annotate(messages,{...store,conversations:[{...row,status}]},{now})[0].conversation.status,null,'unknown statuses are not workflow facts');
   assert.deepEqual(result[0].conversation.deals,[{ref:'WOS-FL-1031',id:'fixture-deal'}]);assert.ok(!JSON.stringify(result).includes(row.person));assert.ok(!JSON.stringify(result).includes(store.reviewed_deals[0].address));
   assert.equal(JSON.stringify([store,messages]),frozen);assert.equal(result[1].direction,'out','role display never fabricates an incoming receipt');
   const ambiguous=annotate(messages,{...store,conversations:[row,{...row,id:'other',role:'seller'}]},{now});assert.ok(ambiguous.every(m=>m.conversation===null&&m.link_status==='ambiguous'));

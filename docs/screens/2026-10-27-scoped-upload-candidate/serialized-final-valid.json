@@ -1,0 +1,105 @@
+{
+  "synthetic_only": true,
+  "baseline": "a2dc46e2e125a4e9c340f0934693346a34134024",
+  "sizes": [
+    {
+      "mode": "before",
+      "width": 1366,
+      "fcp": 659.8000000119209,
+      "overflow": false
+    },
+    {
+      "mode": "before",
+      "width": 400,
+      "fcp": 327.60000002384186,
+      "overflow": false
+    },
+    {
+      "mode": "before",
+      "width": 412,
+      "fcp": 374.5,
+      "overflow": false
+    },
+    {
+      "mode": "after",
+      "width": 1366,
+      "fcp": 398.2999999821186,
+      "overflow": false
+    },
+    {
+      "mode": "after",
+      "width": 400,
+      "fcp": 236.60000002384186,
+      "overflow": false
+    },
+    {
+      "mode": "after",
+      "width": 412,
+      "fcp": 204.5,
+      "overflow": false
+    }
+  ],
+  "lighthouse": [
+    {
+      "mode": "before",
+      "width": 1366,
+      "version": "13.5.0",
+      "performance": 83,
+      "accessibility": 88,
+      "runtimeErrorCode": null,
+      "auditErrors": [],
+      "metrics": {
+        "first-contentful-paint": 873.433,
+        "largest-contentful-paint": 2011.504,
+        "total-blocking-time": 151.22099996948236,
+        "cumulative-layout-shift": 0.0034533236582213085
+      }
+    },
+    {
+      "mode": "before",
+      "width": 412,
+      "version": "13.5.0",
+      "performance": 100,
+      "accessibility": 88,
+      "runtimeErrorCode": null,
+      "auditErrors": [],
+      "metrics": {
+        "first-contentful-paint": 432.648,
+        "largest-contentful-paint": 1192.475,
+        "total-blocking-time": 72.50899999999979,
+        "cumulative-layout-shift": 0.02248690846755361
+      }
+    },
+    {
+      "mode": "after",
+      "width": 1366,
+      "version": "13.5.0",
+      "performance": 97,
+      "accessibility": 94,
+      "runtimeErrorCode": null,
+      "auditErrors": [],
+      "metrics": {
+        "first-contentful-paint": 343.117,
+        "largest-contentful-paint": 1100.766,
+        "total-blocking-time": 70.83899999999994,
+        "cumulative-layout-shift": 0.001954427114036987
+      }
+    },
+    {
+      "mode": "after",
+      "width": 412,
+      "version": "13.5.0",
+      "performance": 100,
+      "accessibility": 94,
+      "runtimeErrorCode": null,
+      "auditErrors": [],
+      "metrics": {
+        "first-contentful-paint": 384.17,
+        "largest-contentful-paint": 909.5,
+        "total-blocking-time": 44.045999999999935,
+        "cumulative-layout-shift": 0.014112154490954426
+      }
+    }
+  ],
+  "notes": "Actual classic Settings source;synthetic read-only APIs,font stub/CSP self-only;raw Lighthouse reports/screenshots never persisted. Legacy private-looking template fields opaque before screenshot disk."
+}

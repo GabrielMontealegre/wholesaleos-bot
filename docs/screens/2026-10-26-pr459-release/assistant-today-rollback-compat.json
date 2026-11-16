@@ -1,0 +1,9 @@
+{
+  "synthetic_only": true,
+  "legacy_sha": "dd04d989ebf74fe7c208554024b93f6a5bc4fd90",
+  "legacy_reader_accepts_new_receipt": true,
+  "legacy_writer_preserves_new_receipt": true,
+  "current_reader_accepts_legacy_write": true,
+  "receipt_keys": 8,
+  "no_real_storage": true
+}

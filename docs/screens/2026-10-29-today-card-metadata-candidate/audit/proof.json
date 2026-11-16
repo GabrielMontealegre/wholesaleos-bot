@@ -1,0 +1,185 @@
+{
+  "synthetic_only": true,
+  "baseline": "7a7e354e5f8519bf10f6514dbf9abf9a2602a3fe",
+  "sizes": [
+    {
+      "mode": "before",
+      "view": "today",
+      "width": 1366,
+      "fcp": 243.40000000037253,
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "mode": "before",
+      "view": "today",
+      "width": 400,
+      "fcp": 64.5,
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "mode": "before",
+      "view": "today",
+      "width": 412,
+      "fcp": 65.30000000074506,
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "mode": "before",
+      "view": "classic-today",
+      "width": 1366,
+      "fcp": 303.30000000074506,
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "mode": "before",
+      "view": "classic-today",
+      "width": 400,
+      "fcp": 76.30000000074506,
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "mode": "before",
+      "view": "classic-today",
+      "width": 412,
+      "fcp": 74.79999999888241,
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "mode": "after",
+      "view": "today",
+      "width": 1366,
+      "fcp": 49.30000000074506,
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "mode": "after",
+      "view": "today",
+      "width": 400,
+      "fcp": 32.70000000111759,
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "mode": "after",
+      "view": "today",
+      "width": 412,
+      "fcp": 39,
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "mode": "after",
+      "view": "classic-today",
+      "width": 1366,
+      "fcp": 82.30000000074506,
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "mode": "after",
+      "view": "classic-today",
+      "width": 400,
+      "fcp": 133.5,
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "mode": "after",
+      "view": "classic-today",
+      "width": 412,
+      "fcp": 76.70000000111759,
+      "overflow": false,
+      "errors": []
+    }
+  ],
+  "lighthouse": [
+    {
+      "mode": "before",
+      "view": "today",
+      "width": 1366,
+      "version": "13.5.0",
+      "performance": 99,
+      "accessibility": 100,
+      "runtimeErrorCode": null,
+      "auditErrors": []
+    },
+    {
+      "mode": "before",
+      "view": "today",
+      "width": 412,
+      "version": "13.5.0",
+      "performance": 96,
+      "accessibility": 100,
+      "runtimeErrorCode": null,
+      "auditErrors": []
+    },
+    {
+      "mode": "before",
+      "view": "classic-today",
+      "width": 1366,
+      "version": "13.5.0",
+      "performance": 94,
+      "accessibility": 98,
+      "runtimeErrorCode": null,
+      "auditErrors": []
+    },
+    {
+      "mode": "before",
+      "view": "classic-today",
+      "width": 412,
+      "version": "13.5.0",
+      "performance": 90,
+      "accessibility": 98,
+      "runtimeErrorCode": null,
+      "auditErrors": []
+    },
+    {
+      "mode": "after",
+      "view": "today",
+      "width": 1366,
+      "version": "13.5.0",
+      "performance": 99,
+      "accessibility": 100,
+      "runtimeErrorCode": null,
+      "auditErrors": []
+    },
+    {
+      "mode": "after",
+      "view": "today",
+      "width": 412,
+      "version": "13.5.0",
+      "performance": 96,
+      "accessibility": 100,
+      "runtimeErrorCode": null,
+      "auditErrors": []
+    },
+    {
+      "mode": "after",
+      "view": "classic-today",
+      "width": 1366,
+      "version": "13.5.0",
+      "performance": 94,
+      "accessibility": 98,
+      "runtimeErrorCode": null,
+      "auditErrors": []
+    },
+    {
+      "mode": "after",
+      "view": "classic-today",
+      "width": 412,
+      "version": "13.5.0",
+      "performance": 100,
+      "accessibility": 98,
+      "runtimeErrorCode": null,
+      "auditErrors": []
+    }
+  ],
+  "notes": "Exact source-switch; synthetic GET-only APIs; content masked before disk; serialized audits, no real credentials/production traffic."
+}

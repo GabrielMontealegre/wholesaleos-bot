@@ -47,7 +47,7 @@ function annotate(messages, store, { now }) {
     }) : [];
     return { ...message, date: Number.isFinite(receivedTime(message?.date)) ? new Date(receivedTime(message.date)).toISOString() : '',
       thread_key: crypto.createHash('sha256').update(identity).digest('hex'),
-      conversation: row ? { role: row.role, role_source_kind: row.source_kind, role_recorded_at: row.recorded_at || row.captured_at, deals, records: linkedRecords } : null,
+      conversation: row ? { role: row.role, role_source_kind: row.source_kind, role_recorded_at: row.recorded_at || row.captured_at, status: conversations.STATUSES.includes(row.status) ? row.status : null, deals, records: linkedRecords } : null,
       link_status: owners.length > 1 ? 'ambiguous' : row ? 'linked' : 'unlinked' };
   });
 }

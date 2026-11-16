@@ -366,11 +366,16 @@ function list(store, { now, includeHidden = false, jv = false, state = '', count
   items.sort((a, b) => rank[a.evaluation.verdict] - rank[b.evaluation.verdict] || (spread(b) > spread(a) ? 1 : spread(b) < spread(a) ? -1 : 0) || (a.evaluation.deadline || '9999').localeCompare(b.evaluation.deadline || '9999') || a.id.localeCompare(b.id));
   return { items: items.slice(0, 100), ...(jv?{jv_stage_labels:jvWorkflow.LABELS}:{}), ...(locationExact ? {location_counts: Array.from(locationCounts.values())} : {}), counts: { total: all.length, shown: items.length, vetted_today: all.filter(d => d.approval === 'approved' && d.evidence_reviewed_at && d.evidence_reviewed_at.slice(0, 10) === now.slice(0, 10) && d.evaluation.value.range && d.repair_estimate != null && d.evaluation.matches.some(m=>m.max_price!=null) && !['STALE', 'NO'].includes(d.evaluation.verdict)).length, daily_target: 10, jv: all.filter(d => d.evaluation.jv_eligible).length }, status_labels: STATUS_LABELS };
 }
-function jvDraft(deal, evaluation) {
+function jvDraft(deal, evaluation, operator = null) {
   return ['WORKING JV TERM SHEET - NOT A SIGNED AGREEMENT', 'Title company and counsel must review. This draft establishes no ownership, authority or legal compliance.',
-    'Record reference: ' + (activity.reference(deal) || 'Not assigned'), 'Property: ' + deal.address, 'Holder: __________________', 'Co-holder: __________________', 'Contract interest and assignment authority: __________________',
+    'Record reference: ' + (activity.reference(deal) || 'Not assigned'), 'Property: ' + deal.address, 'Holder: __________________', 'Co-holder: ' + (operator?.profile?.legal_name || '__________________'),
+    ...(operator?.profile ? ['Optional LLC: '+(operator.profile.llc||'Not supplied'), 'Draft contact: '+[operator.profile.email,operator.profile.phone].filter(Boolean).join(' / '), 'Draft mailing address: '+(operator.profile.mailing_address||'Not supplied')] : []),
+    'Contract interest and assignment authority: __________________',
     'Owner-of-record / contract signature / assignability / closing date checks: __________________', 'Title company: __________________',
     'Fee split proposed: ' + (deal.jv_split == null ? 'Not supplied' : deal.jv_split * 100 + '% to Gabriel'), 'Fees payable by title only at closing.',
-    'Closing / expiration: ' + (evaluation.expires_on || 'Not supplied'), 'Buyer earnest money delivered to title: __________________', 'Signatures, date and title approval: __________________'].join('\n');
+    'Closing / expiration: ' + (evaluation.expires_on || 'Not supplied'), 'Buyer earnest money delivered to title: __________________',
+    'Deposit amount: __________________ (buyer-funded at assignment; review with title). Gabriel contributes no deposit or due-diligence fee.',
+    ...(operator?.profile ? ['Draft signature presentation only - NOT a signed agreement: '+(operator.profile.typed_signature||'__________________'), ...(operator.profile.signature_image?['Signature image is stored in the profile; not applied as signing evidence.']:[])] : []),
+    'Signatures, date and title approval: __________________'].join('\n');
 }
 module.exports = { validate, validateDealUpdate, ingest, update, evaluate, list, jvDraft, synchronizeMatchReferences, percentageRule, STAGES, STATUS_LABELS };

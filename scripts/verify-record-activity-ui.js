@@ -26,7 +26,9 @@ async function prove({screenshots=false}={}) {
     const page=await browserContext.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));const output=path.join(root,'docs/screens/record-activity-local');if(screenshots)fs.mkdirSync(output,{recursive:true});
     for(const width of [1366,400,412]) {
       await page.setViewportSize({width,height:width===412?915:900});await page.goto(base+'/dashboard/');await page.evaluate(()=>navigate('todays_deals',null));await page.locator('.td-card').waitFor();
-      assert.ok((await page.locator('.td-card').innerText()).includes('WOS-FL-1031'));
+      assert.strictEqual(await page.locator('.td-card').getAttribute('data-deal-id'),'deal1');
+      assert.strictEqual(await page.locator('.td-summary .td-reference').count(),0);
+      assert.ok(!(await page.locator('.td-summary').innerText()).includes('WOS-FL-1031'));
       await page.evaluate(()=>navigate('todays_deals',null));await page.getByRole('button',{name:'Open deal',exact:true}).click();
       const deal=page.locator('.td-card');assert.ok((await deal.innerText()).includes('WOS-FL-1031'));assert.ok((await deal.innerText()).includes('[WOS-FL-1031] Deal enquiry'));
       await deal.locator('details[data-record-timeline] summary').click();await deal.getByText('Operator recorded vetted.',{exact:true}).waitFor();

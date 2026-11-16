@@ -1,0 +1,284 @@
+{
+  "source_sha": "71f32fc4a96a33f1f89f2d1ef7381c146f567543",
+  "source_evidence": "Pair with authoritative active deployment Details; SHA is not inferred from health.",
+  "playwright_version": "1.44.0",
+  "browser_version": "125.0.6422.26",
+  "authenticated": false,
+  "cookie_transfer": false,
+  "checked_at": "2026-10-29T09:01:34.460Z",
+  "cases": [
+    {
+      "name": "root",
+      "requested": {
+        "width": 1366,
+        "height": 768
+      },
+      "actual": {
+        "width": 1366,
+        "height": 768
+      },
+      "status": 200,
+      "path": "/app",
+      "screenshot": "root-1366x768.png",
+      "health_status": 200,
+      "session_authenticated": false
+    },
+    {
+      "name": "classic",
+      "requested": {
+        "width": 1366,
+        "height": 768
+      },
+      "actual": {
+        "width": 1366,
+        "height": 768
+      },
+      "status": 200,
+      "path": "/dashboard/",
+      "screenshot": "classic-1366x768.png",
+      "health_status": 200,
+      "session_authenticated": false
+    },
+    {
+      "name": "native-email",
+      "requested": {
+        "width": 1366,
+        "height": 768
+      },
+      "actual": {
+        "width": 1366,
+        "height": 768
+      },
+      "status": 200,
+      "path": "/app",
+      "screenshot": "native-email-1366x768.png",
+      "health_status": 200,
+      "session_authenticated": false
+    },
+    {
+      "name": "native-today",
+      "requested": {
+        "width": 1366,
+        "height": 768
+      },
+      "actual": {
+        "width": 1366,
+        "height": 768
+      },
+      "status": 200,
+      "path": "/app",
+      "screenshot": "native-today-1366x768.png",
+      "health_status": 200,
+      "session_authenticated": false
+    },
+    {
+      "name": "direct-app",
+      "requested": {
+        "width": 1366,
+        "height": 768
+      },
+      "actual": {
+        "width": 1366,
+        "height": 768
+      },
+      "status": 200,
+      "path": "/app",
+      "screenshot": "direct-app-1366x768.png",
+      "health_status": 200,
+      "session_authenticated": false
+    },
+    {
+      "name": "root",
+      "requested": {
+        "width": 400,
+        "height": 915
+      },
+      "actual": {
+        "width": 400,
+        "height": 915
+      },
+      "status": 200,
+      "path": "/app",
+      "screenshot": "root-400x915.png",
+      "health_status": 200,
+      "session_authenticated": false
+    },
+    {
+      "name": "classic",
+      "requested": {
+        "width": 400,
+        "height": 915
+      },
+      "actual": {
+        "width": 400,
+        "height": 915
+      },
+      "status": 200,
+      "path": "/dashboard/",
+      "screenshot": "classic-400x915.png",
+      "health_status": 200,
+      "session_authenticated": false
+    },
+    {
+      "name": "native-email",
+      "requested": {
+        "width": 400,
+        "height": 915
+      },
+      "actual": {
+        "width": 400,
+        "height": 915
+      },
+      "status": 200,
+      "path": "/app",
+      "screenshot": "native-email-400x915.png",
+      "health_status": 200,
+      "session_authenticated": false
+    },
+    {
+      "name": "native-today",
+      "requested": {
+        "width": 400,
+        "height": 915
+      },
+      "actual": {
+        "width": 400,
+        "height": 915
+      },
+      "status": 200,
+      "path": "/app",
+      "screenshot": "native-today-400x915.png",
+      "health_status": 200,
+      "session_authenticated": false
+    },
+    {
+      "name": "direct-app",
+      "requested": {
+        "width": 400,
+        "height": 915
+      },
+      "actual": {
+        "width": 400,
+        "height": 915
+      },
+      "status": 200,
+      "path": "/app",
+      "screenshot": "direct-app-400x915.png",
+      "health_status": 200,
+      "session_authenticated": false
+    },
+    {
+      "name": "root",
+      "requested": {
+        "width": 412,
+        "height": 915
+      },
+      "actual": {
+        "width": 412,
+        "height": 915
+      },
+      "status": 200,
+      "path": "/app",
+      "screenshot": "root-412x915.png",
+      "health_status": 200,
+      "session_authenticated": false
+    },
+    {
+      "name": "classic",
+      "requested": {
+        "width": 412,
+        "height": 915
+      },
+      "actual": {
+        "width": 412,
+        "height": 915
+      },
+      "status": 200,
+      "path": "/dashboard/",
+      "screenshot": "classic-412x915.png",
+      "health_status": 200,
+      "session_authenticated": false
+    },
+    {
+      "name": "native-email",
+      "requested": {
+        "width": 412,
+        "height": 915
+      },
+      "actual": {
+        "width": 412,
+        "height": 915
+      },
+      "status": 200,
+      "path": "/app",
+      "screenshot": "native-email-412x915.png",
+      "health_status": 200,
+      "session_authenticated": false
+    },
+    {
+      "name": "native-today",
+      "requested": {
+        "width": 412,
+        "height": 915
+      },
+      "actual": {
+        "width": 412,
+        "height": 915
+      },
+      "status": 200,
+      "path": "/app",
+      "screenshot": "native-today-412x915.png",
+      "health_status": 200,
+      "session_authenticated": false
+    },
+    {
+      "name": "direct-app",
+      "requested": {
+        "width": 412,
+        "height": 915
+      },
+      "actual": {
+        "width": 412,
+        "height": 915
+      },
+      "status": 200,
+      "path": "/app",
+      "screenshot": "direct-app-412x915.png",
+      "health_status": 200,
+      "session_authenticated": false
+    }
+  ],
+  "unsigned_identity_header_status": 401,
+  "unsigned_assistant_snapshot_status": 401,
+  "unsigned_assistant_upload_keys_status": 401,
+  "unsigned_remembered_devices_status": 401,
+  "mobile_menu_assets": [
+    {
+      "file": "workspace/design-system.css",
+      "version": 15,
+      "exact_normalized_source_match": true
+    },
+    {
+      "file": "workspace/app.js",
+      "version": 13,
+      "exact_normalized_source_match": true
+    }
+  ],
+  "loading_assets": [
+    {
+      "file": "workspace/email-screen.js",
+      "version": 15,
+      "exact_normalized_source_match": true
+    },
+    {
+      "file": "workspace/app.js",
+      "version": 12,
+      "exact_normalized_source_match": true
+    },
+    {
+      "file": "wos-todays-deals.js",
+      "version": 17,
+      "exact_normalized_source_match": true
+    }
+  ]
+}

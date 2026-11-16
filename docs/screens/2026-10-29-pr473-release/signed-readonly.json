@@ -1,0 +1,111 @@
+{
+  "today": {
+    "chooserEnabled": true,
+    "chooserPresent": true,
+    "fileInputs": 1,
+    "height": 529,
+    "hiddenFileEmpty": true,
+    "importHiddenDisabled": true,
+    "locked": false,
+    "moreButtons": 1,
+    "overflow": false,
+    "ready": true,
+    "recordedWork": true,
+    "width": 1280
+  },
+  "recorded": {
+    "overflow": false,
+    "queuePresent": true,
+    "recordedVisible": true
+  },
+  "settings": {
+    "createEnabled": true,
+    "devicePanel": true,
+    "deviceRows": 0,
+    "keyPanel": true,
+    "keyRevealClosed": true,
+    "keyRows": 0,
+    "locked": false,
+    "overflow": false,
+    "revealEmpty": true
+  },
+  "email": {
+    "composer": false,
+    "listSkeletons": 0,
+    "locked": false,
+    "overflow": false,
+    "ready": true,
+    "refreshPresent": true,
+    "rows": 49
+  },
+  "emailRead": {
+    "bodySkeletons": 0,
+    "composer": false,
+    "messagePanels": 1,
+    "overflow": false,
+    "replyEnabled": true
+  },
+  "reply": {
+    "composer": true,
+    "disabledActions": 3,
+    "fieldsFit": true,
+    "inputFields": 4,
+    "overflow": false,
+    "previewDisabled": false,
+    "sendDisabled": true
+  },
+  "replyActions": {
+    "editDisabled": true,
+    "previewDisabled": true,
+    "reviewHidden": true,
+    "sendDisabled": true
+  },
+  "afterReply": {
+    "composer": false,
+    "messagePanels": 1,
+    "overflow": false
+  },
+  "classicBefore": {
+    "cards": 19,
+    "loading": false,
+    "newAsset": true,
+    "open": 0,
+    "overflow": false,
+    "skeletons": 0
+  },
+  "classicOpen": {
+    "backButtons": 1,
+    "backVisible": true,
+    "cards": 1,
+    "loading": true,
+    "open": 1,
+    "overflow": false
+  },
+  "classicBackEarly": {
+    "cards": 0,
+    "loading": true,
+    "open": 0,
+    "overflow": false,
+    "skeletons": 6
+  },
+  "classicBackFinal": {
+    "cards": 19,
+    "loading": false,
+    "open": 0,
+    "overflow": false,
+    "skeletons": 0
+  },
+  "notes": {
+    "privateBodyInspectionDenied": true,
+    "denialHonored": true,
+    "bodyTextNotReadOrPersisted": true,
+    "exactContentProofSyntheticOnly": true,
+    "liveRecordIdentityCountsOnly": true,
+    "noPrivateScreenshots": true,
+    "noConsoleZeroClaim": true,
+    "initialFileListProxyUnsupported": true,
+    "initialPreviewSelectorMismatch": true,
+    "authoritativeReplyActionsUseStaticIds": true,
+    "noFieldValuesInspectedInReply": true
+  }
+}

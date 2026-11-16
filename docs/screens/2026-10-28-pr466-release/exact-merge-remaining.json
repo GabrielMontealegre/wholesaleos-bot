@@ -1,0 +1,17 @@
+{
+  "source_sha": "38ea175b45dcb9dabc634debee36ec703996715d",
+  "synthetic_only": true,
+  "production_writes": 0,
+  "rows": [
+    {
+      "test": "remembered-device-ui.test.js",
+      "status": "passed",
+      "seconds": 51.38
+    },
+    {
+      "test": "workspace-mailbox-chrome.test.js",
+      "status": "passed",
+      "seconds": 84.95
+    }
+  ]
+}

@@ -1,0 +1,221 @@
+{
+  "synthetic_only": true,
+  "baseline": "38ea175b45dcb9dabc634debee36ec703996715d",
+  "sizes": [
+    {
+      "mode": "before",
+      "view": "classic-login",
+      "width": 1366,
+      "fcp": 745.1999999880791,
+      "overflow": false
+    },
+    {
+      "mode": "before",
+      "view": "classic-login",
+      "width": 400,
+      "fcp": 463.7000000178814,
+      "overflow": false
+    },
+    {
+      "mode": "before",
+      "view": "classic-login",
+      "width": 412,
+      "fcp": 595.5999999940395,
+      "overflow": false
+    },
+    {
+      "mode": "before",
+      "view": "native-login",
+      "width": 1366,
+      "fcp": 526.8999999761581,
+      "overflow": false
+    },
+    {
+      "mode": "before",
+      "view": "native-login",
+      "width": 400,
+      "fcp": 186.30000001192093,
+      "overflow": false
+    },
+    {
+      "mode": "before",
+      "view": "native-login",
+      "width": 412,
+      "fcp": 157.80000001192093,
+      "overflow": false
+    },
+    {
+      "mode": "after",
+      "view": "classic-login",
+      "width": 1366,
+      "fcp": 817.5,
+      "overflow": false
+    },
+    {
+      "mode": "after",
+      "view": "classic-login",
+      "width": 400,
+      "fcp": 126,
+      "overflow": false
+    },
+    {
+      "mode": "after",
+      "view": "classic-login",
+      "width": 412,
+      "fcp": 87.7999999821186,
+      "overflow": false
+    },
+    {
+      "mode": "after",
+      "view": "native-login",
+      "width": 1366,
+      "fcp": 134.69999998807907,
+      "overflow": false
+    },
+    {
+      "mode": "after",
+      "view": "native-login",
+      "width": 400,
+      "fcp": 79.69999998807907,
+      "overflow": false
+    },
+    {
+      "mode": "after",
+      "view": "native-login",
+      "width": 412,
+      "fcp": 35.19999998807907,
+      "overflow": false
+    }
+  ],
+  "lighthouse": [
+    {
+      "mode": "before",
+      "view": "classic-login",
+      "width": 1366,
+      "version": "13.5.0",
+      "performance": 100,
+      "accessibility": 91,
+      "runtimeErrorCode": null,
+      "auditErrors": [],
+      "metrics": {
+        "first-contentful-paint": 615.829,
+        "largest-contentful-paint": 615.829,
+        "total-blocking-time": 37.50300000000004,
+        "cumulative-layout-shift": 0
+      }
+    },
+    {
+      "mode": "before",
+      "view": "classic-login",
+      "width": 412,
+      "version": "13.5.0",
+      "performance": 100,
+      "accessibility": 91,
+      "runtimeErrorCode": null,
+      "auditErrors": [],
+      "metrics": {
+        "first-contentful-paint": 549.995,
+        "largest-contentful-paint": 549.995,
+        "total-blocking-time": 69.55399999999997,
+        "cumulative-layout-shift": 0
+      }
+    },
+    {
+      "mode": "before",
+      "view": "native-login",
+      "width": 1366,
+      "version": "13.5.0",
+      "performance": 99,
+      "accessibility": 100,
+      "runtimeErrorCode": null,
+      "auditErrors": [],
+      "metrics": {
+        "first-contentful-paint": 611.267,
+        "largest-contentful-paint": 796.83,
+        "total-blocking-time": 20.917999999999893,
+        "cumulative-layout-shift": 0
+      }
+    },
+    {
+      "mode": "before",
+      "view": "native-login",
+      "width": 412,
+      "version": "13.5.0",
+      "performance": 76,
+      "accessibility": 100,
+      "runtimeErrorCode": null,
+      "auditErrors": [],
+      "metrics": {
+        "first-contentful-paint": 708.781,
+        "largest-contentful-paint": 1908.169,
+        "total-blocking-time": 1154.157,
+        "cumulative-layout-shift": 0
+      }
+    },
+    {
+      "mode": "after",
+      "view": "classic-login",
+      "width": 1366,
+      "version": "13.5.0",
+      "performance": 100,
+      "accessibility": 100,
+      "runtimeErrorCode": null,
+      "auditErrors": [],
+      "metrics": {
+        "first-contentful-paint": 350.959,
+        "largest-contentful-paint": 764.293,
+        "total-blocking-time": 34.19599999999997,
+        "cumulative-layout-shift": 0
+      }
+    },
+    {
+      "mode": "after",
+      "view": "classic-login",
+      "width": 412,
+      "version": "13.5.0",
+      "performance": 100,
+      "accessibility": 100,
+      "runtimeErrorCode": null,
+      "auditErrors": [],
+      "metrics": {
+        "first-contentful-paint": 363.386,
+        "largest-contentful-paint": 803.635,
+        "total-blocking-time": 43.41899999999998,
+        "cumulative-layout-shift": 0
+      }
+    },
+    {
+      "mode": "after",
+      "view": "native-login",
+      "width": 1366,
+      "version": "13.5.0",
+      "performance": 100,
+      "accessibility": 100,
+      "runtimeErrorCode": null,
+      "auditErrors": [],
+      "metrics": {
+        "first-contentful-paint": 251.997,
+        "largest-contentful-paint": 368.323,
+        "total-blocking-time": 0,
+        "cumulative-layout-shift": 0
+      }
+    },
+    {
+      "mode": "after",
+      "view": "native-login",
+      "width": 412,
+      "version": "13.5.0",
+      "performance": 100,
+      "accessibility": 100,
+      "runtimeErrorCode": null,
+      "auditErrors": [],
+      "metrics": {
+        "first-contentful-paint": 215.595,
+        "largest-contentful-paint": 320.542,
+        "total-blocking-time": 0,
+        "cumulative-layout-shift": 0
+      }
+    }
+  ],
+  "notes": "Exact source,read-only synthetic APIs,self-only CSP/font stub;no real credentials or production traffic;no raw Lighthouse report persisted."
+}

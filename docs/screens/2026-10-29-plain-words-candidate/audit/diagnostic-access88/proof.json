@@ -1,0 +1,100 @@
+{
+  "synthetic_only": true,
+  "baseline": "71f32fc4a96a33f1f89f2d1ef7381c146f567543",
+  "sizes": [],
+  "lighthouse": [
+    {
+      "mode": "after",
+      "view": "preview",
+      "width": 1366,
+      "version": "13.5.0",
+      "performance": 78,
+      "accessibility": 88,
+      "runtimeErrorCode": null,
+      "auditErrors": [],
+      "failedAccessibility": [
+        {
+          "id": "label-content-name-mismatch",
+          "nodes": [
+            {
+              "selector": "div#app > div.sidebar > details.desk-user-menu > summary",
+              "explanation": "Fix any of the following:\n  Text inside the element is not included in the accessible name",
+              "related": []
+            }
+          ]
+        },
+        {
+          "id": "label",
+          "nodes": [
+            {
+              "selector": "details.wos-manual-evidence-card > div > div.wos-manual-upload-slot > input.wos-manual-file",
+              "explanation": "Fix any of the following:\n  Element does not have an implicit (wrapped) <label>\n  Element does not have an explicit <label>\n  aria-label attribute does not exist or is empty\n  aria-labelledby attribute does not exist, references elements that do not exist or references elements that are empty\n  Element has no title attribute\n  Element has no placeholder attribute\n  Element's default semantics were not overridden with role=\"none\" or role=\"presentation\"",
+              "related": []
+            },
+            {
+              "selector": "details.wos-manual-evidence-card > div > div.wos-manual-upload-slot > input.wos-manual-file",
+              "explanation": "Fix any of the following:\n  Element does not have an implicit (wrapped) <label>\n  Element does not have an explicit <label>\n  aria-label attribute does not exist or is empty\n  aria-labelledby attribute does not exist, references elements that do not exist or references elements that are empty\n  Element has no title attribute\n  Element has no placeholder attribute\n  Element's default semantics were not overridden with role=\"none\" or role=\"presentation\"",
+              "related": []
+            },
+            {
+              "selector": "details.wos-manual-evidence-card > div > div.wos-manual-upload-slot > input.wos-manual-file",
+              "explanation": "Fix any of the following:\n  Element does not have an implicit (wrapped) <label>\n  Element does not have an explicit <label>\n  aria-label attribute does not exist or is empty\n  aria-labelledby attribute does not exist, references elements that do not exist or references elements that are empty\n  Element has no title attribute\n  Element has no placeholder attribute\n  Element's default semantics were not overridden with role=\"none\" or role=\"presentation\"",
+              "related": []
+            },
+            {
+              "selector": "details.wos-manual-evidence-card > div > div.wos-manual-upload-slot > input.wos-manual-file",
+              "explanation": "Fix any of the following:\n  Element does not have an implicit (wrapped) <label>\n  Element does not have an explicit <label>\n  aria-label attribute does not exist or is empty\n  aria-labelledby attribute does not exist, references elements that do not exist or references elements that are empty\n  Element has no title attribute\n  Element has no placeholder attribute\n  Element's default semantics were not overridden with role=\"none\" or role=\"presentation\"",
+              "related": []
+            },
+            {
+              "selector": "details.wos-manual-evidence-card > div > div.wos-manual-upload-slot > input.wos-manual-file",
+              "explanation": "Fix any of the following:\n  Element does not have an implicit (wrapped) <label>\n  Element does not have an explicit <label>\n  aria-label attribute does not exist or is empty\n  aria-labelledby attribute does not exist, references elements that do not exist or references elements that are empty\n  Element has no title attribute\n  Element has no placeholder attribute\n  Element's default semantics were not overridden with role=\"none\" or role=\"presentation\"",
+              "related": []
+            }
+          ]
+        },
+        {
+          "id": "landmark-one-main",
+          "nodes": [
+            {
+              "selector": "html",
+              "explanation": "Fix all of the following:\n  Document does not have a main landmark",
+              "related": []
+            }
+          ]
+        },
+        {
+          "id": "select-name",
+          "nodes": [
+            {
+              "selector": "details.wos-manual-evidence-card > div > div.wos-manual-upload-slot > select.wos-manual-source",
+              "explanation": "Fix any of the following:\n  Element does not have an implicit (wrapped) <label>\n  Element does not have an explicit <label>\n  aria-label attribute does not exist or is empty\n  aria-labelledby attribute does not exist, references elements that do not exist or references elements that are empty\n  Element has no title attribute\n  Element's default semantics were not overridden with role=\"none\" or role=\"presentation\"",
+              "related": []
+            },
+            {
+              "selector": "details.wos-manual-evidence-card > div > div.wos-manual-upload-slot > select.wos-manual-source",
+              "explanation": "Fix any of the following:\n  Element does not have an implicit (wrapped) <label>\n  Element does not have an explicit <label>\n  aria-label attribute does not exist or is empty\n  aria-labelledby attribute does not exist, references elements that do not exist or references elements that are empty\n  Element has no title attribute\n  Element's default semantics were not overridden with role=\"none\" or role=\"presentation\"",
+              "related": []
+            },
+            {
+              "selector": "details.wos-manual-evidence-card > div > div.wos-manual-upload-slot > select.wos-manual-source",
+              "explanation": "Fix any of the following:\n  Element does not have an implicit (wrapped) <label>\n  Element does not have an explicit <label>\n  aria-label attribute does not exist or is empty\n  aria-labelledby attribute does not exist, references elements that do not exist or references elements that are empty\n  Element has no title attribute\n  Element's default semantics were not overridden with role=\"none\" or role=\"presentation\"",
+              "related": []
+            },
+            {
+              "selector": "details.wos-manual-evidence-card > div > div.wos-manual-upload-slot > select.wos-manual-source",
+              "explanation": "Fix any of the following:\n  Element does not have an implicit (wrapped) <label>\n  Element does not have an explicit <label>\n  aria-label attribute does not exist or is empty\n  aria-labelledby attribute does not exist, references elements that do not exist or references elements that are empty\n  Element has no title attribute\n  Element's default semantics were not overridden with role=\"none\" or role=\"presentation\"",
+              "related": []
+            },
+            {
+              "selector": "details.wos-manual-evidence-card > div > div.wos-manual-upload-slot > select.wos-manual-source",
+              "explanation": "Fix any of the following:\n  Element does not have an implicit (wrapped) <label>\n  Element does not have an explicit <label>\n  aria-label attribute does not exist or is empty\n  aria-labelledby attribute does not exist, references elements that do not exist or references elements that are empty\n  Element has no title attribute\n  Element's default semantics were not overridden with role=\"none\" or role=\"presentation\"",
+              "related": []
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "notes": "Exact source-switch; synthetic GET-only APIs; content masked before disk; serialized audits, no real credentials/production traffic."
+}

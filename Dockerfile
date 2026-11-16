@@ -6,5 +6,6 @@ RUN npm install --production
 RUN npx playwright install chromium --with-deps \
   && node -e "const { chromium } = require('playwright'); console.log('Playwright Chromium:', chromium.executablePath())"
 COPY . .
+RUN node scripts/check-production-assets.js
 EXPOSE 3000
 CMD ["node", "server.js"]

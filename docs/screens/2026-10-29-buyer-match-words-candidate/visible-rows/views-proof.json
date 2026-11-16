@@ -1,0 +1,62 @@
+{
+  "synthetic_only": true,
+  "baseline": "f6d7f52240df2d1f06b0032bc41a9cb993918edc",
+  "sizes": [
+    {
+      "mode": "before",
+      "width": 1366,
+      "fcp": 527.7999999988824,
+      "overflow": false,
+      "ready": true,
+      "selected": true,
+      "errors": []
+    },
+    {
+      "mode": "before",
+      "width": 400,
+      "fcp": 104,
+      "overflow": false,
+      "ready": true,
+      "selected": true,
+      "errors": []
+    },
+    {
+      "mode": "before",
+      "width": 412,
+      "fcp": 201.19999999925494,
+      "overflow": false,
+      "ready": true,
+      "selected": true,
+      "errors": []
+    },
+    {
+      "mode": "after",
+      "width": 1366,
+      "fcp": 99.40000000037253,
+      "overflow": false,
+      "ready": true,
+      "selected": true,
+      "errors": []
+    },
+    {
+      "mode": "after",
+      "width": 400,
+      "fcp": 110.59999999962747,
+      "overflow": false,
+      "ready": true,
+      "selected": true,
+      "errors": []
+    },
+    {
+      "mode": "after",
+      "width": 412,
+      "fcp": 95,
+      "overflow": false,
+      "ready": true,
+      "selected": true,
+      "errors": []
+    }
+  ],
+  "lighthouse": [],
+  "notes": "Exact source-switch;fixedcanonicalbuyer route;actual fullindex matchingtab;GET-only synthetic APIs/no credentials or production writes."
+}

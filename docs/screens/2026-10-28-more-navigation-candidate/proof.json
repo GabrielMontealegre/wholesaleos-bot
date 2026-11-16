@@ -1,0 +1,185 @@
+{
+  "synthetic_only": true,
+  "baseline": "6247e0fe69f998bc24cf6e33f42e35b72c23f8fc",
+  "sizes": [
+    {
+      "mode": "before",
+      "view": "today",
+      "width": 1366,
+      "fcp": 350.19999998807907,
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "mode": "before",
+      "view": "today",
+      "width": 400,
+      "fcp": 134.5,
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "mode": "before",
+      "view": "today",
+      "width": 412,
+      "fcp": 143.39999997615814,
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "mode": "before",
+      "view": "email",
+      "width": 1366,
+      "fcp": 214.4000000357628,
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "mode": "before",
+      "view": "email",
+      "width": 400,
+      "fcp": 123.60000002384186,
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "mode": "before",
+      "view": "email",
+      "width": 412,
+      "fcp": 127.5,
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "mode": "after",
+      "view": "today",
+      "width": 1366,
+      "fcp": 130.80000001192093,
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "mode": "after",
+      "view": "today",
+      "width": 400,
+      "fcp": 101.5,
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "mode": "after",
+      "view": "today",
+      "width": 412,
+      "fcp": 124.69999998807907,
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "mode": "after",
+      "view": "email",
+      "width": 1366,
+      "fcp": 320.5,
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "mode": "after",
+      "view": "email",
+      "width": 400,
+      "fcp": 525.1999999880791,
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "mode": "after",
+      "view": "email",
+      "width": 412,
+      "fcp": 397.5,
+      "overflow": false,
+      "errors": []
+    }
+  ],
+  "lighthouse": [
+    {
+      "mode": "before",
+      "view": "today",
+      "width": 1366,
+      "version": "13.5.0",
+      "performance": 99,
+      "accessibility": 100,
+      "runtimeErrorCode": null,
+      "auditErrors": []
+    },
+    {
+      "mode": "before",
+      "view": "today",
+      "width": 412,
+      "version": "13.5.0",
+      "performance": 96,
+      "accessibility": 100,
+      "runtimeErrorCode": null,
+      "auditErrors": []
+    },
+    {
+      "mode": "before",
+      "view": "email",
+      "width": 1366,
+      "version": "13.5.0",
+      "performance": 99,
+      "accessibility": 100,
+      "runtimeErrorCode": null,
+      "auditErrors": []
+    },
+    {
+      "mode": "before",
+      "view": "email",
+      "width": 412,
+      "version": "13.5.0",
+      "performance": 96,
+      "accessibility": 100,
+      "runtimeErrorCode": null,
+      "auditErrors": []
+    },
+    {
+      "mode": "after",
+      "view": "today",
+      "width": 1366,
+      "version": "13.5.0",
+      "performance": 99,
+      "accessibility": 100,
+      "runtimeErrorCode": null,
+      "auditErrors": []
+    },
+    {
+      "mode": "after",
+      "view": "today",
+      "width": 412,
+      "version": "13.5.0",
+      "performance": 96,
+      "accessibility": 100,
+      "runtimeErrorCode": null,
+      "auditErrors": []
+    },
+    {
+      "mode": "after",
+      "view": "email",
+      "width": 1366,
+      "version": "13.5.0",
+      "performance": 99,
+      "accessibility": 100,
+      "runtimeErrorCode": null,
+      "auditErrors": []
+    },
+    {
+      "mode": "after",
+      "view": "email",
+      "width": 412,
+      "version": "13.5.0",
+      "performance": 96,
+      "accessibility": 100,
+      "runtimeErrorCode": null,
+      "auditErrors": []
+    }
+  ],
+  "notes": "Exact source-switch; synthetic GET-only APIs; content masked before disk; serialized audits, no real credentials/production traffic."
+}

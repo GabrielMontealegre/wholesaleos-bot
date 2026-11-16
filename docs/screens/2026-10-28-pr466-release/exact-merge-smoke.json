@@ -1,0 +1,21 @@
+{
+  "source_sha": "38ea175b45dcb9dabc634debee36ec703996715d",
+  "synthetic_only": true,
+  "production_writes": 0,
+  "rows": [
+    {
+      "test": "remembered-devices.test.js",
+      "status": "passed",
+      "seconds": 7.64
+    },
+    {
+      "test": "remembered-device-routes.test.js",
+      "status": "passed",
+      "seconds": 5.42
+    },
+    {
+      "test": "remembered-device-integration.test.js",
+      "status": "failed"
+    }
+  ]
+}

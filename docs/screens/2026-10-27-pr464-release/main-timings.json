@@ -1,0 +1,1319 @@
+{
+  "run": 40492803077,
+  "job": 122150687766,
+  "source": "a2dc46e2e125a4e9c340f0934693346a34134024",
+  "files": [
+    {
+      "file": "actionable-lead-reconnection.test.js",
+      "seconds": 0.17,
+      "status": "passed"
+    },
+    {
+      "file": "active-notice-address-origin.test.js",
+      "seconds": 0.24,
+      "status": "passed"
+    },
+    {
+      "file": "address-link-audit-classification.test.js",
+      "seconds": 0.1,
+      "status": "passed"
+    },
+    {
+      "file": "after-sale-frozen-chain.test.js",
+      "seconds": 0.64,
+      "status": "passed"
+    },
+    {
+      "file": "after-sale-proof-origin.test.js",
+      "seconds": 0.1,
+      "status": "passed"
+    },
+    {
+      "file": "agent-conversation-import.test.js",
+      "seconds": 0.36,
+      "status": "passed"
+    },
+    {
+      "file": "api-session-gate.test.js",
+      "seconds": 1.91,
+      "status": "passed"
+    },
+    {
+      "file": "approval-card-brief-ui.test.js",
+      "seconds": 4.62,
+      "status": "passed"
+    },
+    {
+      "file": "approval-card-brief.test.js",
+      "seconds": 0.3,
+      "status": "passed"
+    },
+    {
+      "file": "approval-workspace-ui.test.js",
+      "seconds": 10.3,
+      "status": "passed"
+    },
+    {
+      "file": "approval-workspace.test.js",
+      "seconds": 0.22,
+      "status": "passed"
+    },
+    {
+      "file": "assistant-buyer-finds.test.js",
+      "seconds": 0.42,
+      "status": "passed"
+    },
+    {
+      "file": "assistant-buyer-replies.test.js",
+      "seconds": 2.46,
+      "status": "passed"
+    },
+    {
+      "file": "assistant-named-files.test.js",
+      "seconds": 0.24,
+      "status": "passed"
+    },
+    {
+      "file": "assistant-reply-reader.test.js",
+      "seconds": 0.3,
+      "status": "passed"
+    },
+    {
+      "file": "assistant-sheet-model.test.js",
+      "seconds": 0.1,
+      "status": "passed"
+    },
+    {
+      "file": "assistant-sheet-ui.test.js",
+      "seconds": 6.81,
+      "status": "passed"
+    },
+    {
+      "file": "assistant-snapshot-routes.test.js",
+      "seconds": 0.29,
+      "status": "passed"
+    },
+    {
+      "file": "assistant-snapshot.test.js",
+      "seconds": 0.27,
+      "status": "passed"
+    },
+    {
+      "file": "b02-safety-cleanup.test.js",
+      "seconds": 0.08,
+      "status": "passed"
+    },
+    {
+      "file": "b02-server-call-disabled.test.js",
+      "seconds": 0.09,
+      "status": "passed"
+    },
+    {
+      "file": "b02-server-send-disabled.test.js",
+      "seconds": 0.12,
+      "status": "passed"
+    },
+    {
+      "file": "b04a-date-supersession-audit.test.js",
+      "seconds": 0.31,
+      "status": "passed"
+    },
+    {
+      "file": "b04b-event-date-origin.test.js",
+      "seconds": 0.34,
+      "status": "passed"
+    },
+    {
+      "file": "b04c-state-rules-and-profiles.test.js",
+      "seconds": 0.08,
+      "status": "passed"
+    },
+    {
+      "file": "b04d-source-kinds-equivalence.test.js",
+      "seconds": 0.31,
+      "status": "passed"
+    },
+    {
+      "file": "b04e-registry-routing-equivalence.test.js",
+      "seconds": 0.43,
+      "status": "passed"
+    },
+    {
+      "file": "b04f-official-source-routing-equivalence.test.js",
+      "seconds": 0.29,
+      "status": "passed"
+    },
+    {
+      "file": "b04g-primary-source-profile-equivalence.test.js",
+      "seconds": 0.3,
+      "status": "passed"
+    },
+    {
+      "file": "b05a-post-sale-candidates.test.js",
+      "seconds": 0.14,
+      "status": "passed"
+    },
+    {
+      "file": "b05b-post-sale-outcome.test.js",
+      "seconds": 0.11,
+      "status": "passed"
+    },
+    {
+      "file": "b05c-post-sale-snapshot-lane.test.js",
+      "seconds": 1.58,
+      "status": "passed"
+    },
+    {
+      "file": "b05d-past-only-proof-row.test.js",
+      "seconds": 0.44,
+      "status": "passed"
+    },
+    {
+      "file": "blocked-inventory-breakdown.test.js",
+      "seconds": 0.33,
+      "status": "passed"
+    },
+    {
+      "file": "bounded-record-refs.test.js",
+      "seconds": 0.19,
+      "status": "passed"
+    },
+    {
+      "file": "business-entity-owner-resolution.test.js",
+      "seconds": 0.09,
+      "status": "passed"
+    },
+    {
+      "file": "buyer-find-import.test.js",
+      "seconds": 0.42,
+      "status": "passed"
+    },
+    {
+      "file": "buyer-match-deal-update.test.js",
+      "seconds": 0.2,
+      "status": "passed"
+    },
+    {
+      "file": "buyer-workspace-ui.test.js",
+      "seconds": 4.46,
+      "status": "passed"
+    },
+    {
+      "file": "buyer-workspace.test.js",
+      "seconds": 0.24,
+      "status": "passed"
+    },
+    {
+      "file": "ca-los-angeles-tax-default-acquisition-adapter.test.js",
+      "seconds": 0.63,
+      "status": "passed"
+    },
+    {
+      "file": "ca-tax-default-notice-acquisition-adapter.test.js",
+      "seconds": 0.42,
+      "status": "passed"
+    },
+    {
+      "file": "calendar-workspace-routes.test.js",
+      "seconds": 0.29,
+      "status": "passed"
+    },
+    {
+      "file": "calendar-workspace-ui.test.js",
+      "seconds": 7.03,
+      "status": "passed"
+    },
+    {
+      "file": "calendar-workspace.test.js",
+      "seconds": 0.15,
+      "status": "passed"
+    },
+    {
+      "file": "call-ready-deal-packet.test.js",
+      "seconds": 0.19,
+      "status": "passed"
+    },
+    {
+      "file": "canonical-legacy-readback.test.js",
+      "seconds": 0.2,
+      "status": "passed"
+    },
+    {
+      "file": "canonical-opportunity-kernel.test.js",
+      "seconds": 0.21,
+      "status": "passed"
+    },
+    {
+      "file": "census-zip-resolution.test.js",
+      "seconds": 0.07,
+      "status": "passed"
+    },
+    {
+      "file": "classic-deal-back-ui.test.js",
+      "seconds": 4.9,
+      "status": "passed"
+    },
+    {
+      "file": "clean-buyer-cards-ui.test.js",
+      "seconds": 5.38,
+      "status": "passed"
+    },
+    {
+      "file": "clean-buyer-cards.test.js",
+      "seconds": 0.2,
+      "status": "passed"
+    },
+    {
+      "file": "cloud-ci-policy.test.js",
+      "seconds": 0.07,
+      "status": "passed"
+    },
+    {
+      "file": "comp-grid-fingerprint.test.js",
+      "seconds": 0.07,
+      "status": "passed"
+    },
+    {
+      "file": "contact-first-property-detail-discovery.test.js",
+      "seconds": 0.23,
+      "status": "passed"
+    },
+    {
+      "file": "contact-route-roles-adversarial.test.js",
+      "seconds": 0.09,
+      "status": "passed"
+    },
+    {
+      "file": "contact-route-roles.test.js",
+      "seconds": 0.09,
+      "status": "passed"
+    },
+    {
+      "file": "contact-workflow-control.test.js",
+      "seconds": 1.35,
+      "status": "passed"
+    },
+    {
+      "file": "conversation-brief.test.js",
+      "seconds": 0.14,
+      "status": "passed"
+    },
+    {
+      "file": "conversation-cards-ui.test.js",
+      "seconds": 2.26,
+      "status": "passed"
+    },
+    {
+      "file": "conversation-cards.test.js",
+      "seconds": 0.11,
+      "status": "passed"
+    },
+    {
+      "file": "conversation-email-ui.test.js",
+      "seconds": 0.07,
+      "status": "passed"
+    },
+    {
+      "file": "conversation-routes.test.js",
+      "seconds": 0.43,
+      "status": "passed"
+    },
+    {
+      "file": "conversations.test.js",
+      "seconds": 0.14,
+      "status": "passed"
+    },
+    {
+      "file": "cycle-27-phone-route.test.js",
+      "seconds": 0.17,
+      "status": "passed"
+    },
+    {
+      "file": "cycle-28-property-identity.test.js",
+      "seconds": 0.37,
+      "status": "passed"
+    },
+    {
+      "file": "cycle-29-secure-login.test.js",
+      "seconds": 0.09,
+      "status": "passed"
+    },
+    {
+      "file": "cycle-30-local-comp-capture.test.js",
+      "seconds": 16.48,
+      "status": "passed"
+    },
+    {
+      "file": "cycle-31-local-helper.test.js",
+      "seconds": 0.36,
+      "status": "passed"
+    },
+    {
+      "file": "cycle-31-scraper-credential.test.js",
+      "seconds": 0.17,
+      "status": "passed"
+    },
+    {
+      "file": "cycle-31-session-security.test.js",
+      "seconds": 4.66,
+      "status": "passed"
+    },
+    {
+      "file": "cycle-32-local-config-path.test.js",
+      "seconds": 0.18,
+      "status": "passed"
+    },
+    {
+      "file": "cycle-33-1-labelled-date-prefix.test.js",
+      "seconds": 0.11,
+      "status": "passed"
+    },
+    {
+      "file": "cycle-33-subject-address-recovery.test.js",
+      "seconds": 0.13,
+      "status": "passed"
+    },
+    {
+      "file": "cycle-34-comp-proposal-fallback.test.js",
+      "seconds": 16.6,
+      "status": "passed"
+    },
+    {
+      "file": "cycle-37-single-property-dossier.test.js",
+      "seconds": 0.16,
+      "status": "passed"
+    },
+    {
+      "file": "cycle-38-research-queue-alias.test.js",
+      "seconds": 1.93,
+      "status": "passed"
+    },
+    {
+      "file": "cycle-39-snapshot-mount-race.test.js",
+      "seconds": 0.07,
+      "status": "passed"
+    },
+    {
+      "file": "cycle-40-capture-mode-routing.test.js",
+      "seconds": 0.39,
+      "status": "passed"
+    },
+    {
+      "file": "cycle-41-search-to-detail.test.js",
+      "seconds": 0.41,
+      "status": "passed"
+    },
+    {
+      "file": "cycle-43-helper-freshness.test.js",
+      "seconds": 0.22,
+      "status": "passed"
+    },
+    {
+      "file": "cycle-44-county-appraisal.test.js",
+      "seconds": 0.31,
+      "status": "passed"
+    },
+    {
+      "file": "cycle-45-apply.test.js",
+      "seconds": 0.49,
+      "status": "passed"
+    },
+    {
+      "file": "cycle-46-county-match-audit.test.js",
+      "seconds": 1.8,
+      "status": "passed"
+    },
+    {
+      "file": "cycle-47-property-identity.test.js",
+      "seconds": 0.56,
+      "status": "passed"
+    },
+    {
+      "file": "cycle-48-notice-extraction.test.js",
+      "seconds": 0.45,
+      "status": "passed"
+    },
+    {
+      "file": "cycle-49-discovery-layer.test.js",
+      "seconds": 0.59,
+      "status": "passed"
+    },
+    {
+      "file": "cycle-50-date-normalization-and-links.test.js",
+      "seconds": 0.43,
+      "status": "passed"
+    },
+    {
+      "file": "cycle-52-county-parcel.test.js",
+      "seconds": 0.37,
+      "status": "passed"
+    },
+    {
+      "file": "cycle-53-pr1-hardening.test.js",
+      "seconds": 0.32,
+      "status": "passed"
+    },
+    {
+      "file": "cycle-53-texas-closeout.test.js",
+      "seconds": 0.26,
+      "status": "passed"
+    },
+    {
+      "file": "cycle-54a-source-date-proof.test.js",
+      "seconds": 0.37,
+      "status": "passed"
+    },
+    {
+      "file": "dallas-craigslist-owner-acquisition-adapter.test.js",
+      "seconds": 0.23,
+      "status": "passed"
+    },
+    {
+      "file": "dallas-foreclosure-acquisition-adapter.test.js",
+      "seconds": 230.5,
+      "status": "passed"
+    },
+    {
+      "file": "dallas-foreclosure-document-hunter.test.js",
+      "seconds": 0.43,
+      "status": "passed"
+    },
+    {
+      "file": "dallas-foreclosure-live-source-preview.test.js",
+      "seconds": 0.42,
+      "status": "passed"
+    },
+    {
+      "file": "dallas-foreclosure-publicsearch-input.test.js",
+      "seconds": 0.29,
+      "status": "passed"
+    },
+    {
+      "file": "dallas-fsbo-contact-acquisition-adapter.test.js",
+      "seconds": 0.28,
+      "status": "passed"
+    },
+    {
+      "file": "dashboard-boxes-filter-guard.test.js",
+      "seconds": 0.16,
+      "status": "passed"
+    },
+    {
+      "file": "dashboard-deal-mount-order.test.js",
+      "seconds": 12.52,
+      "status": "passed"
+    },
+    {
+      "file": "dashboard-public-deal-queue.test.js",
+      "seconds": 13.51,
+      "status": "passed"
+    },
+    {
+      "file": "deal-card-navigation-ui.test.js",
+      "seconds": 6.71,
+      "status": "passed"
+    },
+    {
+      "file": "deal-help.test.js",
+      "seconds": 0.08,
+      "status": "passed"
+    },
+    {
+      "file": "desk-shell.test.js",
+      "seconds": 24.86,
+      "status": "passed"
+    },
+    {
+      "file": "disclosure-state-comp-resolution.test.js",
+      "seconds": 0.12,
+      "status": "passed"
+    },
+    {
+      "file": "discover-public-parcel-apis.test.js",
+      "seconds": 0.32,
+      "status": "passed"
+    },
+    {
+      "file": "distress-evidence-model.test.js",
+      "seconds": 0.12,
+      "status": "passed"
+    },
+    {
+      "file": "document-reextraction-pass.test.js",
+      "seconds": 3.36,
+      "status": "passed"
+    },
+    {
+      "file": "draft-profit-review-ui.test.js",
+      "seconds": 2.63,
+      "status": "passed"
+    },
+    {
+      "file": "draft-profit-review.test.js",
+      "seconds": 0.39,
+      "status": "passed"
+    },
+    {
+      "file": "drive-connection-status-routes.test.js",
+      "seconds": 0.27,
+      "status": "passed"
+    },
+    {
+      "file": "drive-connection-status-ui.test.js",
+      "seconds": 2.79,
+      "status": "passed"
+    },
+    {
+      "file": "drive-connection-status.test.js",
+      "seconds": 0.12,
+      "status": "passed"
+    },
+    {
+      "file": "email-read-errors.test.js",
+      "seconds": 4.97,
+      "status": "passed"
+    },
+    {
+      "file": "email-template-approvals-ui.test.js",
+      "seconds": 1.56,
+      "status": "passed"
+    },
+    {
+      "file": "email-template-approvals.test.js",
+      "seconds": 0.09,
+      "status": "passed"
+    },
+    {
+      "file": "enrichment-ledger-snapshot-persistence.test.js",
+      "seconds": 0.58,
+      "status": "passed"
+    },
+    {
+      "file": "enrichment-ledger.test.js",
+      "seconds": 0.18,
+      "status": "passed"
+    },
+    {
+      "file": "enrichment-scheduler.test.js",
+      "seconds": 0.15,
+      "status": "passed"
+    },
+    {
+      "file": "error-tracking-privacy.test.js",
+      "seconds": 0.17,
+      "status": "passed"
+    },
+    {
+      "file": "error-tracking-sdk.test.js",
+      "seconds": 0.56,
+      "status": "passed"
+    },
+    {
+      "file": "evidence-packet-throughput.test.js",
+      "seconds": 0.25,
+      "status": "passed"
+    },
+    {
+      "file": "executable-work-orders.test.js",
+      "seconds": 0.21,
+      "status": "passed"
+    },
+    {
+      "file": "export-free-public-deal-board.test.js",
+      "seconds": 0.15,
+      "status": "passed"
+    },
+    {
+      "file": "filter-hygiene-ui.test.js",
+      "seconds": 4.06,
+      "status": "passed"
+    },
+    {
+      "file": "free-public-contact-comp-hunter.test.js",
+      "seconds": 0.19,
+      "status": "passed"
+    },
+    {
+      "file": "free-public-deal-board.test.js",
+      "seconds": 0.27,
+      "status": "passed"
+    },
+    {
+      "file": "fresh-lead-batch-engine.test.js",
+      "seconds": 0.47,
+      "status": "passed"
+    },
+    {
+      "file": "fresh-lead-no-auto-ingest-env-diagnostics.test.js",
+      "seconds": 0.19,
+      "status": "passed"
+    },
+    {
+      "file": "fresh-lead-source-enrichment.test.js",
+      "seconds": 0.12,
+      "status": "passed"
+    },
+    {
+      "file": "gemini-specialist-workers.test.js",
+      "seconds": 0.19,
+      "status": "passed"
+    },
+    {
+      "file": "government-catalog-discovery.test.js",
+      "seconds": 0.09,
+      "status": "passed"
+    },
+    {
+      "file": "hover-help-ui.test.js",
+      "seconds": 6.43,
+      "status": "passed"
+    },
+    {
+      "file": "inbox-load-layout.test.js",
+      "seconds": 3.53,
+      "status": "passed"
+    },
+    {
+      "file": "inbox-thread-read.test.js",
+      "seconds": 1.09,
+      "status": "passed"
+    },
+    {
+      "file": "inbox-thread-view.test.js",
+      "seconds": 0.1,
+      "status": "passed"
+    },
+    {
+      "file": "inbox-ui-state.test.js",
+      "seconds": 0.09,
+      "status": "passed"
+    },
+    {
+      "file": "inbox-workspace-ui.test.js",
+      "seconds": 2.87,
+      "status": "passed"
+    },
+    {
+      "file": "interim-deal-grade.test.js",
+      "seconds": 0.07,
+      "status": "passed"
+    },
+    {
+      "file": "jv-desk-ui.test.js",
+      "seconds": 2.41,
+      "status": "passed"
+    },
+    {
+      "file": "jv-desk-view.test.js",
+      "seconds": 0.46,
+      "status": "passed"
+    },
+    {
+      "file": "jv-list-filters-ui.test.js",
+      "seconds": 3.76,
+      "status": "passed"
+    },
+    {
+      "file": "jv-list-filters.test.js",
+      "seconds": 0.32,
+      "status": "passed"
+    },
+    {
+      "file": "jv-signing-review-ui.test.js",
+      "seconds": 2.32,
+      "status": "passed"
+    },
+    {
+      "file": "jv-signing-review.test.js",
+      "seconds": 0.29,
+      "status": "passed"
+    },
+    {
+      "file": "jv-stage-controls-ui.test.js",
+      "seconds": 3.39,
+      "status": "passed"
+    },
+    {
+      "file": "jv-stage-controls.test.js",
+      "seconds": 0.24,
+      "status": "passed"
+    },
+    {
+      "file": "jv-workflow-routes.test.js",
+      "seconds": 0.9,
+      "status": "passed"
+    },
+    {
+      "file": "jv-workflow.test.js",
+      "seconds": 0.29,
+      "status": "passed"
+    },
+    {
+      "file": "lead-address-dossier-dedup.test.js",
+      "seconds": 0.28,
+      "status": "passed"
+    },
+    {
+      "file": "lead-geography-ui.test.js",
+      "seconds": 9.75,
+      "status": "passed"
+    },
+    {
+      "file": "lead-geography.test.js",
+      "seconds": 0.22,
+      "status": "passed"
+    },
+    {
+      "file": "lead-lifecycle-status.test.js",
+      "seconds": 0.07,
+      "status": "passed"
+    },
+    {
+      "file": "lead-operations-queue.test.js",
+      "seconds": 0.32,
+      "status": "passed"
+    },
+    {
+      "file": "lead-triage-ui.test.js",
+      "seconds": 3.17,
+      "status": "passed"
+    },
+    {
+      "file": "lead-triage.test.js",
+      "seconds": 0.7,
+      "status": "passed"
+    },
+    {
+      "file": "lead-zero-counts-ui.test.js",
+      "seconds": 2.4,
+      "status": "passed"
+    },
+    {
+      "file": "lead-zero-counts.test.js",
+      "seconds": 0.12,
+      "status": "passed"
+    },
+    {
+      "file": "listing-radar-acquisition-adapter.test.js",
+      "seconds": 0.14,
+      "status": "passed"
+    },
+    {
+      "file": "live-provider-readiness.test.js",
+      "seconds": 0.09,
+      "status": "passed"
+    },
+    {
+      "file": "local-voice-ui.test.js",
+      "seconds": 3.28,
+      "status": "passed"
+    },
+    {
+      "file": "local-voice.test.js",
+      "seconds": 0.06,
+      "status": "passed"
+    },
+    {
+      "file": "mail-layout-model.test.js",
+      "seconds": 0.08,
+      "status": "passed"
+    },
+    {
+      "file": "mailbox-attachments.test.js",
+      "seconds": 1.05,
+      "status": "passed"
+    },
+    {
+      "file": "mailbox-conversation-preview.test.js",
+      "seconds": 0.98,
+      "status": "passed"
+    },
+    {
+      "file": "mailbox-participants.test.js",
+      "seconds": 0.92,
+      "status": "passed"
+    },
+    {
+      "file": "mailbox-persistence-ui.test.js",
+      "seconds": 0.07,
+      "status": "passed"
+    },
+    {
+      "file": "mailbox-provider-labels.test.js",
+      "seconds": 0.95,
+      "status": "passed"
+    },
+    {
+      "file": "mailbox-read-state.test.js",
+      "seconds": 0.95,
+      "status": "passed"
+    },
+    {
+      "file": "mailbox-reader.test.js",
+      "seconds": 1.07,
+      "status": "passed"
+    },
+    {
+      "file": "mailbox-snippets.test.js",
+      "seconds": 0.93,
+      "status": "passed"
+    },
+    {
+      "file": "manual-evidence-packet.test.js",
+      "seconds": 0.18,
+      "status": "passed"
+    },
+    {
+      "file": "manual-value-source-unlock.test.js",
+      "seconds": 0.33,
+      "status": "passed"
+    },
+    {
+      "file": "market-comp-policy.test.js",
+      "seconds": 0.08,
+      "status": "passed"
+    },
+    {
+      "file": "market-demand-index.test.js",
+      "seconds": 0.12,
+      "status": "passed"
+    },
+    {
+      "file": "marketplace-mobile-shell.test.js",
+      "seconds": 12.72,
+      "status": "passed"
+    },
+    {
+      "file": "match-profit-ui.test.js",
+      "seconds": 3.24,
+      "status": "passed"
+    },
+    {
+      "file": "match-profit.test.js",
+      "seconds": 0.37,
+      "status": "passed"
+    },
+    {
+      "file": "mi-land-bank-acquisition-adapter.test.js",
+      "seconds": 0.51,
+      "status": "passed"
+    },
+    {
+      "file": "navigation-copy-ui.test.js",
+      "seconds": 2.64,
+      "status": "passed"
+    },
+    {
+      "file": "navigation-copy.test.js",
+      "seconds": 0.2,
+      "status": "passed"
+    },
+    {
+      "file": "no-secrets-in-tracked-files.test.js",
+      "seconds": 1.73,
+      "status": "passed"
+    },
+    {
+      "file": "notification-workspace-ui.test.js",
+      "seconds": 5.87,
+      "status": "passed"
+    },
+    {
+      "file": "notification-workspace.test.js",
+      "seconds": 0.07,
+      "status": "passed"
+    },
+    {
+      "file": "ocr-notice-extraction.test.js",
+      "seconds": 0.13,
+      "status": "passed"
+    },
+    {
+      "file": "operational-lead-eligibility.test.js",
+      "seconds": 0.16,
+      "status": "passed"
+    },
+    {
+      "file": "operator-brief.test.js",
+      "seconds": 0.25,
+      "status": "passed"
+    },
+    {
+      "file": "opportunity-execution-spine.test.js",
+      "seconds": 0.43,
+      "status": "passed"
+    },
+    {
+      "file": "opportunity-work-orders.test.js",
+      "seconds": 0.18,
+      "status": "passed"
+    },
+    {
+      "file": "owner-brief-card-link.test.js",
+      "seconds": 2.43,
+      "status": "passed"
+    },
+    {
+      "file": "owner-brief-preview.test.js",
+      "seconds": 0.06,
+      "status": "passed"
+    },
+    {
+      "file": "owner-telegram-import.test.js",
+      "seconds": 0.43,
+      "status": "passed"
+    },
+    {
+      "file": "owner-telegram.test.js",
+      "seconds": 0.32,
+      "status": "passed"
+    },
+    {
+      "file": "paid-provider-fallback-registry.test.js",
+      "seconds": 0.07,
+      "status": "passed"
+    },
+    {
+      "file": "panel-hygiene-ui.test.js",
+      "seconds": 8.34,
+      "status": "passed"
+    },
+    {
+      "file": "persistent-mailbox-conversations.test.js",
+      "seconds": 1.02,
+      "status": "passed"
+    },
+    {
+      "file": "pipeline-buyer-context-ui.test.js",
+      "seconds": 2.5,
+      "status": "passed"
+    },
+    {
+      "file": "pipeline-buyer-context.test.js",
+      "seconds": 0.27,
+      "status": "passed"
+    },
+    {
+      "file": "pipeline-producer.test.js",
+      "seconds": 0.3,
+      "status": "passed"
+    },
+    {
+      "file": "pipeline-report-review-routes.test.js",
+      "seconds": 0.41,
+      "status": "passed"
+    },
+    {
+      "file": "pipeline-report-review-ui.test.js",
+      "seconds": 4.3,
+      "status": "passed"
+    },
+    {
+      "file": "pipeline-report-review.test.js",
+      "seconds": 0.19,
+      "status": "passed"
+    },
+    {
+      "file": "pipeline-report-routes.test.js",
+      "seconds": 0.52,
+      "status": "passed"
+    },
+    {
+      "file": "pipeline-reports.test.js",
+      "seconds": 0.3,
+      "status": "passed"
+    },
+    {
+      "file": "pipeline-workspace-ui.test.js",
+      "seconds": 12.44,
+      "status": "passed"
+    },
+    {
+      "file": "pipeline-workspace.test.js",
+      "seconds": 0.2,
+      "status": "passed"
+    },
+    {
+      "file": "property-candidate.test.js",
+      "seconds": 0.13,
+      "status": "passed"
+    },
+    {
+      "file": "property-detail-query-planner.test.js",
+      "seconds": 0.2,
+      "status": "passed"
+    },
+    {
+      "file": "property-leverage-dossier.test.js",
+      "seconds": 0.42,
+      "status": "passed"
+    },
+    {
+      "file": "provenance.test.js",
+      "seconds": 0.07,
+      "status": "passed"
+    },
+    {
+      "file": "public-parcel-owner-lookup.test.js",
+      "seconds": 0.09,
+      "status": "passed"
+    },
+    {
+      "file": "public-record-browser-lookup.test.js",
+      "seconds": 0.22,
+      "status": "passed"
+    },
+    {
+      "file": "railway-no-listing-egress.test.js",
+      "seconds": 0.57,
+      "status": "passed"
+    },
+    {
+      "file": "record-activity-routes.test.js",
+      "seconds": 0.4,
+      "status": "passed"
+    },
+    {
+      "file": "record-activity-ui.test.js",
+      "seconds": 14.55,
+      "status": "passed"
+    },
+    {
+      "file": "record-activity.test.js",
+      "seconds": 0.26,
+      "status": "passed"
+    },
+    {
+      "file": "reviewed-deal-clock-ui.test.js",
+      "seconds": 2.57,
+      "status": "passed"
+    },
+    {
+      "file": "reviewed-deal-clock.test.js",
+      "seconds": 0.42,
+      "status": "passed"
+    },
+    {
+      "file": "reviewed-deal-routes.test.js",
+      "seconds": 0.38,
+      "status": "passed"
+    },
+    {
+      "file": "reviewed-deals.test.js",
+      "seconds": 0.18,
+      "status": "passed"
+    },
+    {
+      "file": "reviewed-thread-replies.test.js",
+      "seconds": 1.0,
+      "status": "passed"
+    },
+    {
+      "file": "reviewed-wider-area-comps.test.js",
+      "seconds": 0.3,
+      "status": "passed"
+    },
+    {
+      "file": "reviewed-wider-area-ui.test.js",
+      "seconds": 12.86,
+      "status": "passed"
+    },
+    {
+      "file": "run-tests-node-resolution.test.js",
+      "seconds": 13.11,
+      "status": "passed"
+    },
+    {
+      "file": "scoped-ui-kit.test.js",
+      "seconds": 0.08,
+      "status": "passed"
+    },
+    {
+      "file": "screenshot-comp-evidence.test.js",
+      "seconds": 0.23,
+      "status": "passed"
+    },
+    {
+      "file": "search-provider-fallback.test.js",
+      "seconds": 0.2,
+      "status": "passed"
+    },
+    {
+      "file": "search-snippet-evidence-conversion.test.js",
+      "seconds": 0.21,
+      "status": "passed"
+    },
+    {
+      "file": "selected-deal-packet-service.test.js",
+      "seconds": 0.21,
+      "status": "passed"
+    },
+    {
+      "file": "serper-free-query-mode.test.js",
+      "seconds": 0.1,
+      "status": "passed"
+    },
+    {
+      "file": "serper-provider-execution-diagnostics.test.js",
+      "seconds": 0.16,
+      "status": "passed"
+    },
+    {
+      "file": "server-call-ready-preview.test.js",
+      "seconds": 0.5,
+      "status": "passed"
+    },
+    {
+      "file": "server-free-public-deal-board-preview.test.js",
+      "seconds": 0.41,
+      "status": "passed"
+    },
+    {
+      "file": "shared-location-filters-ui.test.js",
+      "seconds": 8.45,
+      "status": "passed"
+    },
+    {
+      "file": "shared-location-filters.test.js",
+      "seconds": 0.32,
+      "status": "passed"
+    },
+    {
+      "file": "source-acquisition-engine.test.js",
+      "seconds": 0.22,
+      "status": "passed"
+    },
+    {
+      "file": "source-evidence-recovery.test.js",
+      "seconds": 0.1,
+      "status": "passed"
+    },
+    {
+      "file": "submit-assistant-finds.test.js",
+      "seconds": 0.21,
+      "status": "passed"
+    },
+    {
+      "file": "thread-reply-context.test.js",
+      "seconds": 1.09,
+      "status": "passed"
+    },
+    {
+      "file": "today-model.test.js",
+      "seconds": 0.06,
+      "status": "passed"
+    },
+    {
+      "file": "today-navigation-ui.test.js",
+      "seconds": 7.91,
+      "status": "passed"
+    },
+    {
+      "file": "today-navigation.test.js",
+      "seconds": 0.13,
+      "status": "passed"
+    },
+    {
+      "file": "today-pending.test.js",
+      "seconds": 0.13,
+      "status": "passed"
+    },
+    {
+      "file": "today-rollout-flag.test.js",
+      "seconds": 0.07,
+      "status": "passed"
+    },
+    {
+      "file": "today-workspace-ui.test.js",
+      "seconds": 23.66,
+      "status": "passed"
+    },
+    {
+      "file": "today-workspace.test.js",
+      "seconds": 0.53,
+      "status": "passed"
+    },
+    {
+      "file": "tx-bexar-county-free-lookup-profile.test.js",
+      "seconds": 0.06,
+      "status": "passed"
+    },
+    {
+      "file": "tx-county-foreclosure-adapter.test.js",
+      "seconds": 0.81,
+      "status": "passed"
+    },
+    {
+      "file": "workspace-components-ui.test.js",
+      "seconds": 1.4,
+      "status": "passed"
+    },
+    {
+      "file": "workspace-components.test.js",
+      "seconds": 0.16,
+      "status": "passed"
+    },
+    {
+      "file": "workspace-email-attachments.test.js",
+      "seconds": 4.18,
+      "status": "passed"
+    },
+    {
+      "file": "workspace-email-loading.test.js",
+      "seconds": 5.67,
+      "status": "passed"
+    },
+    {
+      "file": "workspace-email-model.test.js",
+      "seconds": 0.24,
+      "status": "passed"
+    },
+    {
+      "file": "workspace-email-reply.test.js",
+      "seconds": 9.35,
+      "status": "passed"
+    },
+    {
+      "file": "workspace-email-snippets.test.js",
+      "seconds": 10.16,
+      "status": "passed"
+    },
+    {
+      "file": "workspace-email-ui.test.js",
+      "seconds": 6.96,
+      "status": "passed"
+    },
+    {
+      "file": "workspace-mailbox-chrome.test.js",
+      "seconds": 12.14,
+      "status": "passed"
+    },
+    {
+      "file": "workspace-navigation-journey.test.js",
+      "seconds": 6.97,
+      "status": "passed"
+    },
+    {
+      "file": "workspace-preview.test.js",
+      "seconds": 0.16,
+      "status": "passed"
+    },
+    {
+      "file": "workspace-shell-ui.test.js",
+      "seconds": 6.9,
+      "status": "passed"
+    },
+    {
+      "file": "workspace-today-action-center.test.js",
+      "seconds": 2.88,
+      "status": "passed"
+    },
+    {
+      "file": "zillow-fsbo-direct-detail-discovery.test.js",
+      "seconds": 0.21,
+      "status": "passed"
+    }
+  ],
+  "sum_seconds": 708.56,
+  "summary": "SUMMARY passed=262 failed=0 skipped=0 total=262"
+}

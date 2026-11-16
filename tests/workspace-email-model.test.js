@@ -40,6 +40,14 @@ assert.equal(isolated.threads.length, 2, 'Invalid keys cannot join unrelated mes
 const original = message(), frozen = JSON.stringify(original);
 assert.equal(project([original, original]).duplicate_count, 1);
 assert.equal(project([message({ read: true }), message({ unread: true })]).threads[0].unread, true);
+for (const patch of [{}, { read: null, unread: null }, { read: 'false', unread: 'true' }, { read: true, unread: true }, { read: false, unread: false }]) {
+  assert.equal(project([message(patch)]).threads[0].unread, null, 'Missing, malformed or contradictory state stays unknown');
+}
+assert.equal(project([message({ read: true, unread: false })]).threads[0].unread, false);
+assert.equal(project([message({ read: false, unread: true })]).threads[0].unread, true);
+assert.equal(project([message({ read: true }), message()]).threads[0].unread, null, 'Unknown duplicate cannot certify read');
+assert.equal(project([message({ read: true }), message({ id: 'synthetic-2' })]).threads[0].unread, null, 'Read plus unknown thread member remains unknown');
+assert.equal(project([message({ unread: true }), message({ id: 'synthetic-2' })]).threads[0].unread, true, 'One confirmed unread member is enough');
 assert.equal(JSON.stringify(original), frozen);
 const conflict = project([original, message({ subject: 'Conflicting source' })]);
 assert.equal(conflict.threads.length, 0);

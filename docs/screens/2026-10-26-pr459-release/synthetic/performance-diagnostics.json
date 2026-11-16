@@ -1,0 +1,137 @@
+{
+  "first-contentful-paint": {
+    "id": "first-contentful-paint",
+    "title": "First Contentful Paint",
+    "description": "First Contentful Paint marks the time at which the first text or image is painted. [Learn more about the First Contentful Paint metric](https://developer.chrome.com/docs/lighthouse/performance/first-contentful-paint/).",
+    "score": 1,
+    "scoreDisplayMode": "numeric",
+    "numericValue": 1011.733,
+    "numericUnit": "millisecond",
+    "displayValue": "1.0 s",
+    "scoringOptions": {
+      "p10": 1800,
+      "median": 3000
+    }
+  },
+  "largest-contentful-paint": {
+    "id": "largest-contentful-paint",
+    "title": "Largest Contentful Paint",
+    "description": "Largest Contentful Paint marks the time at which the largest text or image is painted. [Learn more about the Largest Contentful Paint metric](https://developer.chrome.com/docs/lighthouse/performance/lighthouse-largest-contentful-paint/)",
+    "score": 1,
+    "scoreDisplayMode": "numeric",
+    "numericValue": 1540.263,
+    "numericUnit": "millisecond",
+    "displayValue": "1.5 s",
+    "scoringOptions": {
+      "p10": 2500,
+      "median": 4000
+    }
+  },
+  "speed-index": {
+    "id": "speed-index",
+    "title": "Speed Index",
+    "description": "Speed Index shows how quickly the contents of a page are visibly populated. [Learn more about the Speed Index metric](https://developer.chrome.com/docs/lighthouse/performance/speed-index/).",
+    "score": 1,
+    "scoreDisplayMode": "numeric",
+    "numericValue": 1121,
+    "numericUnit": "millisecond",
+    "displayValue": "1.1 s",
+    "scoringOptions": {
+      "p10": 3387,
+      "median": 5800
+    }
+  },
+  "total-blocking-time": {
+    "id": "total-blocking-time",
+    "title": "Total Blocking Time",
+    "description": "Sum of all time periods between FCP and Time to Interactive, when task length exceeded 50ms, expressed in milliseconds. [Learn more about the Total Blocking Time metric](https://developer.chrome.com/docs/lighthouse/performance/lighthouse-total-blocking-time/).",
+    "score": 0.97,
+    "scoreDisplayMode": "numeric",
+    "numericValue": 113.29200000000014,
+    "numericUnit": "millisecond",
+    "displayValue": "110 ms",
+    "scoringOptions": {
+      "p10": 200,
+      "median": 600
+    }
+  },
+  "cumulative-layout-shift": {
+    "id": "cumulative-layout-shift",
+    "title": "Cumulative Layout Shift",
+    "description": "Cumulative Layout Shift measures the movement of visible elements within the viewport. [Learn more about the Cumulative Layout Shift metric](https://web.dev/articles/cls).",
+    "score": 0.84,
+    "scoreDisplayMode": "numeric",
+    "numericValue": 0.11999658469945355,
+    "numericUnit": "unitless",
+    "displayValue": "0.12",
+    "scoringOptions": {
+      "p10": 0.1,
+      "median": 0.25
+    },
+    "details": {
+      "type": "debugdata",
+      "items": [
+        {
+          "cumulativeLayoutShiftMainFrame": 0.11999658469945355,
+          "newEngineResultDiffered": false
+        }
+      ]
+    }
+  },
+  "layout-shifts": {
+    "id": "layout-shifts",
+    "title": "Avoid large layout shifts",
+    "description": "These are the largest layout shifts observed on the page. Each table item represents a single layout shift, and shows the element that shifted the most. Below each item are possible root causes that led to the layout shift. Some of these layout shifts may not be included in the CLS metric value due to [windowing](https://web.dev/articles/cls#what_is_cls). [Learn how to improve CLS](https://web.dev/articles/optimize-cls)",
+    "score": 0,
+    "scoreDisplayMode": "metricSavings",
+    "displayValue": "1 layout shift found",
+    "metricSavings": {
+      "CLS": 0.12
+    },
+    "details": {
+      "type": "table",
+      "headings": [
+        {
+          "key": "node",
+          "valueType": "node",
+          "subItemsHeading": {
+            "key": "extra"
+          },
+          "label": "Element"
+        },
+        {
+          "key": "score",
+          "valueType": "numeric",
+          "subItemsHeading": {
+            "key": "cause",
+            "valueType": "text"
+          },
+          "granularity": 0.001,
+          "label": "Layout shift score"
+        }
+      ],
+      "items": [
+        {
+          "node": {
+            "type": "node",
+            "lhId": "page-0-BODY",
+            "path": "1,HTML,1,BODY",
+            "selector": "body",
+            "boundingRect": {
+              "top": 0,
+              "bottom": 915,
+              "left": 0,
+              "right": 412,
+              "width": 412,
+              "height": 915
+            },
+            "snippet": "<body>",
+            "nodeLabel": "body"
+          },
+          "score": 0.11999658469945355
+        }
+      ]
+    },
+    "guidanceLevel": 2
+  }
+}

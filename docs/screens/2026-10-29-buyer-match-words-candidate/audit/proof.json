@@ -1,0 +1,99 @@
+{
+  "synthetic_only": true,
+  "baseline": "f6d7f52240df2d1f06b0032bc41a9cb993918edc",
+  "sizes": [
+    {
+      "mode": "before",
+      "width": 1366,
+      "fcp": 484,
+      "overflow": false,
+      "ready": true,
+      "selected": true,
+      "errors": []
+    },
+    {
+      "mode": "before",
+      "width": 400,
+      "fcp": 115.70000000111759,
+      "overflow": false,
+      "ready": true,
+      "selected": true,
+      "errors": []
+    },
+    {
+      "mode": "before",
+      "width": 412,
+      "fcp": 118.30000000074506,
+      "overflow": false,
+      "ready": true,
+      "selected": true,
+      "errors": []
+    },
+    {
+      "mode": "after",
+      "width": 1366,
+      "fcp": 101.90000000037253,
+      "overflow": false,
+      "ready": true,
+      "selected": true,
+      "errors": []
+    },
+    {
+      "mode": "after",
+      "width": 400,
+      "fcp": 78.40000000037253,
+      "overflow": false,
+      "ready": true,
+      "selected": true,
+      "errors": []
+    },
+    {
+      "mode": "after",
+      "width": 412,
+      "fcp": 89.59999999962747,
+      "overflow": false,
+      "ready": true,
+      "selected": true,
+      "errors": []
+    }
+  ],
+  "lighthouse": [
+    {
+      "mode": "before",
+      "width": 1366,
+      "version": "13.5.0",
+      "performance": 100,
+      "accessibility": 98,
+      "runtimeErrorCode": null,
+      "auditErrors": []
+    },
+    {
+      "mode": "before",
+      "width": 412,
+      "version": "13.5.0",
+      "performance": 100,
+      "accessibility": 98,
+      "runtimeErrorCode": null,
+      "auditErrors": []
+    },
+    {
+      "mode": "after",
+      "width": 1366,
+      "version": "13.5.0",
+      "performance": 93,
+      "accessibility": 98,
+      "runtimeErrorCode": null,
+      "auditErrors": []
+    },
+    {
+      "mode": "after",
+      "width": 412,
+      "version": "13.5.0",
+      "performance": 100,
+      "accessibility": 98,
+      "runtimeErrorCode": null,
+      "auditErrors": []
+    }
+  ],
+  "notes": "Exact source-switch;fixedcanonicalbuyer route;actual fullindex matchingtab;GET-only synthetic APIs/no credentials or production writes."
+}

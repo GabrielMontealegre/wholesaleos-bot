@@ -1,12 +1,12 @@
 'use strict';
 const conversations=require('./conversations');
-function registerConversationRoutes(app,{db,requireAdmin,now=()=>new Date().toISOString(),mailboxReader}) {
+function registerConversationRoutes(app,{db,requireAdmin,now=()=>new Date().toISOString(),mailboxReader,assistantSnapshotImport=false}) {
   require('./calendar-workspace').registerCalendarWorkspace(app,{db,requireAdmin,now});
   const pipeline=require('./pipeline-workspace');
   require('./pipeline-reports').register(app,{db,requireAdmin,now,buildView:pipeline.build,readOptions:pipeline.readOptions});
   require('./pipeline-report-review').register(app,{db,requireAdmin,now});
   require('./approval-workspace').registerApprovalWorkspace(app,{db,requireAdmin,now});
-  require('../agents/today-workspace').registerTodayWorkspace(app,{db,requireAdmin,now,releases:require('../agents/verified-ui-releases.json')});
+  require('../agents/today-workspace').registerTodayWorkspace(app,{db,requireAdmin,now,assistantSnapshotImport,releases:require('../agents/verified-ui-releases.json')});
   require('../email/template-approvals').registerRoutes(app,{db,requireAdmin,now});
   const reader=()=>mailboxReader||require('../email/mailbox-reader').createMailboxReader();
   app.get('/api/dashboard/conversations',requireAdmin,(req,res)=>{

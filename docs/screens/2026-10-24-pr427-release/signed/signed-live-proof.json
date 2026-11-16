@@ -1,0 +1,14 @@
+{
+  "source_sha": "bc6151ff50979e2d082ff34a429f3b6ead68d2e3",
+  "railway_deployment": "af5c5186-44a1-4359-8402-5f37044b2774",
+  "actual_dom": { "width": 894, "height": 577 },
+  "actual_image": { "width": 894, "height": 577 },
+  "mail_rows": 30,
+  "full_body_characters": 6318,
+  "panes_top_px": 128,
+  "classic_deal_cards": 25,
+  "console_errors_observed": 0,
+  "private_regions_masked_before_persistence": true,
+  "production_business_writes": 0,
+  "owner_design_approval": false
+}

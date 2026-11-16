@@ -1,0 +1,19 @@
+{
+  "source_sha": "5b8b89ec77e3563329b0719f04e81fe62cc36a7b",
+  "railway_deployment": "30578f86-9af4-4438-9dea-0ac7298e44f2",
+  "actual_dom": { "width": 894, "height": 577 },
+  "actual_image": { "width": 894, "height": 577 },
+  "recorded_actions": 73,
+  "visible_pending_rows": 9,
+  "urgency_groups": 3,
+  "pending_and_action_details_open_close": true,
+  "exact_record_links_present": true,
+  "classic_deal_cards": 25,
+  "mail_rows": 30,
+  "full_mail_body_characters": 6318,
+  "mail_panes_top_px": 128,
+  "console_errors_observed": 0,
+  "private_regions_masked_before_persistence": true,
+  "production_business_writes": 0,
+  "owner_design_approval": false
+}

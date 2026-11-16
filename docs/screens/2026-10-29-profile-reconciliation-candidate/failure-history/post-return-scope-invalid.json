@@ -1,0 +1,75 @@
+{
+  "synthetic_only": true,
+  "baseline": "7262b1114f5db3543cfb13a8cd304ad529a6f99a",
+  "source_sha": "e9b956c15ce70e6f59595e89b7c3900d96fd7772",
+  "sizes": [
+    {
+      "mode": "before",
+      "view": "settings",
+      "width": 1366,
+      "fcp": 287.8999999985099,
+      "overflow": false,
+      "actualPage": "settings",
+      "profileForms": 0,
+      "templateForms": 0,
+      "preview": 0,
+      "errors": []
+    },
+    {
+      "mode": "before",
+      "view": "settings",
+      "width": 400,
+      "fcp": 117.5,
+      "overflow": false,
+      "actualPage": "settings",
+      "profileForms": 0,
+      "templateForms": 0,
+      "preview": 0,
+      "errors": []
+    },
+    {
+      "mode": "before",
+      "view": "settings",
+      "width": 412,
+      "fcp": 99.39999999850988,
+      "overflow": false,
+      "actualPage": "settings",
+      "profileForms": 0,
+      "templateForms": 0,
+      "preview": 0,
+      "errors": []
+    }
+  ],
+  "lighthouse": [
+    {
+      "mode": "before",
+      "view": "settings",
+      "width": 1366,
+      "observed": {
+        "actualPage": "dashboard",
+        "profileForms": 0,
+        "legacyCompanyInfo": false,
+        "templateForms": 0,
+        "preview": 0,
+        "previewOpen": false
+      },
+      "metrics": {
+        "first-contentful-paint": 215.905,
+        "largest-contentful-paint": 822.586,
+        "cumulative-layout-shift": 0.0029431964097760078,
+        "total-blocking-time": 83.70400000000004,
+        "speed-index": 841
+      },
+      "selectors": [
+        "div#app > div.main > div#content > section#email-connection",
+        "div.main > div#content > section.wos-drive-status > p"
+      ],
+      "version": "13.5.0",
+      "performance": 99,
+      "accessibility": 98,
+      "runtimeErrorCode": null,
+      "auditErrors": []
+    }
+  ],
+  "notes": "Actual fullindex fixed Settings and classic Email/template routes; APP.page asserted. Template fixture driver clicks actual Load/summary, no state freeze or source initializer. GET-only synthetic endpoints; no production/private data. Baseline Settings input fields opaque BEFORE screenshot; no full Lighthouse DOM/HTML reports retained."
+}
