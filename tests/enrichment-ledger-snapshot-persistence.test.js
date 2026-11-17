@@ -13,6 +13,9 @@ Module._load = function patchedLoad(request, parent, isMain) {
 };
 
 const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'wholesaleos-enrichment-ledger-'));
+const { installRefuseLiveNetwork } = require('./helpers/refuse-live-network');
+// Hermetic: county documents and the geocoder are never fetched live (B-25).
+const liveNetwork = installRefuseLiveNetwork();
 process.env.DB_PATH = path.join(tmpDir, 'db.json');
 process.env.DEAL_BOARD_SNAPSHOTS_PATH = path.join(tmpDir, 'deal-board-snapshots.json');
 fs.writeFileSync(process.env.DB_PATH, JSON.stringify({ leads: [] }, null, 2));
@@ -74,6 +77,8 @@ function deal(overrides) {
   assert.strictEqual(latest.rows[0].enrichment_ledger.attempts.length, 1);
   const after = fs.readFileSync(process.env.DEAL_BOARD_SNAPSHOTS_PATH, 'utf8');
   assert.strictEqual(after, before, 'read path must not write the snapshot file');
+  // Census geocoder backfill was attempted and refused; the ledger result above did not depend on it.
+  assert.ok(liveNetwork.hosts().every((host) => host === 'geocoding.geo.census.gov'), 'only the geocoder is reached for, and it is refused');
   console.log('enrichment ledger snapshot persistence tests passed');
 })().catch((error) => {
   console.error(error);
