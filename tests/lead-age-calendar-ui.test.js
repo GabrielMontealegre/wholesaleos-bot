@@ -38,6 +38,8 @@ async function main(){
       phase=width+':today';const initial=reads;await page.locator('#lfAge').selectOption('1');
       await page.waitForFunction(()=>!APP._leadsLoading&&APP.filtered.length===1&&APP.filtered[0].id==='age-0');
       assert(reads>initial,'Actual filter reload must pass through final API loader');
+      // Data readiness precedes the render's deferred control synchronization.
+      await page.waitForFunction(()=>document.getElementById('lfAge')?.value==='1');
       assert.equal(await page.locator('#lfAge').inputValue(),'1');
       assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
       if(process.env.WOS_LEAD_AGE_PROOF_DIR){fs.mkdirSync(process.env.WOS_LEAD_AGE_PROOF_DIR,{recursive:true});await page.screenshot({fullPage:true,path:path.join(process.env.WOS_LEAD_AGE_PROOF_DIR,'today-'+width+'.png')});}
@@ -45,6 +47,7 @@ async function main(){
       for(let i=1;i<rows.length;i++)assert.equal(await page.getByText((100+i)+' Example St',{exact:true}).count(),0);
       if(process.env.WOS_LEAD_AGE_PROOF_DIR)await page.screenshot({path:path.join(process.env.WOS_LEAD_AGE_PROOF_DIR,'today-result-'+width+'.png')});
       phase=width+':any-time';await page.locator('#lfAge').selectOption('');await page.waitForFunction(()=>!APP._leadsLoading&&APP.filtered.length===6);
+      await page.waitForFunction(()=>document.getElementById('lfAge')?.value==='');
       assert.equal(JSON.stringify(rows),before);assert.deepEqual(errors,[]);assert.deepEqual(external,[]);assert.deepEqual(writes,[]);
     }finally{await context.close();}
   }}finally{await browser.close();}

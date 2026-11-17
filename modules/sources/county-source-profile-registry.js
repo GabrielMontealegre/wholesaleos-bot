@@ -9,6 +9,8 @@ const appraisalProfiles = require('./county-appraisal-profiles').PROFILES;
 const publicRecordProfiles = require('./public-parcel-api-profiles').PROFILES;
 const publicInventoryProfiles = require('./mi-detroit-land-bank-source-profiles').PROFILES;
 const codeCaseAdapter = require('./dallas-code-violations-adapter');
+// B-23 public distress list kinds live in their own data-built profile set (D-066).
+const distressListProfiles = require('./distress-list-profiles');
 
 const SALE_DATE_FIELDS = Object.freeze(['sale_date', 'auction_date', 'sale_date_or_event_date', 'date_of_sale', 'trustee_sale_date', 'foreclosure_sale_date']);
 const SOURCE_KINDS = Object.freeze(['trustee_sale_notice', 'tax_sale', 'code_case', 'parcel', 'recorded_sale', 'public_inventory']);
@@ -136,4 +138,6 @@ function sourceHostAllowed(profile, sourceUrl) {
 }
 
 module.exports = { PROFILES, SOURCE_KINDS, SALE_DATE_FIELDS, profileForSourceId,
+  DISTRESS_SOURCE_KINDS: distressListProfiles.DISTRESS_SOURCE_KINDS,
+  distressProfileForSourceId: distressListProfiles.profileForSourceId,
   profilesForCountyKind, regionalProfilesForGroup, sourceHostAllowed };
