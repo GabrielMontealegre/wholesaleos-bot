@@ -1,0 +1,37 @@
+{
+  "source_sha": "5697c8cd23badd9d71595a7a5579c371bb59f4b9",
+  "authenticated": false,
+  "private_body_reads": false,
+  "provider_actions": false,
+  "business_writes": false,
+  "checks": [
+    {
+      "route": "/health",
+      "status": 200
+    },
+    {
+      "route": "/api/auth/devices",
+      "status": 401
+    },
+    {
+      "route": "/api/dashboard/email-templates",
+      "status": 401
+    },
+    {
+      "route": "/dashboard/",
+      "status": 200,
+      "exact_static_source": true
+    },
+    {
+      "route": "/app",
+      "status": 200,
+      "exact_static_source": true
+    },
+    {
+      "route": "/dashboard/wos-email-templates.js?v=3",
+      "status": 200,
+      "exact_static_source": true
+    }
+  ],
+  "result": "PASS"
+}

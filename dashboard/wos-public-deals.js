@@ -995,6 +995,24 @@
         }).join('') + '</details></div>';
   }
 
+  var sourceStateLabels = {
+      LOCKED: 'Needs verification', CALL_READY: 'Phone route recorded', OUTREACH_READY: 'Contact route recorded',
+      MAIL_READY: 'Mailing route recorded', NEEDS_CONTACT_SEARCH: 'Contact search needed', NEEDS_SKIP_TRACE: 'Contact lookup needed',
+      NEEDS_COMPS: 'Comparable sales needed', TITLE_NEEDED: 'Title review needed', CLOSED_NOT_INTERESTED: 'Closed: not interested',
+      CONTACT_COMPLETE: 'Contact recorded', PROPERTY_READY: 'Property research ready', NEEDS_PROPERTY_FACTS: 'Property facts needed',
+      NEEDS_VALUE_SOURCE: 'Value evidence needed', INSPECT_NOW: 'Review now', NEEDS_ZIP_REVIEW: 'Postal code needs review',
+      SOURCE_PROOF_ONLY: 'Source reference only', REJECTED_GENERIC: 'Not a property lead', NEEDS_IDENTITY: 'Identity needs verification'
+  };
+  var sourceStateKinds = {
+    row: ['LOCKED','CALL_READY','OUTREACH_READY','MAIL_READY','NEEDS_CONTACT_SEARCH','NEEDS_SKIP_TRACE','NEEDS_COMPS','TITLE_NEEDED','CLOSED_NOT_INTERESTED'],
+    contact: ['LOCKED','CALL_READY','OUTREACH_READY','MAIL_READY','NEEDS_CONTACT_SEARCH','NEEDS_SKIP_TRACE','CONTACT_COMPLETE'],
+    property: ['LOCKED','PROPERTY_READY','NEEDS_COMPS','NEEDS_PROPERTY_FACTS','NEEDS_VALUE_SOURCE'],
+    quality: ['INSPECT_NOW','NEEDS_ZIP_REVIEW','SOURCE_PROOF_ONLY','REJECTED_GENERIC','NEEDS_IDENTITY']
+  };
+  function sourceStateLabel(value, kind) {
+    return typeof value === 'string' && typeof kind === 'string' && Object.prototype.hasOwnProperty.call(sourceStateKinds, kind) && sourceStateKinds[kind].indexOf(value) !== -1 ? sourceStateLabels[value] : 'Status not confirmed';
+  }
+
   function rowCard(row, embedded) {
     var zipReview = row.quality_bucket === 'NEEDS_ZIP_REVIEW';
     var title = row.normalized_address || row.partial_address || row.headline || 'Source proof row';
@@ -1002,15 +1020,15 @@
     lines.push('<div style="font-weight:700;font-size:14px;margin-bottom:4px;">' + esc(title) +
       (zipReview ? ' <span style="font-weight:600;font-size:11px;padding:2px 8px;border-radius:10px;background:#fed7aa;">ZIP MISSING - verify in document</span>' : '') +
       (row.county ? ' <span style="font-weight:500;font-size:11px;color:#6b7280;">(' + esc(row.county) + ' County)</span>' : '') +
-      ' <span style="font-weight:500;font-size:11px;padding:2px 8px;border-radius:10px;background:' + rowStateColor(row.row_state) + ';">' + esc(row.row_state || row.quality_bucket || '') + '</span>' + lifecycleChip(row) + saleDateBadge(row) + '</div>');
+      ' <span class="wos-source-state-label" style="display:inline-block;max-width:100%;box-sizing:border-box;vertical-align:middle;font-weight:500;font-size:11px;padding:2px 8px;border-radius:10px;background:' + rowStateColor(row.row_state) + ';">' + esc(row.row_state ? sourceStateLabel(row.row_state, 'row') : sourceStateLabel(row.quality_bucket, 'quality')) + '</span>' + lifecycleChip(row) + saleDateBadge(row) + '</div>');
     lines.push(dealFitHtml(row.deal_fit_explanation));
     if (zipReview && row.subject_address_verified_for_research && row.maps_search_url_review_needed) {
       lines.push('<div style="font-size:12px;">' + link('Maps search (zip unverified - review)', row.maps_search_url_review_needed) + '</div>');
     } else if (!row.subject_address_verified_for_research) {
       lines.push('<div style="font-size:12px;">No verified property address yet.</div>');
     }
-    lines.push('<div style="font-size:12px;"><b>Contact status:</b> ' + esc(row.contact_state || 'LOCKED') + ' - <span style="color:#6b7280;">' + esc(row.contact_state_reason || 'No contact route is ready.') + '</span></div>');
-    lines.push('<div style="font-size:12px;"><b>Property status:</b> ' + esc(row.property_state || 'LOCKED') + ' - <span style="color:#6b7280;">' + esc(row.property_state_reason || 'Property work is not ready.') + '</span></div>');
+    lines.push('<div style="font-size:12px;"><b>Contact status:</b> ' + esc(sourceStateLabel(row.contact_state, 'contact')) + ' - <span style="color:#6b7280;">' + esc(row.contact_state_reason || 'No contact route is ready.') + '</span></div>');
+    lines.push('<div style="font-size:12px;"><b>Property status:</b> ' + esc(sourceStateLabel(row.property_state, 'property')) + ' - <span style="color:#6b7280;">' + esc(row.property_state_reason || 'Property work is not ready.') + '</span></div>');
     lines.push('<div style="font-size:12px;"><b>Stored address status:</b> ' + esc(row.address_state_display || row.address_state || 'not recorded') +
       (row.address_state_reason_code && row.address_state_reason_code !== 'stored_state' ? ' (' + esc(row.address_state_reason_code.replace(/_/g, ' ')) + ')' : '') + '</div>');
     lines.push(discoveryHtml(row.discovery, row.queue_key || ''));
@@ -1021,7 +1039,7 @@
           : "This lead's internal ID contains a different address from the sourced property address above.") +
         ' Embedded address: ' + esc(row.queue_key_embedded_address || '') + '. The ID has not been changed.</div>');
     }
-    if (row.row_state) lines.push('<div style="font-size:10px;color:#6b7280;">Legacy combined state: ' + esc(row.row_state) + (row.row_state_reason ? ' - ' + esc(row.row_state_reason) : '') + '</div>');
+    if (row.row_state || row.contact_state || row.property_state) lines.push('<details class="wos-source-status-details" style="font-size:12px;color:#6b7280;"><summary style="min-height:44px;line-height:44px;cursor:pointer;">Source status details</summary><div>Legacy combined state: ' + esc(row.row_state || 'Not recorded') + (row.row_state_reason ? ' - ' + esc(row.row_state_reason) : '') + '</div><div>Contact state: ' + esc(row.contact_state || 'Not recorded') + '</div><div>Property state: ' + esc(row.property_state || 'Not recorded') + '</div></details>');
     var distress = row.distress_evidence || {};
     lines.push('<div style="font-size:12px;margin-top:4px;"><b>Why this lead exists:</b> ' + esc(distress.distress_reason || row.why_this_might_be_a_deal || row.motivation_evidence_text || 'Official source evidence requires review.') + '</div>');
     lines.push('<div style="font-size:12px;"><b>Official event/status:</b> ' + esc(distress.official_event_status || row.status_evidence_text || 'Not published in source') + '</div>');
@@ -2779,6 +2797,7 @@
   }
 
   window.__wosPublicDealsTestHooks = {
+    sourceStateLabel: sourceStateLabel,
     panelsForPage: panelsForPage,
     countyCoverageHtml: countyCoverageHtml,
     stageEllisCountyFile: stageEllisCountyFile,

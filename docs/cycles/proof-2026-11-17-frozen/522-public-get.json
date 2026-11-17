@@ -1,0 +1,28 @@
+{
+  "source_sha": "717d64844234b0aab9e631517f9f3325ce87f164",
+  "authenticated": false,
+  "private_body_reads": false,
+  "provider_actions": false,
+  "business_writes": false,
+  "checks": [
+    {
+      "route": "/health",
+      "status": 200
+    },
+    {
+      "route": "/api/auth/devices",
+      "status": 401
+    },
+    {
+      "route": "/dashboard/",
+      "status": 200,
+      "exact_static_source": true
+    },
+    {
+      "route": "/app",
+      "status": 200,
+      "exact_static_source": true
+    }
+  ],
+  "result": "PASS"
+}
