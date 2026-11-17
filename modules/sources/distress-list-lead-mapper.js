@@ -7,6 +7,7 @@
 
 const { normalizeSourceDate } = require('../research/normalize-source-date');
 const { resolveSourceSaleDate } = require('../research/resolve-source-sale-date');
+const { createHash } = require('crypto');
 
 const GENERIC_FIELDS = Object.freeze({
   address: ['address', 'property address', 'property_address', 'situs', 'situs address', 'site address', 'site_address', 'location', 'street address', 'full_address', 'propaddr'],
@@ -60,7 +61,10 @@ function readDate(picked, profile, sourceLine) {
   if (raw === '' || raw == null) return { iso: '', status: 'MISSING', raw: '', origin: '' };
   if (typeof raw === 'number' && Number.isFinite(raw) && Math.abs(raw) > 1e11) {
     // ArcGIS date fields are epoch milliseconds: one reading only.
-    return { iso: new Date(raw).toISOString().slice(0, 10), status: 'RESOLVED', raw: String(raw), origin: picked.origin, rule: 'epoch_milliseconds' };
+    const date = new Date(raw);
+    const iso = Number.isSafeInteger(raw) && Number.isFinite(date.getTime()) ? date.toISOString().slice(0, 10) : '';
+    if (!normalizeSourceDate(iso).iso) return { iso: '', status: 'INVALID', raw: String(raw), origin: picked.origin, reason: 'invalid_epoch_milliseconds' };
+    return { iso, status: 'RESOLVED', raw: String(raw), origin: picked.origin, rule: 'epoch_milliseconds' };
   }
   const text = clean(raw);
   const isoLike = text.match(/^(\d{4}-\d{2}-\d{2})(?:[T ][\d:.]+Z?)?$/);
@@ -106,6 +110,9 @@ function mapRowToLead(row, profile, options = {}) {
   const recorded = readDate(picked.recorded_date, profile, sourceLine);
   const rowReference = clean(row && row.row_reference);
   const documentNumber = clean(picked.document_number.value);
+  const address = clean(picked.address.value);
+  // A case may cover several properties; this opaque identity never verifies an address.
+  const propertyKey = createHash('sha256').update(JSON.stringify([address ? 'address' : 'row', (address || rowReference).toLowerCase()])).digest('hex');
   // Owner names stay on the lead only; they never go into evidence text, logs or summaries.
   const evidence = ['address', 'city', 'zip', 'document_number', 'sale_date', 'recorded_date', 'amount_due', 'status']
     .filter((generic) => clean(picked[generic].value) !== '')
@@ -113,7 +120,7 @@ function mapRowToLead(row, profile, options = {}) {
     .join(' | ')
     .slice(0, 300);
   const lead = {
-    lead_key: `${profile.source_id}|${documentNumber ? `doc:${documentNumber.toLowerCase()}` : `ref:${rowReference.toLowerCase()}`}`,
+    lead_key: `${profile.source_id}|${documentNumber ? `doc:${documentNumber.toLowerCase()}|property:${propertyKey}` : `ref:${rowReference.toLowerCase()}`}`,
     source_id: profile.source_id,
     source_kind: profile.source_kind,
     source_url: clean(options.source_url) || profile.source_url,
@@ -122,7 +129,7 @@ function mapRowToLead(row, profile, options = {}) {
     document_number_origin: picked.document_number.origin,
     county: profile.county,
     state: profile.state,
-    address_as_written: clean(picked.address.value),
+    address_as_written: address,
     address_origin: picked.address.origin,
     address_verified: false,
     city: clean(picked.city.value),

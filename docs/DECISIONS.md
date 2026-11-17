@@ -1,5 +1,16 @@
 # Decisions
 
+ASSUMED 2026-11-17: B-23 document numbers identify cases, not necessarily one
+property. Include an opaque normalized address component (or row reference when
+addressless) in document-backed lead keys; identical case/property rows still
+merge after moving. This is not address verification. CSV references use parser
+physical end lines; XLSX uses worksheet row metadata. Invalid/overflowing epochs
+remain INVALID with raw evidence and the row retained. Synthetic probes on44f82f3
+proved row loss, false references and invalid-date failure; preserve those results.
+No original assertions, source scheduling, data imports or provider activation
+change. New combined head must pass CI after the ordered engine integrations.
+-- AGENTS3/4/5, D-009/D-066 source truth and never-drop acceptance.
+
 ASSUMED 2026-11-17: prepare the green frozen slices as an ordered integration
 stack. Each head contains current main and its already-reviewed predecessor
 source head; review the item's delta against that predecessor and run CI once

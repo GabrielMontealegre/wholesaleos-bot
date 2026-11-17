@@ -2,6 +2,13 @@
 
 ## Latest Run Summary (2026-11-17)
 
+PR #433 is now released as `c03f564`: hosted316/0/0, automatic deployment
+7863430439 success, fixed public/static checks passed. #434's integration is
+still gated. B-23a #513 has a bounded row-preservation correction prepared:
+two properties sharing a case, physical CSV/XLSX references and invalid epochs.
+Focused synthetic regression PASS; its full hosted gate and release are pending.
+No source was scheduled or collected; B-23b/#517 and OFF B-24a/#523 remain next.
+
 - B-25: green PR #509 merged as `35a5f6e`; handoff PR #512 merged as `c53740b`.
   Automatic deployment succeeded. Fixed public health/dashboard/app/static checks passed;
   the unauthenticated device endpoint returned 401. No private reads or business writes.

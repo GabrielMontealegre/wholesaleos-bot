@@ -25,13 +25,13 @@ function finish(reader, rawRows, warnings = []) {
 function readCsv(text, options = {}) {
   const { parse } = require('csv-parse/sync');
   const records = parse(String(text || ''), {
-    columns: true, skip_empty_lines: true, relax_column_count: true, trim: true, bom: true
+    columns: true, skip_empty_lines: true, relax_column_count: true, trim: true, bom: true, info: true
   });
   const idField = clean(options.id_field);
-  return finish('csv', records.map((fields, index) => ({
+  return finish('csv', records.map(({ record: fields, info }, index) => ({
     fields,
-    // Header is line 1, so data row n is line n + 1.
-    row_reference: idField && clean(fields[idField]) ? `${idField} ${clean(fields[idField])}` : `row ${index + 1} (line ${index + 2})`
+    // The parser's physical end line includes blank and quoted multiline records.
+    row_reference: idField && clean(fields[idField]) ? `${idField} ${clean(fields[idField])}` : `row ${index + 1} (line ${info.lines})`
   })));
 }
 
@@ -42,10 +42,10 @@ function readXlsx(buffer, options = {}) {
   const sheet = book.Sheets[sheetName];
   if (!sheet) return finish('xlsx', [], [`sheet_not_found:${sheetName}`]);
   const records = XLSX.utils.sheet_to_json(sheet, { defval: '', raw: false });
-  return finish('xlsx', records.map((fields, index) => ({
-    fields,
-    row_reference: `sheet ${sheetName} row ${index + 2}`
-  })));
+  return finish('xlsx', records.map((fields) => {
+    if (!Number.isSafeInteger(fields.__rowNum__) || fields.__rowNum__ < 0) throw new TypeError('worksheet_row_reference_unavailable');
+    return { fields, row_reference: `sheet ${sheetName} row ${fields.__rowNum__ + 1}` };
+  }));
 }
 
 function readArcgisJson(body, options = {}) {
