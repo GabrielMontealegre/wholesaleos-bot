@@ -4,13 +4,14 @@
 
 PR #433 is released as `c03f564`: hosted316/0/0; #434 is released as `8976683`:
 hosted318/0/0. Both automatic deployments and fixed public/static checks passed.
-B-23a #513's corrected head0b1be9e failed hosted44156436749 (319/1/0):
-the age-filter verifier observed an empty control after filtered-data readiness.
-Two bounded rendered-selection waits now preserve all original assertions,
-fixtures and timeouts. Focused synthetic UI1366/400/412, date predicate and
-row-preservation regressions PASS. New exact-head hosted gate/release pending;
-the failed run remains failed and will not be retried unchanged.
-No source was scheduled or collected; B-23b/#517 and OFF B-24a/#523 remain next.
+B-23a #513 RELEASED as `f9bdb7e`: corrected head0e58ba9 hosted44190617416
+PASS320/0/0, automatic deployment7868487033 SUCCESS, fixed public/static PASS.
+Earlier failed44156436749 remains failed; two rendered-selection waits kept
+every original assertion, fixture and timeout. No source collection was enabled.
+B-23b #517 is integrated with current main. Synthetic review proved parsed rows
+beyond1000 were discarded; now retain every parsed row and mapper duplicate
+audit. Original adapter test and new retention regression PASS; hosted gate pending.
+No source was scheduled or collected; B-23c and OFF B-24a/#523 remain next.
 
 - B-25: green PR #509 merged as `35a5f6e`; handoff PR #512 merged as `c53740b`.
   Automatic deployment succeeded. Fixed public health/dashboard/app/static checks passed;

@@ -1,5 +1,14 @@
 # Decisions
 
+ASSUMED 2026-11-17: B-23b's MAX_ROWS is a remote request-page bound, not
+permission to discard rows already parsed from a bounded public document.
+Remove the adapter's post-parse slice; keep rows_capped at0 and retain mapper
+duplicate audit in distress_audit (never in aggregate summaries). Synthetic
+1003-row CSV proved1000 addressed outputs instead of1001, plus lost proof and
+last-duplicate evidence. Retention regression now passes, original assertions
+unchanged. No extra request, catalog scheduling, persistence or real collection.
+-- AGENTS3/4/5 and B-23 every-row/duplicate-audit acceptance.
+
 ASSUMED 2026-11-17: the B-23a hosted gate44156436749 failed319/1/0 on
 lead-age-calendar-ui's immediate selected-control assertion, not the row mapper.
 The active loader clears _leadsLoading before its buyers await and final render;
