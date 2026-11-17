@@ -1,0 +1,47 @@
+{
+  "source_sha": "f2294a7500629e7a3edf2718ce981342a1d0802a",
+  "authenticated": false,
+  "private_body_reads": false,
+  "provider_actions": false,
+  "business_writes": false,
+  "checks": [
+    {
+      "route": "/health",
+      "status": 200
+    },
+    {
+      "route": "/dashboard/",
+      "status": 200,
+      "exact_static_source": true
+    },
+    {
+      "route": "/app",
+      "status": 200,
+      "exact_static_source": true
+    },
+    {
+      "route": "/dashboard/wos-ask-demo.js?v=5",
+      "status": 200,
+      "exact_static_source": true
+    },
+    {
+      "route": "/dashboard/wos-record-activity.js?v=4",
+      "status": 200,
+      "exact_static_source": true
+    },
+    {
+      "route": "/dashboard/wos-card-clock.js?v=3",
+      "status": 200,
+      "exact_static_source": true
+    },
+    {
+      "route": "/api/dashboard/ask-workspace",
+      "status": 401
+    },
+    {
+      "route": "/api/dashboard/record-activity",
+      "status": 401
+    }
+  ],
+  "result": "PASS"
+}

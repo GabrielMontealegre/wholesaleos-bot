@@ -1,0 +1,33 @@
+{
+  "source_sha": "f2294a7500629e7a3edf2718ce981342a1d0802a",
+  "result": "PASS",
+  "initial_navigation": {
+    "shell": false,
+    "ready": false,
+    "assistantPresent": false,
+    "emailEntryPresent": false,
+    "askAssetPresent": true,
+    "refreshEnabled": false,
+    "refreshGeometry": null,
+    "retryControl": false,
+    "noHorizontalOverflow": true
+  },
+  "settled": {
+    "shell": true,
+    "ready": true,
+    "assistantPresent": true,
+    "emailEntryPresent": true,
+    "askAssetPresent": true,
+    "refreshEnabled": true,
+    "refreshGeometry": { "width": 44, "height": 44 },
+    "retryControl": false,
+    "noHorizontalOverflow": true
+  },
+  "private_content_reads": false,
+  "private_json_reads": false,
+  "captures_or_accessibility_reads": false,
+  "provider_actions": false,
+  "business_writes": false,
+  "auth_transfer": false,
+  "temporary_tab_closed": true
+}

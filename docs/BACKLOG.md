@@ -26,6 +26,46 @@ Gabriel asked Claude to work as the engineer on 2026-11-16 while Codex was stuck
 Codex picks up next, in order: frozen slices (above) -> #433/#434 final main merge -> B-23 (whatever is
 left) -> B-24 (switch off) -> B-07/B-21 -> B-19.
 
+
+2026-11-17: #495 resumed under D-067c and the owner's Claude handoff.
+Current main (including green PR #509) is merged into this frozen slice.
+Historical local failures below remain evidence, not a hosted release gate.
+First hosted gate pending. No production business writes are authorized.
+
+## Historical Device-Slice Evidence
+2026-11-08 run summary: fresh usage primary3% USED, secondary0% USED.
+Fetch origin succeeded; origin/main is ancestor of HEAD (0 behind,2 ahead).
+455.4B3 device labels BLOCKED / needs-architect: first full gate completed
+209 passed,97 failed,0 skipped of306,600s/file; all306 timings retained in
+docs/cycles/proof-455-device-times/first-local-full.json. Existing device UI
+failed again at startup52:5 before requests, matching the focused failure.
+Cause UNPROVEN; no unchanged retry, waiver, push, PR, CI or release.
+New device component test passed in the full gate (2.22s), not a release pass.
+Next independent scope: Email template timestamp reader trace, then JV/profit
+metadata and active legacy source-day readers. Whole455/487 remains incomplete.
+Unrelated exports/debug and newly observed synthetic-failure.png preserved.
+Standing autopilot authority continues until STOP AUTOPILOT; reserve the final
+5% primary window for rollback/redeploy only, no reset/purchase/model escalation.
+
+HISTORICAL PRE-GATE 2026-11-03 455.4B3 LOCAL device labels candidate: shared UTC-7 history and
+future expiry label, server state/auth/TTL/writers unchanged. New synthetic
+actual component3width/Tokyo testPASS, three images inspected. Original signed
+server device UI focused check FIRST FAILED startup52:5 before browser requests;
+cause UNPROVEN, no retry or environment attribution. First full gate pending;
+no push/PR/CI/release. Own prior493 proof carried, unrelated exports/debug untouched.
+
+2026-11-03 PR493 RELEASED/VERIFIED f2294a7500629e7a3edf2718ce981342a1d0802a,
+whole tree identical to tested364d6d8. FIRST PR41749594884/job126311094871
+305/0/0 of305,600s/file,19m13 job wall; sole MAIN41752093784/job126319375219
+also305/0/0,18m34 wall. All610 hosted timings retained alongside original
+local302/3/0/all305 timings, total915 rows. AutomaticRailway210b84b0 exactmerge
+SUCCESS; eight fixed public GET/static/401 and settled signed GLOBAL shell/
+control44x44/nooverflow proofPASS. Temporary tab closed; no private content,
+JSON/AX/captures, provider/business writes or auth transfer. Six inspected
+synthetic1366/400/412 screenshots retain actual Ask/Activity timestamp proof.
+This completes recorded-context dates/filter consistency only, NOT whole455/487.
+Next ordered independent reader: remembered-device creation/expiry dates.
+PR: https://github.com/GabrielMontealegre/wholesaleos-bot/pull/493
 ## NEXT RUN ORDER (D-067, architect 2026-11-09). Read this first; it replaces every older order below
 
 The older run notes below are history. Work this list from top to bottom. GitHub CI on the PR head is
