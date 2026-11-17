@@ -23,6 +23,9 @@ global.Date = class extends ActualDate {
   constructor(...args) { super(...(args.length ? args : [fixtureClock.getTime()])); }
   static now() { return fixtureClock.getTime(); }
 };
+const { installRefuseLiveNetwork } = require('./helpers/refuse-live-network');
+// Hermetic: county documents and the geocoder are never fetched live (B-25).
+const liveNetwork = installRefuseLiveNetwork();
 process.env.DB_PATH = path.join(tmpDir, 'db.json');
 process.env.DEAL_BOARD_SNAPSHOTS_PATH = path.join(tmpDir, 'deal-board-snapshots.json');
 fs.writeFileSync(process.env.DB_PATH, JSON.stringify({ leads: [] }, null, 2));
@@ -1524,6 +1527,9 @@ function mockDeal(overrides) {
     return '/api/dashboard/free-public-deal-board' + suffix;
   }
 
+  // The re-extraction pass still reached for the Bexar source document; the refusal kept
+  // the proof-only row untouched instead of letting the live county list decide the result.
+  assert.ok(liveNetwork.hosts().includes('www.bexar.org'), 're-extraction must still attempt the source document');
   console.log('dashboard public deal queue tests passed');
 })().catch((error) => {
   global.Date = ActualDate;
