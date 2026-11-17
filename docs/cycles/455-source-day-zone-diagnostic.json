@@ -1,0 +1,11 @@
+{
+  "kind": "synthetic_diagnostic_not_acceptance_test",
+  "now": "2026-11-03T19:18:00Z",
+  "owner_zone_same_day_upcoming": true,
+  "owner_zone_same_day_days": 0,
+  "tokyo_same_row_upcoming": false,
+  "invalid_calendar_dto_gets_upcoming": true,
+  "input_unchanged": true,
+  "network_effects": 0,
+  "business_writes": 0
+}

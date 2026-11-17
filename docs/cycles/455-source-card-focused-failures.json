@@ -1,0 +1,29 @@
+{
+  "kind": "focused_test_failures_not_full_suite_timings",
+  "file": "dashboard-public-deal-queue.test.js",
+  "attempts": [
+    {
+      "kind": "first_existing_focused_check",
+      "exit_code": 1,
+      "command_wall_seconds": 9.9445329,
+      "assertion_line": 874,
+      "expected_asset_version": 57,
+      "candidate_asset_version": 58,
+      "raw_log": "455-source-card-first-existing-queue.txt"
+    },
+    {
+      "kind": "first_corrected_cache_guard_check",
+      "exit_code": 1,
+      "command_wall_seconds": 3.6137328,
+      "assertion_line": 931,
+      "expected_asset_version": 57,
+      "candidate_asset_version": 58,
+      "note": "Duplicate public-deals asset guard has a helper-workbench message; no helper asset change.",
+      "raw_log": "455-source-card-corrected-cache-existing-queue.txt"
+    }
+  ],
+  "further_retry": false,
+  "full_suite_run": false,
+  "released": false,
+  "architect_issue": 501
+}
