@@ -1,30 +1,38 @@
 # Backlog
 
-## CODEX HAND-OFF (Claude engineer run, 2026-11-16). Read this before the run order below
+## CODEX HAND-OFF (Claude engineer run, 2026-11-16/17). Read this before the run order below
 
 Gabriel asked Claude to work as the engineer on 2026-11-16 while Codex was stuck. What happened:
 
-- **B-25 real cause found and fixed (PR #509).** The pin was not the whole story. Since 2026-11-11 the only
-  CI failure was `dashboard-public-deal-queue.test.js:449`. That test (and
-  `enrichment-ledger-snapshot-persistence`) let the document re-extraction pass and the Census backfill
-  call the real internet. CI runners have internet, so the live Bexar County foreclosure PDF decided the
-  result. New helper `tests/helpers/refuse-live-network.js` refuses live fetches; both tests now assert
-  the attempt was made and refused. The wasm-feature-detect pin stays in #509 as hardening (no lockfile).
-  Gabriel merges #509 first; every other PR needs it.
+- **B-25 real cause found and fixed (PR #509, CI green).** The pin was not the whole story. Since
+  2026-11-11 the only CI failure was `dashboard-public-deal-queue.test.js:449`. That test (and
+  `enrichment-ledger-snapshot-persistence`) let the document re-extraction pass and the Census backfill call
+  the real internet. CI runners have internet, so the live Bexar County foreclosure PDF decided the result.
+  New helper `tests/helpers/refuse-live-network.js` refuses live fetches; both tests now assert the attempt
+  was made and refused. The wasm-feature-detect pin stays in #509 as hardening (no lockfile).
 - **Frozen slices #495, #496, #497, #498, #501, #502, #504, #505: Codex only.** Their branches and commits
   were never pushed and are not in this repository or on the owner's computer. Codex: push each frozen
   branch, merge current main into it, open the PR and let CI run once (D-067c). A local sandbox failure is
   not a gate.
-- **#433 and #434:** current main merged into both (merge commit, no force-push), docs conflicts resolved
-  by keeping both sides; their own tests pass. After #509 merges, merge main into them once more so CI is
-  green, then merge.
-- **B-23 (public distress lists):** split into sub-PRs. B-23a = pure building blocks (generic source kinds,
-  profiles from `docs/knowledge/county-source-specs-2026-11-09.json`, one reader per format, row-to-lead
-  mapper with provenance and lanes, polite fetch guard). B-23b = wiring into the daily run plus the
-  read-only per-source counts. Status of each is in the B-23 entry below.
+- **#433 and #434 (CI green):** current main merged into both (merge commit, no force-push), docs
+  conflicts resolved by keeping both sides. Ready to merge.
+- **B-23 public distress lists, split:**
+  - B-23a (#513): pure building blocks. 8 generic kinds, 207 profiles from
+    `docs/knowledge/county-source-specs-2026-11-09.json` (66 runnable), one reader per format, row-to-lead
+    mapper with provenance and lanes, duplicate merge with audit, polite fetcher (allowlist, 1 request per
+    second, stop on 401/403/429).
+  - B-23b (#517, includes #513): one generic adapter for the 30 sources with a standard row query (ArcGIS
+    layer, Socrata, CKAN, CSV/XLSX), registered but **not in the source catalog**, so nothing runs yet.
+  - **B-23c (Codex, next):** reader settings for the remaining first-list sources (`*.publicsearch.us`
+    clerk searches are script-driven: confirm a plain result URL or keep them manual; Bexar/Ellis/Kaufman
+    PDF row patterns; DeKalb/Douglas HTML tables; pick the Charlotte code-case layer); the 2026-11-09 host
+    fixes on existing adapters; add chosen sources to the source catalog with a section 7 check; a
+    read-only per-source counts view (each run already returns a counts-only `distress_summary`).
+- **B-24:** see its entry below for what was started in this run (if anything); the rest is Codex's.
 
-Codex picks up next, in order: frozen slices (above) -> #433/#434 final main merge -> B-23 (whatever is
-left) -> B-24 (switch off) -> B-07/B-21 -> B-19.
+Waiting on Gabriel's Merge click, in this order: #509, #512, #433, #434, #513, #517.
+
+Codex picks up next, in order: frozen slices (above) -> B-23c -> B-24 (switch off) -> B-07/B-21 -> B-19.
 
 ## NEXT RUN ORDER (D-067, architect 2026-11-09). Read this first; it replaces every older order below
 
