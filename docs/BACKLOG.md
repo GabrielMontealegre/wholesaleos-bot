@@ -1073,6 +1073,19 @@ little", soft 5-10% counters. No route, UI, storage, send or deploy. PR open for
 review; Codex reviews and merges per AGENTS2 and the #423 deploy pause.
 Assumptions logged in DECISIONS.md.
 
+2026-10-22 #402 exit-strategy engine LOCAL (Claude cloud session, label
+claude-building; Codex leaves it alone per #423). Pure calculator scores flip,
+rental (cap rate, cash-on-cash with a DSCR loan, 1% rule), BRRRR, wholetail,
+creative, novation/list, land/builder, small multifamily and wholesale/JV, and
+ranks them by matching buyer, fee at target, speed and data certainty. Every fact
+needs a source; list price/AVM/claimed ARV, unsourced or stale rent and guessed
+payoffs are rejected and never shown. Buyer strategy profile (strategy, deals a
+year, target return, funding, proof-of-funds date) flows through import, re-import,
+operator update and the buyers list. No route, screen, offer, gate or existing
+match changes. Card block deferred (deals carry no rent yet; #416 order; P0 UI
+gate). PR open for review; not merged or deployed (Railway paused, #423).
+Trace: docs/cycles/issue-402-exit-strategies.md.
+
 2026-10-28 PR467/455item2 RELEASED/VERIFIED:main6247e0fe69f998bc24cf6e33f42e35b72c23f8fc
 fulltree identical testedff9434d. AutomaticRailway619e60c5-4dc3-44eb-9b02-a0b1cd912c5b
 Active/successful authoritativeDetails exactsource,no manualbuild/retry/settings.
