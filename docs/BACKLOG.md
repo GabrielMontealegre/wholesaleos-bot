@@ -1,5 +1,72 @@
 # Backlog
 
+## CODEX HAND-OFF (Claude engineer run, 2026-11-16). Read this before the run order below
+
+Gabriel asked Claude to work as the engineer on 2026-11-16 while Codex was stuck. What happened:
+
+- **B-25 real cause found and fixed (PR #509).** The pin was not the whole story. Since 2026-11-11 the only
+  CI failure was `dashboard-public-deal-queue.test.js:449`. That test (and
+  `enrichment-ledger-snapshot-persistence`) let the document re-extraction pass and the Census backfill
+  call the real internet. CI runners have internet, so the live Bexar County foreclosure PDF decided the
+  result. New helper `tests/helpers/refuse-live-network.js` refuses live fetches; both tests now assert
+  the attempt was made and refused. The wasm-feature-detect pin stays in #509 as hardening (no lockfile).
+  Gabriel merges #509 first; every other PR needs it.
+- **Frozen slices #495, #496, #497, #498, #501, #502, #504, #505: Codex only.** Their branches and commits
+  were never pushed and are not in this repository or on the owner's computer. Codex: push each frozen
+  branch, merge current main into it, open the PR and let CI run once (D-067c). A local sandbox failure is
+  not a gate.
+- **#433 and #434:** current main merged into both (merge commit, no force-push), docs conflicts resolved
+  by keeping both sides; their own tests pass. After #509 merges, merge main into them once more so CI is
+  green, then merge.
+- **B-23 (public distress lists):** split into sub-PRs. B-23a = pure building blocks (generic source kinds,
+  profiles from `docs/knowledge/county-source-specs-2026-11-09.json`, one reader per format, row-to-lead
+  mapper with provenance and lanes, polite fetch guard). B-23b = wiring into the daily run plus the
+  read-only per-source counts. Status of each is in the B-23 entry below.
+
+Codex picks up next, in order: frozen slices (above) -> #433/#434 final main merge -> B-23 (whatever is
+left) -> B-24 (switch off) -> B-07/B-21 -> B-19.
+
+## NEXT RUN ORDER (D-067, architect 2026-11-09). Read this first; it replaces every older order below
+
+The older run notes below are history. Work this list from top to bottom. GitHub CI on the PR head is
+the required gate. A local run that fails only because the sandbox blocks the network (ERR_NETWORK_ACCESS_DENIED,
+loopback `fetch failed`, EPERM/EACCES, fixture start timeout) is not a gate failure: push and let CI decide
+(D-067a).
+
+0. **B-25: pin `wasm-feature-detect` 1.9.0** ([#507](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/507)).
+   Every PR's CI fails until this lands.
+1. **Ship or cut the frozen slices.** Each gets one CI run, plus one fix commit if needed; if it fails twice,
+   mark it DEFERRED and move on (D-067c), in this order:
+   #495 device labels → #496 template labels → #497 JV and profit labels → #498 active Today filter →
+   #501 source-card words (update both cache-57 assertions to 58) → #502 batch decision model →
+   #504 note voice → #505 skip-trace preflight. Then rebase PRs #433 and #434, run CI once and merge.
+   Cut, with no work: #499 and #500 (moved to Deferred). Item 455 date polish ends here.
+2. **B-23: public distress lists importer** (D-066).
+3. **B-24: paid data provider adapter, switch off.** This absorbs #494, the skip-trace button (D-067e).
+4. **B-07 and B-21: comps.**
+5. **B-19: match engine.**
+6. Then: 454 board v1 under the #503 contract (D-067f), #450 clock fix with #412 phase B, and the rest of the
+   backlog in its existing order.
+
+Gabriel only (do not wait on these, do not do them): #428 credential rotation confirmation, turning on the
+reply Send switch, picking and paying for the B-24 provider, any outreach.
+
+---
+
+## B-25 · Pin wasm-feature-detect 1.9.0 (D-067b) · TODO ([#507](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/507))
+
+`wasm-feature-detect` 1.10.0 (published 2026-11-09) crashes the tesseract OCR worker on Node 20. With no
+lockfile, CI and the next production deploy both install it. Acceptance: package.json gets
+`"overrides": {"wasm-feature-detect": "1.9.0"}` and nothing else changes; CI shows 305/305 with
+`dallas-foreclosure-acquisition-adapter` and `dashboard-public-deal-queue` passing; deploy; the §7 read-only check passes.
+
+---
+
+USAGE WARNING 2026-11-03: primary43% USED, secondary93% USED. Secondary
+remaining is below10%; architect should review the live app/backlog status.
+No agent reset/purchase/model escalation. Continue the authorized work loop;
+reserve the final5% primary window for rollback/redeploy only.
+
 494 preflight architecthandoff505 created2026-11-08T06:56:37Z; exact frozen
 candidate/fulltimings/question retained, no retry or release authorization.
 
@@ -2613,6 +2680,11 @@ Mark the status here as part of each item's PR.
 
 ## Current Owner Order (D-056, GitHub 2026-10-13)
 
+Owner update 2026-11-09 (D-066; run order now at the top of this file, D-067) supersedes the pause below for source and comps work: after the
+open needs-architect items are answered, do B-23 (public distress lists importer), then B-24 (paid data
+provider adapter, switch off), then comps (B-07, B-21) and the match engine (B-19). No new UI polish
+slices before B-23.
+
 Owner update2026-10-15 supersedes the slice order below: #366 D -> A -> G -> C
 -> F -> B -> E -> I -> H -> J, one PR per letter, live click-through1366/412.
 Notify Gabriel when C and B are live for his #341 sign-off. County ranking
@@ -4437,8 +4509,66 @@ Acceptance
   - Outreach Hub says "Run scrape to find real buyers", which is legacy wording.
   - Deal Matching stays on "Loading matches..." (replaced by B-19).
 
+## B-23 · Public distress lists importer (D-066) · TODO
+
+Goal: the app pulls free public distress lists every day, like the operator did by hand on 2026-11-09:
+foreclosure notices, trustee sales, tax sales, tax-delinquent lists, lis pendens, probate, code cases and
+land bank inventories.
+
+Source list: `docs/knowledge/county-source-specs-2026-11-09.json` (207 sources in 46 counties; 153 open,
+54 blocked or gated, each with url, format, fields, cadence, allowlisted host and access).
+
+Acceptance
+- Generic source kinds `foreclosure_notice`, `trustee_sale`, `tax_sale`, `tax_delinquent`, `lis_pendens`,
+  `probate`, `code_case`, `land_bank` in the source-kind registry (D-053 `trustee_sale_list` maps to
+  `trustee_sale`). One county source profile per source; no county or state names in generic code (D-013).
+- Readers by format: HTML search results, PDF lists, CSV/XLSX, ArcGIS REST layers, Socrata/JSON. One
+  generic reader per format, configured by the profile.
+- First 15 profiles, in order: Mecklenburg tax-foreclosure map layer; Dallas and Tarrant clerk notices
+  (publicsearch.us); publicsearch.us lis pendens for Dallas, Tarrant, Collin, Denton and Bexar; Bexar
+  clerk foreclosure PDF; DeKalb tax sale list; Douglas GA delinquent list; Guilford tax-foreclosure layer;
+  Charlotte code cases; Ellis and Kaufman notice files; San Antonio 311 property maintenance; Austin code
+  complaints; Rowan delinquent spreadsheet; Shelby tax-sale CSV; Nashville code violations.
+- Every row becomes a lead in the right lane (D-009, never dropped) with source_kind, source_url, page or
+  row reference, document/case number, captured date and the evidence text. Dates as written go through
+  `resolve-source-sale-date.js`; ambiguous dates stay quarantined.
+- Network: allowlisted hosts only, about 1 request per second, stop on 401/403/429 and mark the source
+  unavailable; never behind a login, CAPTCHA or click-through; sources whose terms forbid automation
+  stay manual (marked in the profile).
+- Fixes found 2026-11-09: Ellis host moved to www.elliscountytx.gov; Collin URLs in the repo return 403;
+  Dallas should point at dallas.tx.publicsearch.us; Detroit land bank should use the DLBA_For_Sale layer.
+- Tests: a fixture per format; wrong host rejected; 429 stops the run; row references kept; duplicate
+  rows merge with an audit trail; no owner names in logs or aggregate reports.
+- Verification: read-only run counts per source ("rows found / new leads / blocked") on the live app.
+
+---
+
+## B-24 · Paid data provider adapter: comps, property detail, skip trace (D-066) · TODO (switch stays off)
+
+Goal: one provider interface so the app can use the vendor Gabriel picks, without code changes per vendor.
+
+Acceptance
+- Provider registry entry plus environment switch, off by default; key only in Railway; per-call cost
+  logged; monthly cap that stops calls.
+- Comps: closed sales only, with address, date, price, beds, baths, living area, year built, distance and
+  the provider's source label. Reject AVMs, list prices and estimates as comps. Texas results are labeled
+  estimates and can never satisfy a comp or ARV gate (AGENTS.md section 5, D-066).
+- Skip trace: numbers stored as "Possible number, not confirmed" with provider, date, phone type and any
+  DNC or litigator flag (D-006). Rejected or do-not-call numbers never count as a route.
+- List import (pre-foreclosure, probate, tax-delinquent, absentee, vacant) feeds the same lead lanes as B-23.
+- Tests use fixtures from the vendor's published examples; no live calls in tests; a spy proves no call
+  happens while the switch is off.
+
+---
+
 ## Deferred Follow-Up
 
+- Commit a lockfile (D-067b follow-up) so CI and production install the same package versions.
+- Email date with an impossible calendar day (#499, D-067d): in `receivedTime`, reject a named-month mail
+  date whose day, month or year does not match in the header's own offset, and show "Time not confirmed".
+  Add no new parser dependency.
+- Owner display day for sale urgency (#500, D-067d): inject the owner's UTC-7 day and add a real-calendar
+  check in `saleDateInfo`. The backend stays the authority for "sale date passed".
 - Classic Today layout shift (CLS) on Conversations/Notifications. D065b/#487
   records existing baseline debt, not a477 regression. Address separately at
   the bottom of the queue; preserve current safety gates and report an actual
