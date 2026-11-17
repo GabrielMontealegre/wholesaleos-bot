@@ -28,6 +28,30 @@ ASSUMED: B-23 ships as ordered sub-PRs (B-23a pure modules and fixtures, B-23b w
 counts) under AGENTS 2 "split big items" -- 2026-11-16.
 
 
+ASSUMED2026-11-08:D065c blocks494 preflightfcc78b0 after firstfull209/97/0
+repeated requiredfailures. New/registrypure passes do not waivefull; all306
+timings retained, same97namesNOTcausalproof. No unchangedretry/skip/cancel/
+bypass/environmentattribution/CI/release. Next independent scope401 read-only
+performance-budget inventory only; no Postgres/accounts/jobs rewrite or private
+production inspection. Keep494disabled, no blockedcodecarried to nextrelease.
+
+ASSUMED2026-11-08:494 first preflight is unregistered, pure and always execution-
+disabled. Integer micro-USD with BigInt intermediates prevents rounding/overflow;
+all projected/request/reserved spend counts against supplied cap. Units1-100;
+unknown/negative/nonfinite/fractional values reject, no defaultzero. Arithmetic
+is not verified quote/spend/owner approval. Strict capability input accepts no
+asserted subject/authorization flags, always reports those contracts unverified
+and adapter disabled even for known provider/switchtrue/affordablebudget. Existing
+execute, guards, routes/env/legacy worker unchanged. No enabling or paid action.
+
+ASSUMED2026-11-08:494 registry/switch inventory does not authorize paid provider
+execution. Keep execute disabled; pure future capability checks must failclosed
+on unverified quote/authorization/subject/projectedbudget. Existing metadata and
+env strings are not owner approval or verified vendor facts. Never repurpose the
+legacy browser/DB skip-trace worker/routes as this adapter. Independent docs-only
+branch excludes blockedvoice37c36f2/batch77608f7/455runtime/tests. No env change,
+paid choice, provider request, owner lookup or canonical write performed.
+
 ASSUMED2026-11-08:454 current per-card note voice reuses existing local-only
 controller/input event; extend only explicit classic/preview allowlists and
 asset4->5. No batchSubmit/overallnote/draftpersistence/from_voice assertion or
