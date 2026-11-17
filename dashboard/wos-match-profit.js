@@ -3,7 +3,7 @@
   function esc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
   function amount(v){return typeof v==='number'&&Number.isFinite(v)?'$'+v.toLocaleString('en-US',{maximumFractionDigits:2}):'Not established';}
   function range(v){return v&&typeof v.low==='number'&&typeof v.high==='number'?v.low===v.high?amount(v.low):amount(v.low)+' - '+amount(v.high):'Not established';}
-  function date(v){return Number.isFinite(Date.parse(v))?new Date(v).toLocaleString('en-US',{month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit',timeZone:'UTC'})+' UTC':'Date not recorded';}
+  function date(v){const clock=root.wosCardClock,label=typeof clock?.formatTime==='function'?clock.formatTime(v,new Date().toISOString()):'Unknown';return label==='Unknown'?'Time not confirmed':label;}
   function markup(p){
     if(!p)return '<div class="match-profit"><strong>Potential net fee: Not established</strong><p>Potential, no confirmed buyer. Proof of funds: Not established.</p></div>';
     const fields=[['buyer_price','Reported buyer price'],['contract_price','Reported contract price'],['costs','Total costs']];
