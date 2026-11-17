@@ -8,9 +8,12 @@ B-23a #513 RELEASED as `f9bdb7e`: corrected head0e58ba9 hosted44190617416
 PASS320/0/0, automatic deployment7868487033 SUCCESS, fixed public/static PASS.
 Earlier failed44156436749 remains failed; two rendered-selection waits kept
 every original assertion, fixture and timeout. No source collection was enabled.
-B-23b #517 is integrated with current main. Synthetic review proved parsed rows
-beyond1000 were discarded; now retain every parsed row and mapper duplicate
-audit. Original adapter test and new retention regression PASS; hosted gate pending.
+B-23b #517 RELEASED as `19e4a77`: head217e4ca hosted44194323949 PASS322/0/0,
+automatic deployment7868989719 SUCCESS, fixed public/static PASS. Every parsed
+row and duplicate audit is retained; the remote request-page bound stays1000.
+B-23c1 now preserves row metadata, proof-only rows and duplicate audit through
+shared candidate normalization/orchestration before any catalog wiring. Focused
+synthetic integration tests PASS; full hosted gate pending. No sources scheduled.
 No source was scheduled or collected; B-23c and OFF B-24a/#523 remain next.
 
 - B-25: green PR #509 merged as `35a5f6e`; handoff PR #512 merged as `c53740b`.

@@ -143,6 +143,7 @@ function mapRowToLead(row, profile, options = {}) {
     recorded_date: recorded.iso,
     recorded_date_status: recorded.status,
     recorded_date_raw: recorded.raw,
+    recorded_date_origin: recorded.origin,
     amount_listed: clean(picked.amount_due.value),
     amount_listed_label: clean(picked.amount_due.value) ? AMOUNT_LABEL : '',
     source_status: clean(picked.status.value),
@@ -162,7 +163,9 @@ function mapRowToLead(row, profile, options = {}) {
 
 const AUDITED_FIELDS = Object.freeze([
   'source_url', 'source_row_reference', 'address_as_written', 'address_origin', 'city', 'zip', 'owner_clue',
-  'sale_date', 'sale_date_status', 'sale_date_raw', 'recorded_date', 'amount_listed', 'source_status',
+  'sale_date', 'sale_date_status', 'sale_date_raw', 'sale_date_origin',
+  'recorded_date', 'recorded_date_status', 'recorded_date_raw', 'recorded_date_origin',
+  'document_number_origin', 'owner_clue_origin', 'amount_listed', 'source_status',
   'evidence_text', 'lane', 'lane_reason'
 ]);
 

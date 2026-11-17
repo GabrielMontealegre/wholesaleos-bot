@@ -1,5 +1,15 @@
 # Decisions
 
+ASSUMED 2026-11-17: B-23c1 first preserves B-23 evidence through shared
+normalization/orchestration before catalog activation. Copy only an explicit
+own-field list of descriptive strings; never infer an event date, price,
+address verification or ingestion readiness from these fields. Retain proof-only
+rows and mapper audit separately from counts-only summaries. Carry recorded-date
+origin and audit raw/status/origin changes even if the normalized day is equal.
+Synthetic pipeline probes reproduced missing case identity and recorded origin;
+focused regressions now pass. No original assertions or source schedule change.
+-- AGENTS3/4/5, B-23 every-row/audit and origin-travels-with-value acceptance.
+
 ASSUMED 2026-11-17: B-23b's MAX_ROWS is a remote request-page bound, not
 permission to discard rows already parsed from a bounded public document.
 Remove the adapter's post-parse slice; keep rows_capped at0 and retain mapper

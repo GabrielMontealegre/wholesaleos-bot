@@ -193,6 +193,14 @@ function normalizePropertyCandidate(input, context) {
         : input.auction_date ? 'auction_date' : input.event_date_origin || (input.event_date ? 'event_date' : '')),
     sale_date: cleanText(input.sale_date),
     sale_date_origin: cleanText(input.sale_date_origin),
+    // Row evidence is descriptive only; it never sets price, date authority or readiness.
+    ...Object.fromEntries([
+      'distress_lead_key', 'distress_source_kind', 'document_number',
+      'sale_date_status', 'sale_date_raw', 'address_origin',
+      'recorded_date', 'recorded_date_status', 'recorded_date_raw', 'recorded_date_origin',
+      'amount_listed', 'amount_listed_label', 'lane', 'lane_reason'
+    ].filter(field => Object.prototype.hasOwnProperty.call(input, field))
+      .map(field => [field, cleanText(input[field])])),
     property_address_origin: cleanText(input.property_address_origin),
     sale_date_resolution: input.sale_date_resolution && typeof input.sale_date_resolution === 'object'
       ? Object.assign({}, input.sale_date_resolution) : null,

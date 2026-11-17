@@ -98,6 +98,10 @@ function candidateFromLead(lead, profile, context) {
     sale_date_status: lead.sale_date_status,
     sale_date_raw: lead.sale_date_raw,
     sale_date_origin: lead.sale_date_origin,
+    recorded_date: lead.recorded_date,
+    recorded_date_status: lead.recorded_date_status,
+    recorded_date_raw: lead.recorded_date_raw,
+    recorded_date_origin: lead.recorded_date_origin,
     address_origin: lead.address_origin,
     amount_listed: lead.amount_listed,
     amount_listed_label: lead.amount_listed_label,
@@ -186,7 +190,12 @@ async function runDistressListAcquisitionAdapter(options = {}) {
     cards,
     source_proof_rows: proofOnly.map((lead) => ({
       lead_key: lead.lead_key, source_row_reference: lead.source_row_reference, document_number: lead.document_number,
-      lane: lead.lane, lane_reason: lead.lane_reason, evidence_text: lead.evidence_text, source_url: lead.source_url
+      lane: lead.lane, lane_reason: lead.lane_reason, evidence_text: lead.evidence_text, source_url: lead.source_url,
+      source_kind: lead.source_kind, captured_at: lead.captured_at,
+      sale_date: lead.sale_date, sale_date_status: lead.sale_date_status,
+      sale_date_raw: lead.sale_date_raw, sale_date_origin: lead.sale_date_origin,
+      recorded_date: lead.recorded_date, recorded_date_status: lead.recorded_date_status,
+      recorded_date_raw: lead.recorded_date_raw, recorded_date_origin: lead.recorded_date_origin
     })),
     candidate_count: candidates.length,
     distress_audit: merged.audit,
