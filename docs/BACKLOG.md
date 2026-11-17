@@ -137,6 +137,51 @@ reserve the final5% primary window for rollback/redeploy only.
 2026-11-08 independent455.4B5 JV/profit metadata LOCAL/BLOCKED: new branch
 
 2026-11-08 active455 creation-date candidate frozenf36c5c3 LOCAL/BLOCKED:
+
+2026-11-08 compact source-card status words LOCAL/BLOCKED: canonical field-
+scoped captions plus expandable raw source-status details; reasons/identity/
+controls/readiness/dates/backend unchanged. New unit and actual-renderer checks
+PASS1366/400/412; six final images inspected, initial badge-wrap images retained.
+Existing queue test failed twice on duplicate cache57 guards (874 then931) after
+owned cache57->58 change. Only first guard updated to58; second remains unchanged
+under D065c stop. Misleading second message says helper workbench but assertion
+also checks public-deals script, no helper/auth change. Both raw failure logs
+retained; no further retry/full/CI/PR/push/release or waiver. Whole455.8 remains
+partial: value/freshness/action codes and other source sections not repaired.
+Remaining value/freshness/action wording inventory is read-only until this source
+card slice is unblocked; no further edits/runs to evade the two-failure stop.
+Next independent step: reconcile remaining455 statuses from existing proof, then
+the next unblocked D065 item; do not claim whole455 complete or repoll releases.
+Fresh run-start usage56%primary/9%secondaryUSED; whole455/487/backlog incomplete.
+Handoff: https://github.com/GabrielMontealegre/wholesaleos-bot/issues/501
+
+HISTORICAL2026-11-08 active source-day inventory LOCAL/docs-only: public-deals source
+panel has real dashboard/Deal Finder callers. Same saleDateInfo drives labels,
+upcoming/urgent eligibility and sorting using browser-local day; backend snapshot
+repair separately uses server-local currentDateIso for passed-sale risk flags.
+Synthetic fixed VM Nov3 sale is upcoming0days inUTC7 but not Tokyo. Malformed
+Nov31 DTO also gets upcoming, but backend emission is NOT claimed. Writer/raw-
+origin/resolver trace retained; no runtime edit, source inference or private read.
+Implementation BLOCKED pending owner-display vs source/legal-calendar boundary;
+do not change flags/readiness/sorting through a cosmetic helper replacement.
+Next independent scope: remaining455 compact card-face wording inventory under
+D065, exact active callers only; keep all blocked runtime/tests separate.
+Fresh run-start usage48%primary/7%secondaryUSED. Whole455/487 remains incomplete.
+Contract handoff: https://github.com/GabrielMontealegre/wholesaleos-bot/issues/500
+
+HISTORICAL2026-11-08 Email timestamp trace complete LOCAL/test-only: all four actual mail
+read routes annotate RFC/ISO to canonical ISO before browser display; no OAuth
+rewrite needed. New injected-reader10case contract testPASS, no provider/auth/
+ambientclock/write effects. Native screen already strict; WOS note metadata is
+a separate recorded-data boundary. Actual synthetic invalid30Feb RFC header is
+normalized to March2 by receivedTime/annotation; diagnostic retained, not a test
+enshrining bad behavior or a claimed production occurrence. Frontend follow-on
+BLOCKED pending bounded upstream calendar/provenance decision; no runtime/PR/
+push/full/CI/release. Next independent work follows D065 ordered backlog, keeping
+all prior blocked runtimes separate. Usage38%primary/6%secondaryUSED atstart.
+Calendar contract handoff: https://github.com/GabrielMontealegre/wholesaleos-bot/issues/499
+
+HISTORICAL2026-11-08 active455 creation-date candidate frozenf36c5c3 LOCAL/BLOCKED:
 FIRST307-file full naturally exited1,210 passed/97 failed/0 skipped,600s/file;
 all307 timing rows retained proof-455-lead-age/first-local-full.json. Same97
 failed filenames as prior devicefull; comparison does NOT prove sharedcause.
