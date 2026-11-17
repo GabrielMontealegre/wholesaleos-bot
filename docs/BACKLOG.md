@@ -1,5 +1,22 @@
 # Backlog
 
+## Latest Run Summary (2026-11-17)
+
+- B-25: green PR #509 merged as `35a5f6e`; handoff PR #512 merged as `c53740b`.
+  Automatic deployment succeeded. Fixed public health/dashboard/app/static checks passed;
+  the unauthenticated device endpoint returned 401. No private reads or business writes.
+- #495: [PR #514](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/514)
+  merged as `70b43a9`. First hosted suite: 306 passed, 0 failed, 0 skipped.
+  Exact-source automatic deployment and public/static verification passed.
+  Synthetic 1366/400/412 screenshots inspected; no production device metadata read.
+  Evidence: [release record](cycles/proof-514/README.md).
+- All eight frozen branches are pushed: #514-#516 and #518-#522. Remaining slices
+  await their ordered green merge and deployment verification. #496's first head passed;
+  its current-main integration head needs its own single CI run. No unchanged retry.
+- #433/#434 each received a non-force merge from fixed main and a new hosted run.
+  B-23b already has engineer PR #517; review it after B-23a #513, do not duplicate it.
+  Architect PR #511 is unchanged. The rest of B-23/B-24/B-07/B-21/B-19 is not done.
+
 ## CODEX HAND-OFF (Claude engineer run, 2026-11-16). Read this before the run order below
 
 Gabriel asked Claude to work as the engineer on 2026-11-16 while Codex was stuck. What happened:
@@ -26,6 +43,47 @@ Gabriel asked Claude to work as the engineer on 2026-11-16 while Codex was stuck
 Codex picks up next, in order: frozen slices (above) -> #433/#434 final main merge -> B-23 (whatever is
 left) -> B-24 (switch off) -> B-07/B-21 -> B-19.
 
+
+2026-11-17: #495 resumed under D-067c and the owner's Claude handoff.
+Current main (including green PR #509) is merged into this frozen slice.
+Historical local failures below remain evidence, not a hosted release gate.
+First hosted gate passed 306/0/0; PR #514 is released with bounded public proof above.
+No production business writes are authorized. Historical local failures remain unchanged.
+
+## Historical Device-Slice Evidence
+2026-11-08 run summary: fresh usage primary3% USED, secondary0% USED.
+Fetch origin succeeded; origin/main is ancestor of HEAD (0 behind,2 ahead).
+455.4B3 device labels BLOCKED / needs-architect: first full gate completed
+209 passed,97 failed,0 skipped of306,600s/file; all306 timings retained in
+docs/cycles/proof-455-device-times/first-local-full.json. Existing device UI
+failed again at startup52:5 before requests, matching the focused failure.
+Cause UNPROVEN; no unchanged retry, waiver, push, PR, CI or release.
+New device component test passed in the full gate (2.22s), not a release pass.
+Next independent scope: Email template timestamp reader trace, then JV/profit
+metadata and active legacy source-day readers. Whole455/487 remains incomplete.
+Unrelated exports/debug and newly observed synthetic-failure.png preserved.
+Standing autopilot authority continues until STOP AUTOPILOT; reserve the final
+5% primary window for rollback/redeploy only, no reset/purchase/model escalation.
+
+HISTORICAL PRE-GATE 2026-11-03 455.4B3 LOCAL device labels candidate: shared UTC-7 history and
+future expiry label, server state/auth/TTL/writers unchanged. New synthetic
+actual component3width/Tokyo testPASS, three images inspected. Original signed
+server device UI focused check FIRST FAILED startup52:5 before browser requests;
+cause UNPROVEN, no retry or environment attribution. First full gate pending;
+no push/PR/CI/release. Own prior493 proof carried, unrelated exports/debug untouched.
+
+2026-11-03 PR493 RELEASED/VERIFIED f2294a7500629e7a3edf2718ce981342a1d0802a,
+whole tree identical to tested364d6d8. FIRST PR41749594884/job126311094871
+305/0/0 of305,600s/file,19m13 job wall; sole MAIN41752093784/job126319375219
+also305/0/0,18m34 wall. All610 hosted timings retained alongside original
+local302/3/0/all305 timings, total915 rows. AutomaticRailway210b84b0 exactmerge
+SUCCESS; eight fixed public GET/static/401 and settled signed GLOBAL shell/
+control44x44/nooverflow proofPASS. Temporary tab closed; no private content,
+JSON/AX/captures, provider/business writes or auth transfer. Six inspected
+synthetic1366/400/412 screenshots retain actual Ask/Activity timestamp proof.
+This completes recorded-context dates/filter consistency only, NOT whole455/487.
+Next ordered independent reader: remembered-device creation/expiry dates.
+PR: https://github.com/GabrielMontealegre/wholesaleos-bot/pull/493
 ## NEXT RUN ORDER (D-067, architect 2026-11-09). Read this first; it replaces every older order below
 
 The older run notes below are history. Work this list from top to bottom. GitHub CI on the PR head is
@@ -53,7 +111,14 @@ reply Send switch, picking and paying for the B-24 provider, any outreach.
 
 ---
 
-## B-25 · Pin wasm-feature-detect 1.9.0 (D-067b) · TODO ([#507](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/507))
+## B-25 · Pin wasm-feature-detect 1.9.0 (D-067b) · DONE ([#507](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/507))
+
+2026-11-17: PR #509's new head `105c244` passed hosted run `43936249255`
+and merged as `35a5f6e`. The dependency override remains; two queue tests now
+refuse live fetches without changing their original assertions. Owner Nov17
+handoff supersedes the former package-only/#510 ordering hold. PR #512 brought
+that handoff onto main. Automatic deployment and fixed unauthenticated checks
+passed; no private records, device action, provider or business write was used.
 
 `wasm-feature-detect` 1.10.0 (published 2026-11-09) crashes the tesseract OCR worker on Node 20. With no
 lockfile, CI and the next production deploy both install it. Acceptance: package.json gets
@@ -66,6 +131,12 @@ USAGE WARNING 2026-11-03: primary43% USED, secondary93% USED. Secondary
 remaining is below10%; architect should review the live app/backlog status.
 No agent reset/purchase/model escalation. Continue the authorized work loop;
 reserve the final5% primary window for rollback/redeploy only.
+
+2026-11-08 independent455.4B4 template labels LOCAL/BLOCKED: branch from
+
+2026-11-08 independent455.4B5 JV/profit metadata LOCAL/BLOCKED: new branch
+
+2026-11-08 active455 creation-date candidate frozenf36c5c3 LOCAL/BLOCKED:
 
 494 preflight architecthandoff505 created2026-11-08T06:56:37Z; exact frozen
 candidate/fulltimings/question retained, no retry or release authorization.

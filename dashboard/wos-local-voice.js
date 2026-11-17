@@ -1,12 +1,13 @@
 'use strict';
 (function(root){
   const SELECTOR=[
-    'textarea[data-email-reply]','textarea[data-deal-draft]','textarea[data-draft]','textarea[data-conversation-draft]','textarea[data-ask-query]',
+    'textarea[data-email-reply]','textarea[data-deal-draft]','textarea[data-draft]','textarea[data-conversation-draft]','textarea[data-ask-query]','textarea[data-decision-note]',
     '#wosEmailBody','#wosSmsBody','#wosCallNotes','#email-template-library textarea[name="body"]',
     'textarea[id^="lead-notes-"]','textarea[id^="deal-call-notes-"]','textarea[id^="msg-sms-"]','textarea[id^="msg-email-"]',
     '#evt-notes','#ml-notes','#mb-notes','#email-body','#bulk-sms-body','#ise-body','#iss-body','#intro-email-body',
     '#ao-email-body','#ao-sms-body','#or-sms-body','#or-email-body','#or-buyer-email','#or-buyer-sms'
   ].join(',');
+  const PREVIEW_SELECTOR='textarea[data-ask-query],textarea[data-decision-note]';
   const LANGS=['en-US','es-MX'];
   function createController(host){
     let active=null,generation=0;
@@ -53,10 +54,10 @@
     }
     return {dictate,read,cancel,supported:()=>!!localConstructor(),target:()=>active?.target};
   }
-  if(typeof module!=='undefined'&&module.exports){module.exports={createController,SELECTOR};return;}
+  if(typeof module!=='undefined'&&module.exports){module.exports={createController,SELECTOR,PREVIEW_SELECTOR};return;}
   const controller=createController(root),targets=new WeakMap();let scanning=false;
   function attach(){
-    document.querySelectorAll(document.documentElement.dataset.wosWorkspace==='preview'?'textarea[data-ask-query]':SELECTOR).forEach(target=>{
+    document.querySelectorAll(document.documentElement.dataset.wosWorkspace==='preview'?PREVIEW_SELECTOR:SELECTOR).forEach(target=>{
       if(targets.has(target))return;
       const bar=document.createElement('div');bar.className='wos-voice-tools';
       bar.innerHTML='<div><label>Voice language<select data-voice-lang aria-label="Voice language"><option value="en-US">English</option><option value="es-MX">Espa\u00f1ol</option></select></label>'+(target.readOnly?'':'<button type="button" data-voice-dictate title="Dictate on this device only; review before sending" aria-label="Dictate on this device">\uD83C\uDF99</button>')+'<button type="button" data-voice-read title="Read this draft using an on-device voice only">Read aloud</button><button type="button" data-voice-stop title="Stop dictation and read aloud">Stop</button></div><p role="status" data-voice-status></p>';
