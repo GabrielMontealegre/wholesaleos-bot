@@ -1,5 +1,17 @@
 # Decisions
 
+ASSUMED: B-25 is fixed by making the two queue tests refuse live network (shared helper), not by
+editing any assertion; the wasm-feature-detect 1.9.0 override from #509 is kept as hardening. D-067a says
+never edit a test to make the local sandbox pass: this change is not for the sandbox, it removes a
+live-internet dependency that made CI depend on a county website (AGENTS 4 test policy, scaffolding;
+AGENTS 5 network) -- 2026-11-16.
+
+ASSUMED: #433/#434 are brought up to date with a merge of main (not a rebase) because the engineer may not
+force-push branches it did not create; the resulting tree is the same -- 2026-11-16.
+
+ASSUMED: B-23 ships as ordered sub-PRs (B-23a pure modules and fixtures, B-23b wiring and read-only
+counts) under AGENTS 2 "split big items" -- 2026-11-16.
+
 ASSUMED2026-11-08:455.8 compact source status captions map only exact canonical
 field-scoped enums and known quality buckets. No labels inferred from source
 prose; unknown/wrong-field values remain unconfirmed. Raw status codes/reason
@@ -368,6 +380,111 @@ own primitive ISO timestamp <=recorded server imported_at. Upload remains strict
 until the later writer slice. Existing8field envelopes/history/actors unchanged.
 No migration,deletion,contact-to-reply inference or new operator gate.
 --AGENTS safety/data truth and D064/457--2026-10-27.
+
+## D-067 - Unblock the gates: CI decides, frozen slices ship or get cut (Architect, 2026-11-09)
+
+Gabriel, 2026-11-09, told the architect to unblock Codex. Codex merged nothing from 2026-11-06 to
+2026-11-09 and opened issues #495-#505. Most of them describe the same local result: 209 passed, 97 failed.
+
+**a. GitHub CI is the required gate. A local run is a pre-check only.** The required full gate is the
+GitHub Actions "Full test suite" run on the PR head. Evidence: CI run 42628317216 (2026-11-09, docs-only
+PR #506 on main f2294a7) passed every file Codex named as failing locally. That includes
+remembered-device-ui/routes/integration, email-template-approvals-ui, match-profit-ui, jv-signing-review-ui,
+filter-hygiene-ui, lead-geography-ui, local-voice-ui, api-session-gate, shared-dashboard-login,
+assistant-decision-answer-routes, ask-native-entry-ui, plain-card-words-ui, workspace-more-navigation,
+upload-assistant-snapshot and operator-profile-boundary. The only two failures came from D-067b. So the 97
+local failures (ERR_NETWORK_ACCESS_DENIED, `fetch failed` on loopback, EPERM/EACCES, fixture start or health
+timeouts, destroyed execution context) are classified as **the local sandbox blocking loopback network,
+child servers and the browser**. They are not product defects. This classification is proven by the CI run
+and is not a guess.
+- When a local run fails only with these sandbox error types, push the branch, open the PR and let CI run
+  once. A local sandbox failure is not a gate failure and does not count toward D-065c.
+- D-065c still applies to CI runs: one CI run per head and no unchanged retries. If the same test fails twice
+  in CI on two different heads, the slice is DEFERRED (not BLOCKED). Note it in the backlog and move on. Open a
+  `needs-architect` issue only when a CI failure shows a real assertion failure that you cannot explain.
+- Stop gate forensics. Write no more log audits, lifecycle traces or flag counts like #505. They cost budget
+  and ship nothing. Never edit a test, timeout or fixture to make the local sandbox pass.
+- AGENTS.md §5 is unchanged. Tests that protect auth, provenance, money, dates or no-send keep every assertion.
+
+**b. Dependency pin first (B-25, codex-task #507).** `wasm-feature-detect` 1.10.0, published 2026-11-09,
+crashes the tesseract OCR worker on Node 20. With no lockfile, CI and the next production deploy
+(`node:20-slim`, `npm install`) both pick it up. The fix is one line in package.json:
+`"overrides": {"wasm-feature-detect": "1.9.0"}`. Ship it before any other PR. Every other PR waits for it.
+
+**c. Frozen local slices: one CI attempt each, then ship or cut.** After B-25, rebase each frozen branch on
+main, push it, open the PR and run CI once. If it is green, merge, deploy and run the §7 check. If it fails,
+make one real fix commit and give it one more CI run. If it is still red, mark it DEFERRED and continue. Order:
+#495 device labels, #496 template labels, #497 JV and profit labels, #498 active Today filter, #501 source-card
+words, #502 batch decision model, #504 note voice, #505 skip-trace preflight (#494).
+- #501: you may update both duplicate cache-version assertions in
+  `tests/dashboard-public-deal-queue.test.js` (the one near line 874 and the duplicate near line 931) from 57
+  to 58 in one commit. This is incidental scaffolding under AGENTS §4. Keep each assertion and its message.
+  This is the one changed head that the slice gets.
+- PRs #433 (negotiation planner) and #434 (exit-strategy engine) already passed CI and the #436-#438
+  findings are fixed in them. Rebase them on main (they now conflict), run CI once and merge if green. They
+  are pure modules with no UI.
+
+**d. Cut from item 455 (date-display polish ends here).** No new 455 date slices start after the ones in (c).
+- #499 (email date with an impossible calendar day, such as "30 Feb", becomes 2 March): this is a real but
+  rare edge case. The frontend timestamp follow-on is **cut**. The `receivedTime` real-calendar check moves to
+  Deferred: after parsing a named-month mail date, reject it when its day, month or year does not match in the
+  header's own offset, and show "Time not confirmed". Add no new parser dependency.
+- #500 (the browser's local day drives sale urgency): **cut. Change nothing now.** Gabriel's browser runs
+  at UTC-7 (Cabo), so his display day already matches. The backend `repairSaleDateUrgency` stays the authority
+  for "sale date passed". Deferred: option 1 (inject the owner's UTC-7 day and add a real-calendar check in
+  `saleDateInfo`). The browser must never be the authority for whether a sale has passed.
+
+**e. Item 494 is folded into B-24.** The skip-trace button and the paid provider call belong to B-24's
+single provider interface, which is off by default. Ship the pure preflight from #505 under (c) if CI is
+green. Build no separate provider path.
+
+**f. Item 454 board contract (#503). Version 1 shows reported stages only. It is scheduled after B-19.**
+1. *Identity.* Add an optional `canonical_ref` to the snapshot deal. It is a namespaced record reference such
+   as `deal:<id>` or `lead:<id>`, resolved through the existing unique-reference resolver in record-activity.
+   If exactly one record matches, the deal is linked. If none or several match, it shows "Not linked" and
+   stays reported-only. Never bind by address, file path or equal IDs. Two snapshots show the same deal only
+   when they carry the same `canonical_ref`. No migration and no automatic merge.
+2. *Stages.* Add an optional `board_stage`, with values new, analyzed, questions_sent, they_answered,
+   offer_sent, negotiating, ready_to_sign, under_contract, buyer_committed, closed and dead. Add an optional
+   `dead_reason` shown as text. Both are additive and optional, and the version-1 snapshot stays valid. When
+   `board_stage` is missing, the deal stays in today's six-stage group. Never remap it from free text. Every
+   card says "Reported by assistant, <snapshot date>". A "Confirmed" mark appears only for three stages, and
+   only when the linked reviewed deal's operator status shows it: under_contract needs `contract_verified`,
+   buyer_committed needs `buyer_committed`, closed needs `closed`. The mark is labeled "Confirmed by operator".
+   Mail-server acceptance, JV stages, prices, drafts and free text never confirm a stage.
+
+**g. Older issues.** #450: option A is approved. Compare a snapshot's `captured_at` against the server time
+sent in the same response, measure age from when the browser received it, and keep rejecting forged, future
+and stale snapshots against that server time. No skew window. Scheduled after B-19 with the rest of #412
+phase B. #409: option 1. The explicit canonical JSON file is the transport for pipeline and outcome
+reports. Build no Markdown or legacy adapter. The assistant routine will emit that JSON. #360: superseded by
+(a). #209: a 502 on the first leads load within about 2 minutes of a Railway deploy, when the next load
+hydrates, is deploy rollout noise. Note it in the PR and don't open an incident. A 502 outside a deploy
+window reopens #209 with its timestamp, URL and status.
+
+**h. Still Gabriel's (not decided here).** #428 credential rotation: is it done? Turning on the D-061 reply
+Send switch. Picking and paying for the B-24 provider. Any outreach.
+
+## D-066 - Deal-closing features first: public distress lists and a paid data provider (Gabriel, 2026-11-09)
+
+Gabriel, 2026-11-09: "I want the software to do exactly the same" (pull public distress lists like the
+Dallas foreclosure notices and Charlotte code cases), and "we need to pay for the best one to get those
+comps and to also be able to do skip tracing", with an API the app can call.
+
+1. **Order.** After the open needs-architect items are answered, the next feature work is B-23 (public
+   distress lists importer), then B-24 (paid data provider adapter, off until enabled), then comps
+   (B-07, B-21) and the match engine (B-19). This supersedes the P0 pause on new source and comps work
+   for these items. UI work already in flight may finish; no new UI polish slices start before B-23.
+2. **D-012 amended.** A paid data provider may be enabled once Gabriel picks one and signs up himself.
+   Research (private, 2026-11-09) recommends PropertyRadar Team (about $249/month: comps, 500
+   skip-trace lookups, distress lists, API) or RealEstateAPI plus Tracerfy (about $640/month). The
+   adapter ships off: registry entry plus environment switch, key only in Railway, monthly cost cap.
+3. **Texas comps.** No vendor found sells real Texas closed prices by API to a non-licensee. Provider
+   values in Texas are estimates: labeled, never comps, never ARV (AGENTS.md section 5). Texas comps stay
+   in the operator lane (agent partner, local helper).
+4. **Texting skip-traced numbers** keeps every D-054 rule (Send button or approved batch of 20 or fewer,
+   DNC and do-not-contact check, quiet hours, carrier registration). Skip-traced numbers are "Possible
+   number, not confirmed" with their source (D-006).
 
 ## D-064 - Assistant Today Follow-Through (Architect, 2026-10-27)
 
@@ -1207,7 +1324,7 @@ ASSUMED: #283's first-panel requirement is a release gate; the old public panel'
 | D-008 | 2026-09-30 | **One CRM timeline per lead**: every interaction logged with date, time and who (Gabriel or which VA): acquired, opened, closed, reopened, calls, texts, notes. Plus lead clocks: sale/event date, stale date, last touch. |
 | D-009 | 2026-09-30 | **Passed sale dates are not dead leads.** They move to an "After the sale" lane (postponed, still-owner, bank-owned, sold to investor, redemption) — never discarded. |
 | D-010 | 2026-09-30 | **Loan interest rate matters** (low rate → subject-to). It is a call question; a typical-rate clue from the loan date is allowed, labeled. |
-| D-012 | 2026-09-30 | **No paid services yet.** Everything must work free first. |
+| D-012 | 2026-09-30 | **No paid services yet.** Everything must work free first. Amended 2026-11-09 by D-066: a paid data provider may be enabled once Gabriel picks and signs up. |
 | D-013 | 2026-10-01 | **Generic adapters for every state.** No county-specific naming in new code; Dallas, Ellis, etc. are profiles. |
 | D-014 | 2026-09-26 | **VA materials** exclude MAO, spreads, buy boxes and title companies. |
 | D-015 | 2026-09-26 | **Offer math**: MAO = ARV × band% − repairs − fee. Band: 70% under $120k ARV; above that, the course chart up to 80–83%. Repairs before condition is known: $20/sq ft light to $50/sq ft heavy, labeled estimate. |
