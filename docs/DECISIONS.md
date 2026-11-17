@@ -1,5 +1,15 @@
 # Decisions
 
+ASSUMED 2026-11-17: B-23c2 source counts are a read-only projection of the
+latest saved preview outcome per configured source in retained scout jobs,
+not an import, live refresh or all-time ledger. Unknown/invalid/conflicting
+counts stay null; a newer blocked outcome never reuses an older successful
+count. Unique preview rows are not saved/new business leads. Strict store read
+must not create directories, swallow corruption or expose cards/proof/audit.
+Expose only known metadata/typed counts behind requireAdmin and no-store;
+collection remains disabled. No original assertions change.
+-- AGENTS3/4/5, B-23 counts acceptance, source truth and no live import boundary.
+
 ASSUMED 2026-11-17: B-23c1 first preserves B-23 evidence through shared
 normalization/orchestration before catalog activation. Copy only an explicit
 own-field list of descriptive strings; never infer an event date, price,
