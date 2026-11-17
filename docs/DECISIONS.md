@@ -12,6 +12,32 @@ force-push branches it did not create; the resulting tree is the same -- 2026-11
 ASSUMED: B-23 ships as ordered sub-PRs (B-23a pure modules and fixtures, B-23b wiring and read-only
 counts) under AGENTS 2 "split big items" -- 2026-11-16.
 
+OWNER standing order, recorded2026-11-08: continue autopilot until explicit
+STOP AUTOPILOT. Fetch/reconcile origin, implement backlog under AGENTS, commit/
+push/PR, one CI run per new head with no per-PR limit, green merge, automatic
+deployment and bounded read-only proof are authorized. Decide routine questions
+under AGENTS3, log ASSUMED, continue. Sandbox/approval denial: record and skip,
+never bypass or repeatedly retry. Same failure twice: needs-architect/BLOCKED
+for that slice, then independent work; never retry an unchanged head for green.
+Usage limits wait/resume naturally. Paid services, secrets, outreach/messages,
+stored-data deletion and production batch writes remain owner-only. Existing
+privacy, no-manual-Railway and safety restrictions remain unchanged.
+
+ASSUMED2026-11-08:455.4B3 is BLOCKED after remembered-device-ui.test.js
+failed at startup52:5 both focused and in first full suite. All306 full timing
+rows and209/97/0 result retained. No cause attribution, assertion change or
+unchanged retry; no release. Continue independent template reader trace under
+D065c, AGENTS3/10 and standing order; do not carry blocked device runtime into
+an independent release. Open question: architect must bound a real fix for the
+repeated device fixture startup failure without weakening auth or assertions.
+
+ASSUMED 2026-11-03:455.4B3 remembered-device labels reuse shared strict UTC-7
+clock3; future expiry uses scheduled formatter, recorded creation/revocation
+and expired metadata use recorded formatter. Server active/current/revoked
+state stays authoritative; no token/TTL/session/revoke/schema/writer change.
+Unavailable formatter shows Time not confirmed, never browser-local parsing.
+-- AGENTS3/4/5, owner455 dates and additive presentation consistency.
+
 ASSUMED: #402 exit engine (Claude cloud session, PR pending). Verdicts are
 Strong / Possible / Needs data / No: the issue lists three, and "Needs data" keeps
 missing facts visible instead of guessing (AGENTS 5 truth). The flip buyer price
