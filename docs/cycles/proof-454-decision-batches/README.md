@@ -18,6 +18,10 @@ Session19490 and wait cells163-168 naturally finished; do not await them again.
 
 ## Architect Handoff
 
+Resolved2026-11-08: https://github.com/GabrielMontealegre/wholesaleos-bot/issues/502
+Metadata confirms matching title, created/updated03:52:21Z and zero comments.
+No duplicate issue created; the historical connector limitation below is retained.
+
 GitHub CLI changed-issue metadata read failed connection; not a sandbox denial.
 GitHub connector acknowledged issue creation, then a bounded own-title lookup,
 but both returned only "Action completed" without an issue number or snapshot.

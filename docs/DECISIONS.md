@@ -28,6 +28,30 @@ ASSUMED: B-23 ships as ordered sub-PRs (B-23a pure modules and fixtures, B-23b w
 counts) under AGENTS 2 "split big items" -- 2026-11-16.
 
 
+ASSUMED2026-11-08:454 current per-card note voice reuses existing local-only
+controller/input event; extend only explicit classic/preview allowlists and
+asset4->5. No batchSubmit/overallnote/draftpersistence/from_voice assertion or
+new writer. Required existingvoiceUI gate repeats historical navigationfailure;
+D065c blocks slice, no retry/full/CI/releasewaiver or unprovenenvironmentclaim.
+Follow-up pureengine onmain is not productionintegration; exact recorded event
+adapter is absent, never substitute legacy namesake or generic sentactivity.
+
+ASSUMED2026-11-08:454 board projection BLOCKED503 until stable typed identity
+binding and stage/evidence semantics are explicit. Existing snapshot6-stage,
+reviewedstatus and orderedJVevents are different contracts. Activities typed
+email_sent can be imported_report; SMTPaccepted is not delivery or proof of
+question/offer semantics. Exact anchored mail/ref links are not address merges.
+Retain sources/attribution and legal/money/signature gates; no label-only stage
+mapping or new canonical writer. Synthetic diagnostics establish only these
+source boundaries, not production prevalence or acceptance. Batch handoff502
+now verified from metadata, no comments; prior unknownnumber history retained.
+
+ASSUMED2026-11-08:454 board-stage inventory preserves six imported reported
+stages and source provenance. Requested event-backed board is not label-only
+mapping: no canonical identity/stage/delivery inference from address, log prose,
+status or pick. Trace typed event/identity contracts before additive changes.
+Independent branch carries docs/proof only, never blocked batch77608f7 code/test.
+
 ASSUMED2026-11-08:D065c blocks454 batch candidate77608f7 after first306-file
 full209/97/0 repeated requiredgate failures. All306 timing rows retained; pure
 new/legacy passes do not waive full. Matching failednames across device/age/

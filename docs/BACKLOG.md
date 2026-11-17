@@ -138,6 +138,41 @@ reserve the final5% primary window for rollback/redeploy only.
 
 2026-11-08 active455 creation-date candidate frozenf36c5c3 LOCAL/BLOCKED:
 
+454 per-card note voice handoff504 created2026-11-08T06:18:21Z; frozenruntime
+37c36f2 preserved. No further edits/testretry/full/CI/release for this slice.
+
+2026-11-08 454/487 source+proof acceptance reconciliation retained; purefollowup
+engine is onmain with test callers only, not an automatic workflow. Independent
+per-card note voice allowlist slice LOCAL/BLOCKED after existing local-voice-ui
+repeated ERR_NETWORK_ACCESS_DENIED navigation15:112, naturalexit1 wall2.9361919s,
+causeUNPROVEN. New actualsynthetic sheet1366/400/412Tokyo PASS; threefinalimages
+inspected, firstbadfixtureimages retained; localvoiceunitPASS. Onlyselectors+
+twoassetversions4->5, no controller/route/auth/writer/provider changes. No full/
+CI/push/release or waiver. See issue-454-decision-note-voice.md and
+issue-454-487-acceptance-reconciliation.md. Preserveallblockedbranches. Next
+independent494 disabledregistry/switch contractinventory, no paidactivation or
+owneridentity inference. Whole454/455/487/backlog incomplete.
+
+2026-11-08 454 board identity/event boundary inventory complete for the traced
+paths; stage projection BLOCKED503 pending explicit source-to-canonical binding
+and stage/evidence policy. Eight synthetic diagnostic observations hold, input
+immutable and zero ambientclock/network/filesystem effects; not acceptance/full/
+browser/production proof. Snapshot reported stage, operator workflow event,
+connected incoming and SMTP acceptance are distinct. An imported email_sent is
+not independently verified send evidence. No runtime/tests/dependencies changed.
+Batch handoff resolved502(open,zero comments03:52:21Z), no duplicatecreation.
+Fetchedmainf2294a7 unchanged; no completedrelease repoll or blockedcode carried.
+Whole454/455/487 remain incomplete;503 affects board projection only. Continue
+remaining independent ordered contract work; no stage guessing or batchretry.
+
+2026-11-08 LOCAL454 board-stage preliminary source inventory: actual imported
+six-stage schema -> actor latest receipt -> assistant-model reported projection
+-> assistant-sheet grouping/detail. Not a safe label-only map to requested event-
+backed stages; typed event/identity authority still needs trace. Docs-only branch
+from fetchedmainf2294a7+ownedproof/docs, no blockedbatch/455 runtime/tests carried.
+See issue-454-board-stage-contract.md. No tests/CI/push/release; whole454/455/487
+incomplete. Usage92%primary/14%secondaryUSED runstart; reserve>=95 respected.
+
 2026-11-08 LOCAL454 batch model BLOCKED after FIRST306-file full gate naturally
 exit1:209/97/0,600s/file,all306 timings retained in proof-454-decision-batches.
 Frozen runtime77608f7; newmodelPASS0.93/oldpureanswersPASS0.94 do not waive full.
