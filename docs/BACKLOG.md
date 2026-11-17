@@ -138,6 +138,39 @@ reserve the final5% primary window for rollback/redeploy only.
 
 2026-11-08 active455 creation-date candidate frozenf36c5c3 LOCAL/BLOCKED:
 
+2026-11-08 LOCAL454 batch model BLOCKED after FIRST306-file full gate naturally
+exit1:209/97/0,600s/file,all306 timings retained in proof-454-decision-batches.
+Frozen runtime77608f7; newmodelPASS0.93/oldpureanswersPASS0.94 do not waive full.
+Same97 failednames as prior gates does NOT prove common cause; answer-route
+fetch failure causeUNPROVEN. No unchangedretry/fullrerun/push/PR/CI/release.
+GitHub connector acknowledged handoff creation but returned no issue number;
+question retained in proofREADME, avoid duplicate creation until metadata resolves.
+Preserve branch; no candidate runtime/tests carried into independent work. Next:
+remaining independent454 board/stage contract inventory underD065, not batch
+route/UI integration or unsafe canonical inference. Fresh usage90%primary/14%
+secondaryUSED after full; >=95 rollback/redeployonly. All sessions terminal.
+
+2026-11-08 LOCAL454 pure batch model candidate: separate append/read collection,
+exact actor/receipt/option binding, UUID recovery, revision conflicts, atomic
+validation and detached owned reads. Note-only/overall-only bounded policy,
+from_voice:false only until evidence contract. No route/UI/provider/canonical
+writer change. Initial focused new model and existing single-answer tests PASS;
+additional hostile-store/effect tests included for first full gate. Not released;
+full/CI/release pending, whole454/455/487 incomplete. No blocked455 code carried.
+
+2026-11-08 status reconciliation COMPLETE, not product completion: retained
+proofs show455 categories1/2/3/5/6/7/9 released (7/9 categories, not effort).
+Dates4 and words8 remain partial/BLOCKED under495-501. No completed release was
+repolled or reverified; no blocked runtime/tests carried. Source-only454 batch
+decision inventory now records exact schema -> UI -> route -> append/read chain,
+immediate per-choice POST vs requested explicit batch Submit, missing round/
+draft/voice/revision contracts, and additive pure-model next scope. No runtime,
+test/dependency change, test run, full gate, CI, push/PR/release or production
+write. Whole455/454/487/backlog remain incomplete;483 deferred,369 needs366.
+See docs/cycles/issue-455-status-reconciliation.md and
+docs/cycles/issue-454-batch-decision-contract.md. Fresh run-start usage71%primary/
+11%secondaryUSED. Historical notes below retain failures and release evidence.
+
 2026-11-08 compact source-card status words LOCAL/BLOCKED: canonical field-
 scoped captions plus expandable raw source-status details; reasons/identity/
 controls/readiness/dates/backend unchanged. New unit and actual-renderer checks

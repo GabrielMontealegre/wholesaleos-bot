@@ -28,6 +28,36 @@ ASSUMED: B-23 ships as ordered sub-PRs (B-23a pure modules and fixtures, B-23b w
 counts) under AGENTS 2 "split big items" -- 2026-11-16.
 
 
+ASSUMED2026-11-08:D065c blocks454 batch candidate77608f7 after first306-file
+full209/97/0 repeated requiredgate failures. All306 timing rows retained; pure
+new/legacy passes do not waive full. Matching failednames across device/age/
+batch gates is not causal proof. No unchangedretry/skip/cancel/bypass/environment
+attribution/push/CI/release. Architect question retained in proofREADME; connector
+acknowledged creation but no issue number returned, so do not invent one or
+duplicate it. Preserve blocked model branch; next independent scope frommain
+with owned docs/proof only, never this model/test. No route/UI integration.
+
+ASSUMED2026-11-08:454 first batch model is pure and UNREGISTERED. Round equals
+immutable snapshot receipt; expected revision is per actor/round, server advances
+it atomically. Exact UUID replay is readback even after newer import; conflicting
+payload/stale revision rejects. Up to100 unique choices, notes2000/overall4000;
+note-only uses null choice/label and nonblank note; overall-only allowed when
+nonblank, empty batch rejected. Accept only from_voice:false until actual voice
+evidence exists, not client assertion. Submitted time must fall between import
+and injected acceptance clock. Separate capped10000-record collection preserves
+single-answer history and business collections; reads return at most100 owned
+detached batches. No route registration/UI/send/stage/canonical writes added.
+
+ASSUMED2026-11-08 under AGENTS3/D065: reconcile455 using retained proofs only,
+not repeated release polling. Seven categories released; remaining4/8 partial
+and495-501 blocked. Continue independent454 with source-only batch contract
+inventory from main plus owned docs/proof. Next pure record model must remain
+unregistered until gated integration, preserve single-answer history and exact
+actor/snapshot/option binding, and reject inferred voice/stage/delivery facts.
+Later454 no-picks-on-open supersedes earlier voice-preselection proposal.
+No batch wire schema, provider/send permission, canonical mutation, production
+write authority, failed-gate waiver or completion claim is created by this trace.
+
 ASSUMED2026-11-08:455.8 compact source status captions map only exact canonical
 field-scoped enums and known quality buckets. No labels inferred from source
 prose; unknown/wrong-field values remain unconfirmed. Raw status codes/reason
