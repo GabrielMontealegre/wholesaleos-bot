@@ -131,6 +131,7 @@ function urlAllowedForProfile(profile, value) {
   if (!profile.shared_host) return true;
   const base = httpsUrl(profile.source_url);
   if (!base) return false;
+  if (url.pathname === base.pathname) return true;
   const prefix = base.pathname.replace(/\/[^/]*$/, '/');
   return prefix.length > 1 && url.pathname.startsWith(prefix);
 }

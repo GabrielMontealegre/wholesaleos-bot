@@ -63,8 +63,10 @@ function readArcgisJson(body, options = {}) {
 
 function readJsonRows(body, options = {}, reader = 'json_rows') {
   const data = typeof body === 'string' ? JSON.parse(body) : body;
-  const list = Array.isArray(data) ? data
-    : Array.isArray(data && data[clean(options.rows_key) || 'data']) ? data[clean(options.rows_key) || 'data'] : [];
+  // rows_path is a dotted path such as "result.records" (CKAN); the default is "data".
+  const nested = (clean(options.rows_path) || clean(options.rows_key) || 'data').split('.')
+    .reduce((value, key) => (value && typeof value === 'object' ? value[key] : undefined), data);
+  const list = Array.isArray(data) ? data : Array.isArray(nested) ? nested : [];
   const idField = clean(options.id_field) || (reader === 'socrata_json' ? ':id' : '');
   return finish(reader, list.map((fields, index) => {
     const flat = Object.assign({}, fields);
