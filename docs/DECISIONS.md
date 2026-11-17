@@ -1,5 +1,312 @@
 # Decisions
 
+ASSUMED 2026-11-17: B-23b's MAX_ROWS is a remote request-page bound, not
+permission to discard rows already parsed from a bounded public document.
+Remove the adapter's post-parse slice; keep rows_capped at0 and retain mapper
+duplicate audit in distress_audit (never in aggregate summaries). Synthetic
+1003-row CSV proved1000 addressed outputs instead of1001, plus lost proof and
+last-duplicate evidence. Retention regression now passes, original assertions
+unchanged. No extra request, catalog scheduling, persistence or real collection.
+-- AGENTS3/4/5 and B-23 every-row/duplicate-audit acceptance.
+
+ASSUMED 2026-11-17: the B-23a hosted gate44156436749 failed319/1/0 on
+lead-age-calendar-ui's immediate selected-control assertion, not the row mapper.
+The active loader clears _leadsLoading before its buyers await and final render;
+renderLeadActionToolbar schedules syncLeadFilterControls with setTimeout(0).
+Data readiness alone therefore does not establish rendered control readiness.
+Add bounded rendered-selection waits for Today and Any Time; preserve every
+original assertion, fixture, timeout and runtime path. No date semantics change.
+This explains a synchronization gap, not an independently captured CI timeline
+or an environment attribution. One changed head gets one hosted gate; no retry
+of the failed head -- AGENTS4 incidental scaffolding, D-067a.
+
+ASSUMED 2026-11-17: B-23 document numbers identify cases, not necessarily one
+property. Include an opaque normalized address component (or row reference when
+addressless) in document-backed lead keys; identical case/property rows still
+merge after moving. This is not address verification. CSV references use parser
+physical end lines; XLSX uses worksheet row metadata. Invalid/overflowing epochs
+remain INVALID with raw evidence and the row retained. Synthetic probes on44f82f3
+proved row loss, false references and invalid-date failure; preserve those results.
+No original assertions, source scheduling, data imports or provider activation
+change. New combined head must pass CI after the ordered engine integrations.
+-- AGENTS3/4/5, D-009/D-066 source truth and never-drop acceptance.
+
+ASSUMED 2026-11-17: prepare the green frozen slices as an ordered integration
+stack. Each head contains current main and its already-reviewed predecessor
+source head; review the item's delta against that predecessor and run CI once
+on the new combined head. Do not cancel any first run, retry unchanged heads,
+or merge a child before its predecessor is green, merged and deployment-verified.
+Separate PRs and release checks remain mandatory. This avoids repeated doc-only
+conflicts without bypassing the PR-head gate -- AGENTS2/3, D-067c, owner order.
+
+OWNER/ASSUMED 2026-11-17: Gabriel directly accepts Claude's Nov16 engineer
+handoff and orders the frozen slices, #433/#434, B-23a/#513, existing B-23b/#517,
+then B-24 OFF, B-07/B-21 and B-19. Green self-merge remains required; do not
+touch architect PR #511. This resolves the old #510/package-only hold, not
+failed evidence or safety gates. Each changed integration head gets one CI;
+never cancel a running first gate or retry an unchanged head for green.
+
+ASSUMED: B-25 is fixed by making the two queue tests refuse live network (shared helper), not by
+editing any assertion; the wasm-feature-detect 1.9.0 override from #509 is kept as hardening. D-067a says
+never edit a test to make the local sandbox pass: this change is not for the sandbox, it removes a
+live-internet dependency that made CI depend on a county website (AGENTS 4 test policy, scaffolding;
+AGENTS 5 network) -- 2026-11-16.
+
+ASSUMED: #433/#434 are brought up to date with a merge of main (not a rebase) because the engineer may not
+force-push branches it did not create; the resulting tree is the same -- 2026-11-16.
+
+ASSUMED: B-23 ships as ordered sub-PRs (B-23a pure modules and fixtures, B-23b wiring and read-only
+counts) under AGENTS 2 "split big items" -- 2026-11-16.
+
+
+ASSUMED2026-11-08:D065c blocks494 preflightfcc78b0 after firstfull209/97/0
+repeated requiredfailures. New/registrypure passes do not waivefull; all306
+timings retained, same97namesNOTcausalproof. No unchangedretry/skip/cancel/
+bypass/environmentattribution/CI/release. Next independent scope401 read-only
+performance-budget inventory only; no Postgres/accounts/jobs rewrite or private
+production inspection. Keep494disabled, no blockedcodecarried to nextrelease.
+
+ASSUMED2026-11-08:494 first preflight is unregistered, pure and always execution-
+disabled. Integer micro-USD with BigInt intermediates prevents rounding/overflow;
+all projected/request/reserved spend counts against supplied cap. Units1-100;
+unknown/negative/nonfinite/fractional values reject, no defaultzero. Arithmetic
+is not verified quote/spend/owner approval. Strict capability input accepts no
+asserted subject/authorization flags, always reports those contracts unverified
+and adapter disabled even for known provider/switchtrue/affordablebudget. Existing
+execute, guards, routes/env/legacy worker unchanged. No enabling or paid action.
+
+ASSUMED2026-11-08:494 registry/switch inventory does not authorize paid provider
+execution. Keep execute disabled; pure future capability checks must failclosed
+on unverified quote/authorization/subject/projectedbudget. Existing metadata and
+env strings are not owner approval or verified vendor facts. Never repurpose the
+legacy browser/DB skip-trace worker/routes as this adapter. Independent docs-only
+branch excludes blockedvoice37c36f2/batch77608f7/455runtime/tests. No env change,
+paid choice, provider request, owner lookup or canonical write performed.
+
+ASSUMED2026-11-08:454 current per-card note voice reuses existing local-only
+controller/input event; extend only explicit classic/preview allowlists and
+asset4->5. No batchSubmit/overallnote/draftpersistence/from_voice assertion or
+new writer. Required existingvoiceUI gate repeats historical navigationfailure;
+D065c blocks slice, no retry/full/CI/releasewaiver or unprovenenvironmentclaim.
+Follow-up pureengine onmain is not productionintegration; exact recorded event
+adapter is absent, never substitute legacy namesake or generic sentactivity.
+
+ASSUMED2026-11-08:454 board projection BLOCKED503 until stable typed identity
+binding and stage/evidence semantics are explicit. Existing snapshot6-stage,
+reviewedstatus and orderedJVevents are different contracts. Activities typed
+email_sent can be imported_report; SMTPaccepted is not delivery or proof of
+question/offer semantics. Exact anchored mail/ref links are not address merges.
+Retain sources/attribution and legal/money/signature gates; no label-only stage
+mapping or new canonical writer. Synthetic diagnostics establish only these
+source boundaries, not production prevalence or acceptance. Batch handoff502
+now verified from metadata, no comments; prior unknownnumber history retained.
+
+ASSUMED2026-11-08:454 board-stage inventory preserves six imported reported
+stages and source provenance. Requested event-backed board is not label-only
+mapping: no canonical identity/stage/delivery inference from address, log prose,
+status or pick. Trace typed event/identity contracts before additive changes.
+Independent branch carries docs/proof only, never blocked batch77608f7 code/test.
+
+ASSUMED2026-11-08:D065c blocks454 batch candidate77608f7 after first306-file
+full209/97/0 repeated requiredgate failures. All306 timing rows retained; pure
+new/legacy passes do not waive full. Matching failednames across device/age/
+batch gates is not causal proof. No unchangedretry/skip/cancel/bypass/environment
+attribution/push/CI/release. Architect question retained in proofREADME; connector
+acknowledged creation but no issue number returned, so do not invent one or
+duplicate it. Preserve blocked model branch; next independent scope frommain
+with owned docs/proof only, never this model/test. No route/UI integration.
+
+ASSUMED2026-11-08:454 first batch model is pure and UNREGISTERED. Round equals
+immutable snapshot receipt; expected revision is per actor/round, server advances
+it atomically. Exact UUID replay is readback even after newer import; conflicting
+payload/stale revision rejects. Up to100 unique choices, notes2000/overall4000;
+note-only uses null choice/label and nonblank note; overall-only allowed when
+nonblank, empty batch rejected. Accept only from_voice:false until actual voice
+evidence exists, not client assertion. Submitted time must fall between import
+and injected acceptance clock. Separate capped10000-record collection preserves
+single-answer history and business collections; reads return at most100 owned
+detached batches. No route registration/UI/send/stage/canonical writes added.
+
+ASSUMED2026-11-08 under AGENTS3/D065: reconcile455 using retained proofs only,
+not repeated release polling. Seven categories released; remaining4/8 partial
+and495-501 blocked. Continue independent454 with source-only batch contract
+inventory from main plus owned docs/proof. Next pure record model must remain
+unregistered until gated integration, preserve single-answer history and exact
+actor/snapshot/option binding, and reject inferred voice/stage/delivery facts.
+Later454 no-picks-on-open supersedes earlier voice-preselection proposal.
+No batch wire schema, provider/send permission, canonical mutation, production
+write authority, failed-gate waiver or completion claim is created by this trace.
+
+ASSUMED2026-11-08:455.8 compact source status captions map only exact canonical
+field-scoped enums and known quality buckets. No labels inferred from source
+prose; unknown/wrong-field values remain unconfirmed. Raw status codes/reason
+stay behind a native44px source-details disclosure; identity/controls/readiness/
+calendars/money/source evidence unchanged. Badge wrapping is presentation only.
+Existing assertion874 cache57->58 updated under AGENTS4 incidental scaffolding;
+the same file failed again at duplicate931 cache57 guard, despite its misleading
+helper-workbench message. D065c blocks further edits/retry for this slice pending
+architect review. These two stale-cache causes are proven in source; prior97
+full failures still have unproven causes. No full/CI/release waiver or auth change.
+
+ASSUMED2026-11-08: public-deals source-day helper is not cosmetic: it drives
+upcoming/urgent eligibility and sorting as well as labels. Backend separately
+rederives source dates and sets passed-sale risk flags using server-local day.
+Do not replace either calendar blindly with owner UTC-7 or loosen a source/legal
+gate. Record owner-display vs canonical source-calendar contract for architect;
+preserve literal source days, raw origins/resolver authority and all risk flags.
+Synthetic timezone and malformed-DTO diagnostics are not production claims or
+passing defect assertions. No runtime/write action. -- AGENTS3/4/5,455 display
+scope cannot invent source/legal event status or rewrite its authority.
+
+ASSUMED2026-11-08: all four classic mailbox read routes annotate raw provider
+dates before JSON. Valid RFC headers remain accepted upstream; classic display
+can consume canonical ISO, while notes use their separate recorded metadata.
+No OAuth/provider/auth rewrite is justified by the partial raw-Date trace.
+Synthetic nonexistent30Feb RFC date normalizes to March2 at receivedTime/
+annotation, also used for reply/thread evidence; record a needs-architect
+contract handoff rather than invent source truth in a UI formatter. No runtime
+change, provider action or private read; original diagnostic retained. Broader
+failed-gate causes remain unproven and independent. -- AGENTS3/4/5 source truth.
+
+ASSUMED2026-11-08: active age candidatef36c5c3 first full gate210/97/0 of307
+is a failed gate, not an environment waiver. All307timings retained; both new
+tests passed but same97filenames failed as prior device gate. Comparison does
+not establish a common cause. Block this slice under D065c/AGENTS10 and continue
+independent active-reader inventory; no unchanged retries/bypass/skip or release.
+
+ASSUMED2026-11-08: active lead age filter uses created_at, then createdAt,
+inserted_at, created; updated_at never proves creation. Canonical UTC-Z instants
+and finite positive integer epoch milliseconds are supported metadata writer
+contracts; date-only/numeric-slash/offset/invalid/future values cannot prove an
+exact time window. Stronger invalid metadata is not rescued by a weaker alias.
+Today means owner UTC-7 calendar day; other positive whole-day filters retain
+their rolling-window intent. Unknown/day-only/future records remain under Any
+Time; no fabricated midnight, migration, source-date inference or backend change.
+-- AGENTS3/4/5,455 date consistency, traced addLead/server/ArcGIS metadata types.
+
+ASSUMED2026-11-08:455.4B5 reuses shared strict recorded-time display for JV
+event happened_at/recorded_at, review happened_at and match-profit source
+captured_at only. Missing clock/invalid/future => Time not confirmed. Match
+asset loads before clock but lookup occurs at render-time, proven in synthetic
+test; no order change or startup dependency. No backend/stage/signing/dates/
+money/writer/source/input conversion change. Independent current-main branch
+excludes both blocked runtimes. Component testPASS but existing match-profit
+and signing-review UI failures repeated; block under D065c, no bypass/unchanged
+retry/waiver/full suite/CI/release. Causes remain unproven; architect should
+examine release blockers spanning slices, not infer a common root cause.
+
+ASSUMED2026-11-08:455.4B4 template recorded_at reuses existing shared clock3
+formatTime; strict UTC-Z/recent weekday/old month-day/different year policy,
+invalid/future/missing formatter => Time not confirmed. This is presentation
+only: no template body/subject/operator/policy/history/digest/writer/auth change.
+Branch from current origin/main, carry failed device evidence as docs only;
+never carry blocked device runtime into this independent candidate. New test
+uses synthetic route-fulfilled actual component, not a signed full dashboard.
+Existing routes/UI failed again at verifier14:31 first fetch, cause UNPROVEN.
+Under D065c block this slice, no unchanged retry or full/CI/release waiver;
+continue JV/profit metadata trace. Full suite for template head NOT RUN.
+
+Architect updates read once2026-11-08:494 skip trace behind disabled provider
+registry/switch, owner enables paid use;454 new batch choice/voice/board specs,
+375 lost-deal timing,401 performance budgets are future bounded scope. Current
+D065 order unchanged. No private board inspection, paid call, secret, new send
+authorization or address-only cross-source merge is assumed. Evidence/source
+gates win over unsupported stage, contact, comp, price or motivation inference.
+Device startup handoff filed as issue495; earlier connection failure retained.
+Template first-fetch handoff filed as issue496. Neither slice is release-ready.
+
+ASSUMED: #432 negotiation planner (`modules/deals/negotiation-planner.js`) is a
+pure read-only function, not yet wired to a card, route or chat. Choices, all
+the conservative reading of #432/#400 part 3: default buyer max is 70% of value
+under $120k and 75% at or above it, minus repairs (#432 "70/75%"; the B-08
+80-83% bands above $200k are not used until B-08's single calculator exists,
+then the planner takes its band from there and never becomes a second MAO
+source). Minimum fee $10,000, raisable only. Two-signal target uses 55% (low
+end of 55-60%). Value counts only with source_kind sold_comps and an attached
+comps list; a comp counts only when the strict comp grid accepted it
+(comp_grid.accepted, as compValue attaches) AND its own record says a sold or
+closed recorded sale (sold_status sold/closed, price_basis recorded_sale, the
+#434 contract; the grid flag never overrides Active/list-price evidence), it
+sold within 6 months, it has its own address, price and https source, it is
+not the subject by canonical address, and the value lies inside the comps'
+sold-price range (2 = preliminary, D-005). A bare comp count is never proof. No price
+at all (either side) until the seller's number was asked.
+Without value or repairs the move is hold_backup with status no_offer (the
+seven #432 codes only). Counters step 5%, 10% only when another offer is on
+the table, never past walk-away or the seller's number, and only after the
+seller answered our last offer (same-day date-only answers are ambiguous, so
+hold). A fast buyer answer = within 24 hours. Buyer numbers need a buyer id, a
+source and a date within 30 days; a number without proof of funds never lifts
+walk-away above typical buyer price minus $15k, and repairs found on or after
+a buyer's number come off it. Only defects found after our last offer reopen
+the price: last offer minus their cost, capped at walk-away and the seller's
+number; same-day records are flagged, not cut. A standing offer above a fallen
+walk-away is flagged (hold, do not raise). A zero or negative opening or
+target means walk. No deposit from Gabriel is ever produced (D-059) --
+AGENTS3/5, #432, #400, D-005, D-059 --2026-10-22.
+
+OWNER standing order, recorded2026-11-08: continue autopilot until explicit
+STOP AUTOPILOT. Fetch/reconcile origin, implement backlog under AGENTS, commit/
+push/PR, one CI run per new head with no per-PR limit, green merge, automatic
+deployment and bounded read-only proof are authorized. Decide routine questions
+under AGENTS3, log ASSUMED, continue. Sandbox/approval denial: record and skip,
+never bypass or repeatedly retry. Same failure twice: needs-architect/BLOCKED
+for that slice, then independent work; never retry an unchanged head for green.
+Usage limits wait/resume naturally. Paid services, secrets, outreach/messages,
+stored-data deletion and production batch writes remain owner-only. Existing
+privacy, no-manual-Railway and safety restrictions remain unchanged.
+
+ASSUMED2026-11-08:455.4B3 is BLOCKED after remembered-device-ui.test.js
+failed at startup52:5 both focused and in first full suite. All306 full timing
+rows and209/97/0 result retained. No cause attribution, assertion change or
+unchanged retry; no release. Continue independent template reader trace under
+D065c, AGENTS3/10 and standing order; do not carry blocked device runtime into
+an independent release. Open question: architect must bound a real fix for the
+repeated device fixture startup failure without weakening auth or assertions.
+
+ASSUMED 2026-11-03:455.4B3 remembered-device labels reuse shared strict UTC-7
+clock3; future expiry uses scheduled formatter, recorded creation/revocation
+and expired metadata use recorded formatter. Server active/current/revoked
+state stays authoritative; no token/TTL/session/revoke/schema/writer change.
+Unavailable formatter shows Time not confirmed, never browser-local parsing.
+-- AGENTS3/4/5, owner455 dates and additive presentation consistency.
+
+ASSUMED: #402 exit engine (Claude cloud session, PR pending). Verdicts are
+Strong / Possible / Needs data / No: the issue lists three, and "Needs data" keeps
+missing facts visible instead of guessing (AGENTS 5 truth). The flip buyer price
+uses the D-015/D-031 band (low end of each course range: 70 / 75 / 80 / 83%), not
+the issue's flat 70-75%, because decisions outrank an item; the band constant moves
+to B-08's single offer calculator when that exists. The engine never produces an
+offer or MAO: it reports each end buyer's maximum and our fee at the asking price.
+Rental, BRRRR and wholetail defaults (vacancy 8%, maintenance 8%, management 10%,
+buyer closing 3%, DSCR loan 25% down / 7.5% / 30 years, landlord cap 8%, DSCR 1.25,
+BRRRR refinance 75%, wholetail 80%, selling costs 10%, subject-to rate at most 5%,
+target fee $10,000, lot discount $5,000) are labeled assumptions shown with every
+result and can be changed per call; they are never facts. Rent counts only from HUD
+Small Area FMR, rental comps, an agent, a lease or a rent roll, captured within 12
+months; a payoff counts only when owner-stated or from a payoff statement, and a
+rejected payoff value is never echoed. A buyer's proof-of-funds date is a recorded
+report, not a funds check (#413); it counts as current for 90 days. The buyer
+profile lives in assistant_find.strategy_profile with its own source; buy_box's
+free-text funding is unchanged, and legacy buyers have no profile, so they are never
+matched on strategy. Wholesale / JV is how the winning exit is sold, not a ranked
+exit. The deal-card block is deferred: reviewed deals carry no rent, taxes or loan
+facts yet, the Deals screen rebuild (#416) is ordered, and the P0 UI gate holds.
+The engine takes no ARV from the A-023 Texas list-price tier or any comp mix holding
+last list prices, because AGENTS 5 (list price is never ARV) outranks A-023. Land
+prices accept only a builder's stated price or quote, at least 2 recorded lot sales, or
+new-construction sales, and only buyers with a met target return affect the ranking.
+A matched buyer's fee comes from that buyer's own price; the ARV certainty tiers are
+verified / preliminary / ballpark (D-003). ARV and lot-sale values need the comp records
+themselves (address, sold price, sold date, https source, recorded sale); a claimed count
+never unlocks a value. ARV needs the sourced subject address and rejects the subject's own
+sale (lot values too; a partial subject address is rejected); every comp must say sold or
+closed; buyer profiles count only with a valid source and a payload that passes the shared
+buyer schema (invalid ones fail closed), and hard-money cash-on-cash is not modeled. Comps
+must be distinct properties by canonical address identity (fail closed when a missing unit or
+locality makes that ambiguous) --
+AGENTS 3 precedence, D-005, D-010, D-011, D-015, D-031, D-032, A-018 -- 2026-10-22.
+
 ASSUMED 2026-11-03: active-notice-address-origin and after-sale-frozen-chain
 use existing fixed-clock helper at their existing frozen corpus reference
 2026-10-02T12:00:00Z, restored in finally. Their fixed May-past/November-future

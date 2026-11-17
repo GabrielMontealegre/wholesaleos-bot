@@ -13,7 +13,7 @@ const mapper = require('./distress-list-lead-mapper');
 const { createPoliteFetcher } = require('./polite-public-fetcher');
 const propertyCandidate = require('../research/property-candidate');
 
-const MAX_ROWS = 1000;
+const MAX_ROWS = 1000; // Remote request page size, not a limit on rows already read.
 const AUTO_READERS = Object.freeze(['arcgis_json', 'socrata_json', 'json_rows', 'csv', 'xlsx']);
 
 function clean(value) {
@@ -119,7 +119,7 @@ function emptyResult(profile, status, reason, extra = {}) {
     attempted: false,
     blocked_reason: reason,
     message: reason,
-    candidates: [], cards: [], source_proof_rows: [], candidate_count: 0,
+    candidates: [], cards: [], source_proof_rows: [], distress_audit: [], candidate_count: 0,
     diagnostics: { rows_found: 0 },
     preview_only: true, should_ingest: false, no_global_mutation: true
   }, extra);
@@ -158,7 +158,7 @@ async function runDistressListAcquisitionAdapter(options = {}) {
     return emptyResult(profile, 'needs_manual_review', 'The source answered with data the reader could not read.', { attempted: true });
   }
   const context = { captured_at: capturedAt, acquisition_run_id: clean(options.acquisition_run_id) };
-  const leads = read.rows.slice(0, MAX_ROWS).map((row) => mapper.mapRowToLead(row, profile, {
+  const leads = read.rows.map((row) => mapper.mapRowToLead(row, profile, {
     today, captured_at: capturedAt, source_url: plan.url, field_map: options.field_map
   }));
   const merged = mapper.mergeLeads([], leads);
@@ -189,10 +189,11 @@ async function runDistressListAcquisitionAdapter(options = {}) {
       lane: lead.lane, lane_reason: lead.lane_reason, evidence_text: lead.evidence_text, source_url: lead.source_url
     })),
     candidate_count: candidates.length,
+    distress_audit: merged.audit,
     distress_summary: summary,
     diagnostics: {
       rows_found: read.rows.length,
-      rows_capped: Math.max(0, read.rows.length - MAX_ROWS),
+      rows_capped: 0,
       skipped_empty_rows: read.skipped_empty,
       reader: read.reader,
       reader_warnings: read.warnings,

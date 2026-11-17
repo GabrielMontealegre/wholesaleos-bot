@@ -1,0 +1,33 @@
+{
+  "source_sha": "66ed9b83fa157c9dffa67d24378ead4a2da4196e",
+  "authenticated": false,
+  "private_body_reads": false,
+  "provider_actions": false,
+  "business_writes": false,
+  "checks": [
+    {
+      "route": "/health",
+      "status": 200
+    },
+    {
+      "route": "/api/auth/devices",
+      "status": 401
+    },
+    {
+      "route": "/dashboard/",
+      "status": 200,
+      "exact_static_source": true
+    },
+    {
+      "route": "/app",
+      "status": 200,
+      "exact_static_source": true
+    },
+    {
+      "route": "/dashboard/wos-local-voice.js?v=5",
+      "status": 200,
+      "exact_static_source": true
+    }
+  ],
+  "result": "PASS"
+}
