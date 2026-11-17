@@ -2,11 +2,14 @@
 
 ## Latest Run Summary (2026-11-17)
 
-PR #433 is now released as `c03f564`: hosted316/0/0, automatic deployment
-7863430439 success, fixed public/static checks passed. #434's integration is
-still gated. B-23a #513 has a bounded row-preservation correction prepared:
-two properties sharing a case, physical CSV/XLSX references and invalid epochs.
-Focused synthetic regression PASS; its full hosted gate and release are pending.
+PR #433 is released as `c03f564`: hosted316/0/0; #434 is released as `8976683`:
+hosted318/0/0. Both automatic deployments and fixed public/static checks passed.
+B-23a #513's corrected head0b1be9e failed hosted44156436749 (319/1/0):
+the age-filter verifier observed an empty control after filtered-data readiness.
+Two bounded rendered-selection waits now preserve all original assertions,
+fixtures and timeouts. Focused synthetic UI1366/400/412, date predicate and
+row-preservation regressions PASS. New exact-head hosted gate/release pending;
+the failed run remains failed and will not be retried unchanged.
 No source was scheduled or collected; B-23b/#517 and OFF B-24a/#523 remain next.
 
 - B-25: green PR #509 merged as `35a5f6e`; handoff PR #512 merged as `c53740b`.
