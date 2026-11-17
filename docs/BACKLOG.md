@@ -133,6 +133,23 @@ No agent reset/purchase/model escalation. Continue the authorized work loop;
 reserve the final5% primary window for rollback/redeploy only.
 
 2026-11-08 independent455.4B4 template labels LOCAL/BLOCKED: branch from
+
+2026-11-08 independent455.4B5 JV/profit metadata LOCAL/BLOCKED: new branch
+from currentmainf2294a7+493proof396c199 and prior blocked evidence/docs only.
+No device/template runtime carried. Two display helpers/cache versions only;
+writers/stage/signing/money/source/auth/input conversion unchanged. New synthetic
+11case1366/400/412 Tokyo renderer testPASS, six metadata images inspected.
+Existing match-profit UI repeated navigation ERR_NETWORK_ACCESS_DENIED and
+signing-review UI repeated firstfetch TypeError fetch failed. Both naturally
+exit1; causeUNPROVEN, no bypass/retry/waiver. Full suite for this candidate
+NOT RUN after repeated focused failures blocked the slice. No push/PR/CI/release.
+Architect handoff: https://github.com/GabrielMontealegre/wholesaleos-bot/issues/497
+Next independent trace: genuinely active legacy/source-day readers, especially
+wos-leads-detail creation metadata and wos-features date comparison; establish current
+callers/writers before any edit. No blanket Date.parse or shadowed index changes.
+Fresh run-start usage12%primary/2%secondaryUSED. Whole455/487 remains incomplete.
+
+HISTORICAL2026-11-08 independent455.4B4 template labels LOCAL/BLOCKED: branch from
 fresh origin/main f2294a7 plus prior493 proof/docs only; blocked device runtime
 NOT carried. Shared strict clock helper/cache3 only, template writers/text/
 approvals/send policy unchanged. New synthetic component1366/400/412 Tokyo

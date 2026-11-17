@@ -11,8 +11,9 @@
   function esc(value) { return String(value == null ? '' : value).replace(/[&<>"']/g, function (c) { return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
   function field(label, key, value, type) { return '<label>' + label + '<input data-jv-field="' + key + '" type="' + (type || 'text') + '" maxlength="2048"' + (type === 'number' ? ' min="0" step="any"' : '') + ' value="' + esc(value) + '"></label>'; }
   function time(value) {
-    if (!value || !Number.isFinite(Date.parse(value))) return 'Unknown';
-    return new Intl.DateTimeFormat('en-US', {timeZone:'Etc/GMT+7',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}).format(new Date(value));
+    var clock = root.wosCardClock;
+    var label = typeof clock?.formatTime === 'function' ? clock.formatTime(value, new Date().toISOString()) : 'Unknown';
+    return label === 'Unknown' ? 'Time not confirmed' : label;
   }
   function render(deal) {
     var model = deal.jv_workflow;

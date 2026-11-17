@@ -1,5 +1,13 @@
 # Decisions
 
+ASSUMED 2026-11-17: prepare the green frozen slices as an ordered integration
+stack. Each head contains current main and its already-reviewed predecessor
+source head; review the item's delta against that predecessor and run CI once
+on the new combined head. Do not cancel any first run, retry unchanged heads,
+or merge a child before its predecessor is green, merged and deployment-verified.
+Separate PRs and release checks remain mandatory. This avoids repeated doc-only
+conflicts without bypassing the PR-head gate -- AGENTS2/3, D-067c, owner order.
+
 OWNER/ASSUMED 2026-11-17: Gabriel directly accepts Claude's Nov16 engineer
 handoff and orders the frozen slices, #433/#434, B-23a/#513, existing B-23b/#517,
 then B-24 OFF, B-07/B-21 and B-19. Green self-merge remains required; do not
@@ -19,6 +27,17 @@ force-push branches it did not create; the resulting tree is the same -- 2026-11
 ASSUMED: B-23 ships as ordered sub-PRs (B-23a pure modules and fixtures, B-23b wiring and read-only
 counts) under AGENTS 2 "split big items" -- 2026-11-16.
 
+
+ASSUMED2026-11-08:455.4B5 reuses shared strict recorded-time display for JV
+event happened_at/recorded_at, review happened_at and match-profit source
+captured_at only. Missing clock/invalid/future => Time not confirmed. Match
+asset loads before clock but lookup occurs at render-time, proven in synthetic
+test; no order change or startup dependency. No backend/stage/signing/dates/
+money/writer/source/input conversion change. Independent current-main branch
+excludes both blocked runtimes. Component testPASS but existing match-profit
+and signing-review UI failures repeated; block under D065c, no bypass/unchanged
+retry/waiver/full suite/CI/release. Causes remain unproven; architect should
+examine release blockers spanning slices, not infer a common root cause.
 
 ASSUMED2026-11-08:455.4B4 template recorded_at reuses existing shared clock3
 formatTime; strict UTC-Z/recent weekday/old month-day/different year policy,
