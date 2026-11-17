@@ -1,5 +1,17 @@
 # Decisions
 
+ASSUMED: B-25 is fixed by making the two queue tests refuse live network (shared helper), not by
+editing any assertion; the wasm-feature-detect 1.9.0 override from #509 is kept as hardening. D-067a says
+never edit a test to make the local sandbox pass: this change is not for the sandbox, it removes a
+live-internet dependency that made CI depend on a county website (AGENTS 4 test policy, scaffolding;
+AGENTS 5 network) -- 2026-11-16.
+
+ASSUMED: #433/#434 are brought up to date with a merge of main (not a rebase) because the engineer may not
+force-push branches it did not create; the resulting tree is the same -- 2026-11-16.
+
+ASSUMED: B-23 ships as ordered sub-PRs (B-23a pure modules and fixtures, B-23b wiring and read-only
+counts) under AGENTS 2 "split big items" -- 2026-11-16.
+
 ASSUMED 2026-11-03: active-notice-address-origin and after-sale-frozen-chain
 use existing fixed-clock helper at their existing frozen corpus reference
 2026-10-02T12:00:00Z, restored in finally. Their fixed May-past/November-future
