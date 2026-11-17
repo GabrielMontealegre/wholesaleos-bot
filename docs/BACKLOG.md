@@ -135,6 +135,51 @@ reserve the final5% primary window for rollback/redeploy only.
 2026-11-08 independent455.4B4 template labels LOCAL/BLOCKED: branch from
 
 2026-11-08 independent455.4B5 JV/profit metadata LOCAL/BLOCKED: new branch
+
+2026-11-08 active455 creation-date candidate frozenf36c5c3 LOCAL/BLOCKED:
+FIRST307-file full naturally exited1,210 passed/97 failed/0 skipped,600s/file;
+all307 timing rows retained proof-455-lead-age/first-local-full.json. Same97
+failed filenames as prior devicefull; comparison does NOT prove sharedcause.
+Architect handoff: https://github.com/GabrielMontealegre/wholesaleos-bot/issues/498
+New age unit/UI tests passed0.90/3.43s, actual Tokyo1366/400/412 checks and six
+inspected images retained; positives do not waive failedfull or old phone layout
+limitations. No unchanged retry/bypass/skip/waiver, no push/PR/CI/release.
+Next independent work: finish genuinely active date/source-day reader inventory;
+trace Email reader normalization and its writers before any strictness edit.
+Initial source trace: IMAP metadata and parsed MIME body emit ISO timestamps,
+but OAuth list metadata exposes the raw Date header (legitimate RFC mail format).
+Do not blanket-reject this format or change OAuth/provider behavior. Read source
+contracts/tests only; no production mailbox/private content reads.
+Fresh usage after gate35%primary/6%secondaryUSED, no reset/purchase/escalation.
+Whole455/487/backlog incomplete; preserve all four local blocked candidates.
+
+HISTORICAL2026-11-08 active Today predicate LOCAL candidate: precise own creation fields
+before legacy aliases, strict UTC-Z/integer epoch metadata, no update-only or
+future/ambiguous/day-only inferred instant. Today uses UTC-7 day, multi-day
+rolling windows retained, Any Time keeps all rows. No writer/backend/source/
+paging/sort change. Unit and actual full-dashboard route-fulfilled Tokyo checks
+PASS1366/400/412, real filter/API loader selects1 of6 and restores6 under Any
+Time. Six images inspected; existing phone toast/table clipping retained, not
+claimed fixed by overflow/visibility checks. Edge review added falsy primary/
+inherited metadata negatives; stronger invalid fields cannot use weaker aliases.
+First frozen307-file full suite pending, no push/PR/CI/release yet. Whole455/487
+incomplete; original blocked runtime branches remain separate and excluded.
+
+HISTORICAL2026-11-08 active legacy date trace: independent item/455-lead-age-calendar
+from currentmainf2294a7 plus493proof and earlier proof/docs only; no blocked
+runtime/test carried. Active leadMatchesAge path confirmed after final API load;
+shadowed wos-features fallback left untouched. Synthetic fixed-clock probe
+shows Today admits previous-owner-day, future, update-only and numeric-slash
+records; created day-only takes precedence over precise created_at. Writer trace
+and six diagnostic booleans retained in docs/cycles/issue-455-active-lead-age.md
+and455-active-lead-age-diagnostic.json. No runtime edit or release; next bounded
+work is precise creation/UTC-7 Today predicate with explicit unknown handling.
+Preserve multi-day intent and source truth; paging/count changes separate.
+Legacy detail panel reachability still unproven, do not edit blindly.
+Fresh run-start usage18%primary/3%secondaryUSED; previous blockers495/496/497
+unchanged. Whole455/487/backlog incomplete.
+
+HISTORICAL2026-11-08 independent455.4B5 JV/profit metadata LOCAL/BLOCKED: new branch
 from currentmainf2294a7+493proof396c199 and prior blocked evidence/docs only.
 No device/template runtime carried. Two display helpers/cache versions only;
 writers/stage/signing/money/source/auth/input conversion unchanged. New synthetic

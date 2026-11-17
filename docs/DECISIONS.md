@@ -28,6 +28,22 @@ ASSUMED: B-23 ships as ordered sub-PRs (B-23a pure modules and fixtures, B-23b w
 counts) under AGENTS 2 "split big items" -- 2026-11-16.
 
 
+ASSUMED2026-11-08: active age candidatef36c5c3 first full gate210/97/0 of307
+is a failed gate, not an environment waiver. All307timings retained; both new
+tests passed but same97filenames failed as prior device gate. Comparison does
+not establish a common cause. Block this slice under D065c/AGENTS10 and continue
+independent active-reader inventory; no unchanged retries/bypass/skip or release.
+
+ASSUMED2026-11-08: active lead age filter uses created_at, then createdAt,
+inserted_at, created; updated_at never proves creation. Canonical UTC-Z instants
+and finite positive integer epoch milliseconds are supported metadata writer
+contracts; date-only/numeric-slash/offset/invalid/future values cannot prove an
+exact time window. Stronger invalid metadata is not rescued by a weaker alias.
+Today means owner UTC-7 calendar day; other positive whole-day filters retain
+their rolling-window intent. Unknown/day-only/future records remain under Any
+Time; no fabricated midnight, migration, source-date inference or backend change.
+-- AGENTS3/4/5,455 date consistency, traced addLead/server/ArcGIS metadata types.
+
 ASSUMED2026-11-08:455.4B5 reuses shared strict recorded-time display for JV
 event happened_at/recorded_at, review happened_at and match-profit source
 captured_at only. Missing clock/invalid/future => Time not confirmed. Match
