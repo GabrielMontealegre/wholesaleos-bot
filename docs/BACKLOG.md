@@ -10,12 +10,22 @@
   Exact-source automatic deployment and public/static verification passed.
   Synthetic 1366/400/412 screenshots inspected; no production device metadata read.
   Evidence: [release record](cycles/proof-514/README.md).
-- All eight frozen branches are pushed: #514-#516 and #518-#522. Remaining slices
-  await their ordered green merge and deployment verification. #496's first head passed;
-  its current-main integration head needs its own single CI run. No unchanged retry.
-- #433/#434 each received a non-force merge from fixed main and a new hosted run.
-  B-23b already has engineer PR #517; review it after B-23a #513, do not duplicate it.
-  Architect PR #511 is unchanged. The rest of B-23/B-24/B-07/B-21/B-19 is not done.
+- All eight frozen slices are RELEASED: #495/#514, #496/#515, #497/#516,
+  #498/#518, #501/#519, #502/#520, #504/#521 and #505/#522. Every first head
+  passed; each distinct integration head ran once. The final combined gate
+  passed 315/0/0. All exact-source automatic deployments and bounded public
+  checks passed. Original local failures and first-head artifacts are retained.
+  Evidence: [frozen release ledger](cycles/proof-2026-11-17-frozen/README.md).
+- #433/#434 retain the other engineer's current commits. Merge the completed
+  frozen queue without force-push, run each new combined head once, then ship
+  them in order only when green. Current #433 integration is being prepared.
+- New Nov17 handoff facts: B-23a is #513; B-23b #517 registers an adapter but
+  schedules no source. B-23c still needs reader settings, host fixes, catalog
+  wiring and read-only counts. B-24a OFF core already exists in #523: review it,
+  do not duplicate it. B-24b transport/wiring waits for the owner's vendor choice.
+  Follow the owner's order: engines, B-23, B-24 OFF, B-07/B-21, B-19. Do not
+  infer permission for paid calls, data imports or disclosure-rule promotions.
+  Architect PR #511 remains unchanged. The whole backlog is not complete.
 
 ## CODEX HAND-OFF (Claude engineer run, 2026-11-16). Read this before the run order below
 
@@ -1053,6 +1063,15 @@ or production changes yet,no real credentials/devices/key/files/settings actions
 pending actions,not backlog-wide waits.455 item2+ and456 still deferred.
 
 ## Latest Run Summary
+
+2026-10-22 #432 negotiation planner (Claude cloud session, `claude-building`):
+pure planner `modules/deals/negotiation-planner.js` plus hermetic
+`tests/negotiation-planner.test.js`. Next move (ask seller's number, buyers
+first, open, counter, renegotiate down for defects, hold, walk), #400 part 3
+distress sizing (opening/target/walk-away), buyer asking price and "push a
+little", soft 5-10% counters. No route, UI, storage, send or deploy. PR open for
+review; Codex reviews and merges per AGENTS2 and the #423 deploy pause.
+Assumptions logged in DECISIONS.md.
 
 2026-10-28 PR467/455item2 RELEASED/VERIFIED:main6247e0fe69f998bc24cf6e33f42e35b72c23f8fc
 fulltree identical testedff9434d. AutomaticRailway619e60c5-4dc3-44eb-9b02-a0b1cd912c5b
