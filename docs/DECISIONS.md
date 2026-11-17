@@ -1,5 +1,12 @@
 # Decisions
 
+OWNER/ASSUMED 2026-11-17: Gabriel directly accepts Claude's Nov16 engineer
+handoff and orders the frozen slices, #433/#434, B-23a/#513, existing B-23b/#517,
+then B-24 OFF, B-07/B-21 and B-19. Green self-merge remains required; do not
+touch architect PR #511. This resolves the old #510/package-only hold, not
+failed evidence or safety gates. Each changed integration head gets one CI;
+never cancel a running first gate or retry an unchanged head for green.
+
 ASSUMED: B-25 is fixed by making the two queue tests refuse live network (shared helper), not by
 editing any assertion; the wasm-feature-detect 1.9.0 override from #509 is kept as hardening. D-067a says
 never edit a test to make the local sandbox pass: this change is not for the sandbox, it removes a
@@ -11,6 +18,7 @@ force-push branches it did not create; the resulting tree is the same -- 2026-11
 
 ASSUMED: B-23 ships as ordered sub-PRs (B-23a pure modules and fixtures, B-23b wiring and read-only
 counts) under AGENTS 2 "split big items" -- 2026-11-16.
+
 
 ASSUMED2026-11-08:455.4B4 template recorded_at reuses existing shared clock3
 formatTime; strict UTC-Z/recent weekday/old month-day/different year policy,
