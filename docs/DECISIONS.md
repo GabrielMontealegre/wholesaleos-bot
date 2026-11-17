@@ -1,5 +1,12 @@
 # Decisions
 
+OWNER/ASSUMED 2026-11-17: Gabriel directly accepts Claude's Nov16 engineer
+handoff and orders the frozen slices, #433/#434, B-23a/#513, existing B-23b/#517,
+then B-24 OFF, B-07/B-21 and B-19. Green self-merge remains required; do not
+touch architect PR #511. This resolves the old #510/package-only hold, not
+failed evidence or safety gates. Each changed integration head gets one CI;
+never cancel a running first gate or retry an unchanged head for green.
+
 ASSUMED: B-25 is fixed by making the two queue tests refuse live network (shared helper), not by
 editing any assertion; the wasm-feature-detect 1.9.0 override from #509 is kept as hardening. D-067a says
 never edit a test to make the local sandbox pass: this change is not for the sandbox, it removes a
@@ -11,6 +18,27 @@ force-push branches it did not create; the resulting tree is the same -- 2026-11
 
 ASSUMED: B-23 ships as ordered sub-PRs (B-23a pure modules and fixtures, B-23b wiring and read-only
 counts) under AGENTS 2 "split big items" -- 2026-11-16.
+
+
+ASSUMED2026-11-08:455.4B4 template recorded_at reuses existing shared clock3
+formatTime; strict UTC-Z/recent weekday/old month-day/different year policy,
+invalid/future/missing formatter => Time not confirmed. This is presentation
+only: no template body/subject/operator/policy/history/digest/writer/auth change.
+Branch from current origin/main, carry failed device evidence as docs only;
+never carry blocked device runtime into this independent candidate. New test
+uses synthetic route-fulfilled actual component, not a signed full dashboard.
+Existing routes/UI failed again at verifier14:31 first fetch, cause UNPROVEN.
+Under D065c block this slice, no unchanged retry or full/CI/release waiver;
+continue JV/profit metadata trace. Full suite for template head NOT RUN.
+
+Architect updates read once2026-11-08:494 skip trace behind disabled provider
+registry/switch, owner enables paid use;454 new batch choice/voice/board specs,
+375 lost-deal timing,401 performance budgets are future bounded scope. Current
+D065 order unchanged. No private board inspection, paid call, secret, new send
+authorization or address-only cross-source merge is assumed. Evidence/source
+gates win over unsupported stage, contact, comp, price or motivation inference.
+Device startup handoff filed as issue495; earlier connection failure retained.
+Template first-fetch handoff filed as issue496. Neither slice is release-ready.
 
 OWNER standing order, recorded2026-11-08: continue autopilot until explicit
 STOP AUTOPILOT. Fetch/reconcile origin, implement backlog under AGENTS, commit/
