@@ -113,7 +113,7 @@ function normalizeAdapterResult(result) {
   const candidateList = asArray(result && result.candidates);
   const postSaleCandidates = asArray(result && result.post_sale_candidates);
   const packetList = asArray(result && result.packets);
-  return {
+  const normalized = {
     source_id: cleanText(result && result.source_id),
     source_name: cleanText(result && result.source_name),
     county: cleanText(result && result.county),
@@ -143,6 +143,14 @@ function normalizeAdapterResult(result) {
     source_preview: result && result.source_preview ? result.source_preview : result && result.diagnostics && result.diagnostics.live_source_preview ? result.diagnostics.live_source_preview : null,
     candidate_ids: candidateList.map((candidate) => cleanText(candidate.candidate_id || candidate.id)).filter(Boolean)
   };
+  if (result && result.distress_summary && typeof result.distress_summary === 'object' && !Array.isArray(result.distress_summary)) {
+    normalized.distress_summary = Object.assign({}, result.distress_summary);
+    normalized.source_proof_rows = asArray(result.source_proof_rows).map(row => Object.assign({}, row));
+    normalized.distress_audit = asArray(result.distress_audit).map(row => Object.assign({}, row, {
+      changes: asArray(row && row.changes).map(change => Object.assign({}, change))
+    }));
+  }
+  return normalized;
 }
 
 async function runAcquisitionCore(job, options = {}) {
@@ -250,6 +258,9 @@ async function runAcquisitionCore(job, options = {}) {
     source_families_attempted: sourceFamiliesAttempted,
     adapter_results: adapterResults,
     candidates_found: candidates.length,
+    ...(adapterResults.some(result => result.distress_summary) ? {
+      source_proof_rows: adapterResults.flatMap(result => asArray(result.source_proof_rows))
+    } : {}),
     cards: normalizedCards,
     candidates,
     call_ready_packets: packets,
