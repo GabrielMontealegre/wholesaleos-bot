@@ -1,5 +1,14 @@
 # Decisions
 
+ASSUMED: B-24 provider comps count only in a state whose rule has disclosure status "disclosure" AND
+verification "verified". Texas, states missing from the table and states whose rule is still
+"unverified" (NC, MI today) get labeled provider estimates that never satisfy a comp gate. This is the
+conservative reading of AGENTS 5 Value and D-066 point 3 -- 2026-11-17.
+
+ASSUMED: B-24 registry prices stay null until the owner confirms vendor pricing; a null price keeps that
+service off even when its switch is on, because the monthly cap cannot be enforced without a price
+(AGENTS 5 Money) -- 2026-11-17.
+
 ASSUMED: B-25 is fixed by making the two queue tests refuse live network (shared helper), not by
 editing any assertion; the wasm-feature-detect 1.9.0 override from #509 is kept as hardening. D-067a says
 never edit a test to make the local sandbox pass: this change is not for the sandbox, it removes a

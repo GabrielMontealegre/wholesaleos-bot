@@ -28,11 +28,19 @@ Gabriel asked Claude to work as the engineer on 2026-11-16 while Codex was stuck
     PDF row patterns; DeKalb/Douglas HTML tables; pick the Charlotte code-case layer); the 2026-11-09 host
     fixes on existing adapters; add chosen sources to the source catalog with a section 7 check; a
     read-only per-source counts view (each run already returns a counts-only `distress_summary`).
-- **B-24:** see its entry below for what was started in this run (if anything); the rest is Codex's.
+- **B-24 paid data provider:** B-24a (#523) is the provider-generic core, switched off. It has the registry
+  (prices null until the owner confirms them), an exact switch, the key from the server environment only,
+  a cost ledger with no personal data, a monthly cap and cached duplicates. Comps are closed sales only;
+  Texas, unknown and unverified-disclosure states give labeled estimates. Skip trace returns possible
+  numbers with DNC/litigator flags. **B-24b (Codex, after Gabriel picks the vendor):** transport and
+  field mapping from the vendor's published examples; ledger/cache storage; Settings status; the #494
+  skip-trace button and batch with cost estimate and owner confirm; list import into the B-23 lanes.
 
-Waiting on Gabriel's Merge click, in this order: #509, #512, #433, #434, #513, #517.
+Waiting on Gabriel's Merge click, in this order: #509, #512, #433, #434, #513, #517, #523.
 
-Codex picks up next, in order: frozen slices (above) -> B-23c -> B-24 (switch off) -> B-07/B-21 -> B-19.
+Codex picks up next, in order: frozen slices (above) -> B-23c -> B-07/B-21 -> B-19 -> B-24b once the
+vendor is picked. Verify the NC and MI disclosure rules in the state rules table (citations exist, status
+"unverified") so provider comps can count there.
 
 ## NEXT RUN ORDER (D-067, architect 2026-11-09). Read this first; it replaces every older order below
 
@@ -61,7 +69,7 @@ reply Send switch, picking and paying for the B-24 provider, any outreach.
 
 ---
 
-## B-25 · Pin wasm-feature-detect 1.9.0 (D-067b) · TODO ([#507](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/507))
+## B-25 · Pin wasm-feature-detect 1.9.0 (D-067b) · IN REVIEW, CI green (#509: real cause was live network in two tests) ([#507](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/507))
 
 `wasm-feature-detect` 1.10.0 (published 2026-11-09) crashes the tesseract OCR worker on Node 20. With no
 lockfile, CI and the next production deploy both install it. Acceptance: package.json gets
@@ -4262,7 +4270,7 @@ Acceptance
   - Outreach Hub says "Run scrape to find real buyers", which is legacy wording.
   - Deal Matching stays on "Loading matches..." (replaced by B-19).
 
-## B-23 · Public distress lists importer (D-066) · TODO
+## B-23 · Public distress lists importer (D-066) · IN PROGRESS (B-23a #513, B-23b #517 in review; B-23c Codex)
 
 Goal: the app pulls free public distress lists every day, like the operator did by hand on 2026-11-09:
 foreclosure notices, trustee sales, tax sales, tax-delinquent lists, lis pendens, probate, code cases and
@@ -4296,7 +4304,7 @@ Acceptance
 
 ---
 
-## B-24 · Paid data provider adapter: comps, property detail, skip trace (D-066) · TODO (switch stays off)
+## B-24 · Paid data provider adapter: comps, property detail, skip trace (D-066) · IN PROGRESS (B-24a #523 in review; B-24b after vendor pick) (switch stays off)
 
 Goal: one provider interface so the app can use the vendor Gabriel picks, without code changes per vendor.
 
