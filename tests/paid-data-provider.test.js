@@ -15,7 +15,9 @@ const ON = {
 };
 
 function ledger(rows = []) {
-  return { rows: () => rows.slice(), append: (row) => rows.push(row), all: rows };
+  let tail = Promise.resolve();
+  return { rows: () => rows.slice(), append: (row) => rows.push(row), all: rows,
+    runExclusive: work => { const result = tail.then(work); tail = result.catch(() => {}); return result; } };
 }
 
 (async () => {
@@ -90,7 +92,7 @@ function ledger(rows = []) {
 
   // ---- Comps: closed sales only; non-disclosure and unknown states are estimates -------
   const rows = [
-    { address: '10 Example St', sale_status: 'Sold', sale_price: 200000, sale_date: '2026-09-01', beds: 3, baths: 2, living_area_sqft: 1400, year_built: 1975, distance_miles: 0.4, value_kind: 'recorded_sale', source_label: 'County deed record' },
+    { address: '10 Example St', sale_status: 'Sold', sale_price: 200000, sale_date: '2026-09-01', beds: 3, baths: 2, living_area_sqft: 1400, year_built: 1975, distance_miles: 0.4, value_kind: 'recorded_sale', source_label: 'County deed record', source_url: 'https://records.example.test/synthetic-sale/10', source_reference: 'synthetic deed row 10' },
     { address: '11 Example St', sale_status: 'Active', sale_price: 250000, sale_date: '2026-09-01', value_kind: 'list_price', source_label: 'MLS' },
     { address: '12 Example St', value_kind: 'avm', sale_price: 210000, source_label: 'Model' },
     { address: '13 Example St', sale_status: 'Sold', sale_price: 0, sale_date: '2026-09-01', value_kind: 'recorded_sale', source_label: 'Deed' },

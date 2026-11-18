@@ -1,0 +1,13 @@
+{
+  "synthetic_only": true,
+  "provider_calls": false,
+  "impossible_calendar_date_comp_count": 1,
+  "infinite_price_comp_count": 1,
+  "nested_distinct_requests_collide": true,
+  "unknown_litigator_counts_as_route": true,
+  "inherited_flags_count_as_route": true,
+  "concurrent_synthetic_transports": 3,
+  "concurrent_reserved_or_logged_usd": 12,
+  "cap_usd": 10,
+  "response_returned_after_switch_off": true
+}
