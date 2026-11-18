@@ -10,13 +10,21 @@ fixtures. B-23 promotion: BLOCKED until Gabriel approves a preview run per sourc
 First529 failed44234975957 remains failed326/2/0; only intentional OFF metadata
 catalog assertions were corrected, retaining exact active sources/queue defaults.
 B-24a #523 original commits retained and mainc41a349 merged. OFF-core hardening
-is ready for its hosted head gate; no runtime callsite, real vendor, pricing,
+RELEASED as ef94a6e: head51193a4 hosted44243153743 PASS330/0/0,
+auto7875176500 SUCCESS and fixed public/static/counts401 PASS. No runtime callsite, real vendor, pricing,
 credential, spend or outreach action. B-24b transport/durable ledger/vendor-example
 fixtures stay BLOCKED on owner vendor/pricing choice and explicit approval.
 First hardened523 gate44240341791 failed329/1/0 only on public env-name metadata
 under env_key. Rename field credential_env, same exact names/OFF configuration;
 secret scanner and all assertions unchanged, new exact-name checks added.
-After B-24a release, continue B-07/B-21, then B-19.
+After B-24a release, B-07 metadata discovery confirmed official documented fields,
+but not a current free REST endpoint/qualification legend/current count. Official
+metadata versions disagree on cadence/distribution; no guessed profile is enabled.
+Wake fallback index was inaccessible via the read-only tool; columns remain unknown.
+B-07/B-21 live imports/property reports conflict with current boundaries: BLOCKED
+on [#530](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/530)'s compatible bounded scope.
+Safe metadata/code tracing may continue; do not infer an answer from our own issue.
+Continue independent B-19 pure matcher while that scope answer is pending.
 
 PR #433 is released as `c03f564`: hosted316/0/0; #434 is released as `8976683`:
 hosted318/0/0. Both automatic deployments and fixed public/static checks passed.
@@ -4217,7 +4225,14 @@ Acceptance
 
 ---
 
-## B-07 · Charlotte automatic comps (Mecklenburg County, NC) · TODO
+## B-07 · Charlotte automatic comps (Mecklenburg County, NC) · LIVE ACCEPTANCE BLOCKED #530
+
+2026-11-18 metadata-only discovery: official schema names differ from the historical
+third-party field list below. See docs/cycles/b07-source-discovery.md. No property
+rows, actual imports, live comp query, paid distribution or endpoint promotion.
+The live 10-property/PR-address clause below does not override current no-private/
+real-import boundaries. Compatible OFF implementation/acceptance scope awaits #530.
+Historical acceptance follows, not a new authorization.
 
 Goal: the first market where comps work by themselves (D-002).
 
@@ -4456,7 +4471,12 @@ Acceptance
 
 ---
 
-## B-21 · Free statewide data, Texas and Florida first · TODO
+## B-21 · Free statewide data, Texas and Florida first · LIVE ACCEPTANCE BLOCKED #530
+
+Current no-real-import/private-content boundary prevents live statewide file/row
+ingestion. Scope question #530 requests compatible metadata/fixture-only code
+acceptance; no B-23-specific approval is inferred for this item. No statewide
+file was downloaded or source promoted. Independent metadata discovery may continue.
 
 Goal: cover every county of a state at once from free official statewide files, starting with Texas and
 Florida, where Gabriel has phone numbers (D-027).
@@ -4704,7 +4724,15 @@ Acceptance
 
 ---
 
-## B-24 · Paid data provider adapter: comps, property detail, skip trace (D-066) · TODO (switch stays off)
+## B-24 · Paid data provider adapter: comps, property detail, skip trace (D-066) · OFF CORE DONE / ACTIVATION BLOCKED
+
+B-24a #523 RELEASED ef94a6e, hosted330/0/0, auto7875176500/public/static/counts401
+PASS. Original assertions retained; atomic reservation, scoped cache, strict dates/
+price/source evidence and own contact flags hardened. Prices null, switches OFF,
+no production ledger/transport/callsite. B-24b vendor-specific fixtures/mapping,
+durable cross-worker accounting/reconciliation, list integration and activation
+remain BLOCKED on owner vendor/pricing choice and explicit approval. This does
+not claim full operational/provider acceptance or published vendor fixtures exist.
 
 Goal: one provider interface so the app can use the vendor Gabriel picks, without code changes per vendor.
 

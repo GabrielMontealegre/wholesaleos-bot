@@ -1,5 +1,18 @@
 # Decisions
 
+VERIFIED 2026-11-18 UTC: OFF B24a523 releasedef94a6e, exacthead51193a4,
+hosted44243153743 PASS330/0/0, auto7875176500 and fixed public/static/counts401
+PASS. Failed329/1/0 evidence retained. Provider prices remain null/OFF, no runtime
+transport/ledger/wiring; B24b owner choice/pricing/permission remains BLOCKED.
+
+ASSUMED 2026-11-18 UTC: B07/B21 historical live ingestion/property report clauses
+do not override current no-private-content/real-import/business-write boundaries.
+File needs-architect530 for one compatible bounded OFF/code acceptance prompt;
+our issue body is not approval. Metadata-only B07 discovery is retained as such,
+not a live profile/qualified sale/data freshness proof. No guessed REST/layer0,
+no Wake workbook rows or invented columns, no disclosure/ARV promotion. Continue
+independent pure B19 while live scope is blocked. -- AGENTS3/5/10, issue530.
+
 ASSUMED 2026-11-18 UTC: first hardened523 head15ec6d7/run44240341791 failed
 329/1/0,total330. Only secret gate reported entropy-assignment at module28/35:
 the env_key fields contain public environment VARIABLE NAMES, never credentials.
