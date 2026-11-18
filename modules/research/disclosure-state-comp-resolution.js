@@ -30,6 +30,20 @@ function optionalNumber(value) {
   return Number.isFinite(number) ? number : null;
 }
 
+function mappedBathrooms(attrs, map) {
+  if (map.bathrooms || map.baths) return optionalNumber(attrsValue(attrs, map.bathrooms || map.baths));
+  const parts = map.bathrooms_parts;
+  if (!parts || typeof parts.full !== 'string' || typeof parts.half !== 'string') return null;
+  const values = [parts.full, parts.half].map(field => {
+    const raw = attrs && Object.getOwnPropertyDescriptor(attrs, field)?.value;
+    return typeof raw === 'number' && Number.isSafeInteger(raw) && raw >= 0 ? raw :
+      typeof raw === 'string' && /^\d+$/.test(raw) && Number.isSafeInteger(Number(raw)) ? Number(raw) : null;
+  });
+  if (values.some(value => value == null)) return null;
+  const result = values[0] + values[1] * 0.5;
+  return Number.isSafeInteger(result * 2) ? result : null;
+}
+
 function normalizeCaps(caps) {
   const merged = Object.assign({}, DEFAULT_CAPS, caps || {});
   merged.max_rows = Math.max(1, Math.min(Number(merged.max_rows) || DEFAULT_CAPS.max_rows, 6));
@@ -327,6 +341,7 @@ function evaluateStrictCompGrid(candidate, row, options = {}) {
 
 function compFromAttributes(attrs, profile, queryUrl, context = {}, geometry = null) {
   const map = profile.field_map || {};
+  const bathrooms = mappedBathrooms(attrs, map);
   const address = attrsValue(attrs, map.situs_address);
   const price = numberValue(attrsValue(attrs, map.sale_price));
   const soldDate = isoDate(attrsValue(attrs, map.sale_date)) || normalizeArcgisDate(attrsValue(attrs, map.sale_date));
@@ -360,7 +375,10 @@ function compFromAttributes(attrs, profile, queryUrl, context = {}, geometry = n
     property_kind: attrsValue(attrs, map.property_kind) || landUse,
     living_area: optionalNumber(attrsValue(attrs, map.living_area || map.sqft)),
     bedrooms: optionalNumber(attrsValue(attrs, map.bedrooms || map.beds)),
-    bathrooms: optionalNumber(attrsValue(attrs, map.bathrooms || map.baths)),
+    bathrooms,
+    ...(!map.bathrooms && !map.baths && bathrooms != null ? { bathrooms_derivation: {
+      kind: 'derived', formula: 'full + half * 0.5', fields: [map.bathrooms_parts.full, map.bathrooms_parts.half]
+    } } : {}),
     year_built: optionalNumber(attrsValue(attrs, map.year_built)),
     lot_size: optionalNumber(attrsValue(attrs, map.lot_size || map.lot_size_sqft)),
     latitude: coordinates && coordinates.latitude,

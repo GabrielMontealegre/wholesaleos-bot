@@ -2,6 +2,18 @@
 
 ## Latest Run Summary (2026-11-18 UTC)
 
+New run after fresh primary capacity returned: main9e50304, docs534 already
+released332/0/0/auto7876969698/public controls PASS; no completed release re-polled.
+Read genuinely NEW architect530 answer6970839853 once (06:19:20Z): finish532
+(already released), then B07a/B21a default-OFF official-metadata maps and synthetic
+schema-only fixtures. Unknown endpoint/layer/qualification/Wake columns stay null.
+No live rows/downloads/imports/activation/prices or addresses in PRs/disclosure
+promotion. CODE DONE after exact-head hostedgreen; live acceptance owner-BLOCKED.
+B07a OFF schema registry/fixture + generic mapped full/half bath normalization in
+the existing comp engine are ready for hosted gate. No new engine or runnable
+source registration; all operational fields remain null/OFF. B21a follows, then
+remaining B19. This compatible answer supersedes the earlier no-answer notes below.
+
 B-19a #532 RELEASED48f2904: head3fadef7 hosted44250222397 PASS331/0/0,
 auto7876130763 SUCCESS, fixed public/static/counts401 PASS. B-19b #533 private snapshot
 GET RELEASED12937bd: heada16ae89 hosted44253602881 PASS332/0/0,
@@ -4248,7 +4260,13 @@ Acceptance
 
 ---
 
-## B-07 · Charlotte automatic comps (Mecklenburg County, NC) · LIVE ACCEPTANCE BLOCKED #530
+## B-07 · Charlotte automatic comps (Mecklenburg County, NC) · OFF CODE IN PROGRESS / LIVE OWNER-BLOCKED
+
+Architect530 answer6970839853 bounds B07a to official metadata field maps and
+synthetic schema-only fixtures, reusing existing comp engine/grid. Gate pending;
+code is not DONE yet. Unknown endpoint/layer/Wake columns/qualification legend
+remain null. Live10-property acceptance below stays BLOCKED-owner-validation;
+neither metadata nor a synthetic fixture grants runtime or ARV authority.
 
 2026-11-18 metadata-only discovery: official schema names differ from the historical
 third-party field list below. See docs/cycles/b07-source-discovery.md. No property
