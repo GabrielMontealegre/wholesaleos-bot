@@ -40,10 +40,10 @@ function isoDay(value, name) {
   return text.slice(0, 10);
 }
 
-// Picks a value for each generic field. An explicit profile field_map wins; otherwise a
-// column whose name matches a known label is used. The column name travels as the origin.
+// Explicit mapped columns win over generic labels; missing mapped columns stay missing.
+// The column name travels with its value as the origin.
 function pickField(fields, generic, fieldMap) {
-  const mapped = clean(fieldMap && fieldMap[generic]);
+  const mapped = clean(fieldMap && Object.prototype.hasOwnProperty.call(fieldMap, generic) ? fieldMap[generic] : '');
   if (mapped) {
     return Object.prototype.hasOwnProperty.call(fields, mapped) ? { value: fields[mapped], origin: mapped } : { value: '', origin: '' };
   }
@@ -102,7 +102,7 @@ function mapRowToLead(row, profile, options = {}) {
   const capturedAt = clean(options.captured_at);
   isoDay(capturedAt, 'captured_at');
   const fields = Object.assign({}, row && row.fields);
-  const fieldMap = options.field_map || null;
+  const fieldMap = { ...(profile.field_map || {}), ...(options.field_map || {}) };
   const sourceLine = clean(fields.source_line);
   const picked = {};
   for (const generic of Object.keys(GENERIC_FIELDS)) picked[generic] = pickField(fields, generic, fieldMap);

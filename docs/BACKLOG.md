@@ -14,10 +14,13 @@ row and duplicate audit is retained; the remote request-page bound stays1000.
 B-23c1 #524 RELEASED as `16d1558`: hosted44198737032 PASS323/0/0,
 automatic deployment7869489755 SUCCESS, fixed public/static PASS. Row metadata,
 proof-only rows and audit now survive repeated normalization/orchestration.
-B-23c2 adds an admin-only/no-store source-count GET from strict saved snapshots:
-unknown counts remain null, blocked/latest conflicts do not inherit old success,
-and no row/audit/private text leaves the report. Focused tests PASS; hosted gate
-pending. No source fetch, scheduling or actual import is enabled.
+B-23c2 #525 RELEASED as `af59c6a`: hosted44202437105 PASS325/0/0,
+automatic deployment7869884489 SUCCESS, fixed public/static and new endpoint
+unauthenticated401 PASS. Counts remain a saved-preview projection, not live imports.
+B-23c3 now adds source/URL/kind/reader-bound schema field maps for three ArcGIS
+profiles. Metadata/count-only review and synthetic tests PASS; hosted gate pending.
+One existing fixture uses actual column names with all assertions unchanged.
+No source fetch of property rows, scheduling, catalog promotion or actual import.
 No source was scheduled or collected; B-23c and OFF B-24a/#523 remain next.
 
 - B-25: green PR #509 merged as `35a5f6e`; handoff PR #512 merged as `c53740b`.

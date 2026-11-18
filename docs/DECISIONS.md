@@ -1,5 +1,16 @@
 # Decisions
 
+ASSUMED 2026-11-17 local: B-23c3 binds reader settings to exact source ID,
+kind, URL and reader using a data-only table. Only three official ArcGIS schemas
+were reviewed; metadata/count GETs fetched no property rows and promoted no
+source. Explicit profile columns replace guesses; a missing mapped column stays
+missing. No venue/mailing/deed/assessment field supplies property/sale/price truth.
+Change one existing ArcGIS fixture's SITE_ADDRESS/SALE_DATE keys to the official
+LOCATION_ADDR/AuctionDate keys, preserving every assertion and epoch value;
+this replaces incidental synthetic schema, not a safety/date assertion.
+Unverified first-list settings, pagination/host/catalog/daily wiring remain TODO.
+-- AGENTS3/4/5, D-013 generic code/config data, D-066, source-truth acceptance.
+
 ASSUMED 2026-11-17: B-23c2 source counts are a read-only projection of the
 latest saved preview outcome per configured source in retained scout jobs,
 not an import, live refresh or all-time ledger. Unknown/invalid/conflicting

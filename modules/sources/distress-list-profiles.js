@@ -6,6 +6,7 @@
 // Pure: no network, no clock, no writes.
 
 const specs = require('../../docs/knowledge/county-source-specs-2026-11-09.json');
+const readerSettings = require('./distress-list-reader-settings.json');
 
 const DISTRESS_SOURCE_KINDS = Object.freeze([
   'foreclosure_notice', 'trustee_sale', 'tax_sale', 'tax_delinquent',
@@ -87,6 +88,8 @@ function buildProfile(spec) {
   const url = httpsUrl(spec.url);
   const host = clean(spec.allowlisted_host).toLowerCase();
   const reader = READER_FOR_FORMAT[clean(spec.format)] || '';
+  const settings = readerSettings.settings.find(item => item.source_id === clean(spec.source_id) &&
+    item.source_kind === sourceKind && item.source_url === (url && url.href) && item.reader === reader);
   const hostMatches = Boolean(url && host && url.hostname.toLowerCase() === host);
   const reason = !sourceKind ? 'Unknown source kind.'
     : !hostMatches ? 'Source address is not on its allowlisted host.'
@@ -100,6 +103,9 @@ function buildProfile(spec) {
     source_url: url ? url.href : '',
     format: clean(spec.format),
     reader,
+    reader_options: Object.freeze({ ...(settings && settings.reader_options) }),
+    field_map: Object.freeze({ ...(settings && settings.field_map) }),
+    reader_settings_evidence: settings ? Object.freeze({ schema_url: settings.schema_url, checked_at: settings.checked_at, evidence_level: settings.evidence_level }) : null,
     hosts: Object.freeze(host ? [host] : []),
     shared_host: SHARED_HOSTS.includes(host),
     access: clean(spec.access),
