@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "fixture_sets": [
+    { "source_id": "nc_mecklenburg_tax_sale_meckags_mecklenburgcountync_gov", "kind": "synthetic", "path": "tests/distress-list-reader-settings.test.js" },
+    { "source_id": "nc_guilford_tax_sale_gcgis_guilfordcountync_gov", "kind": "synthetic", "path": "tests/distress-list-reader-settings.test.js" },
+    { "source_id": "tn_davidson_code_case_services2_arcgis_com", "kind": "synthetic", "path": "tests/distress-list-reader-settings.test.js" }
+  ],
+  "source_relations": [
+    { "source_id": "mi_wayne_land_bank_services2_arcgis_com", "related_source_id": "mi_wayne_detroit_land_bank_listings", "relation": "candidate_successor" }
+  ]
+}

@@ -66,8 +66,8 @@ function runOptions(responses, calls) {
   assert.strictEqual(registry.adapterIdForSourceId('tx_dallas_foreclosure_notice_dallas_tx_publicsearch_us'), '', 'settings-needed source is not registered');
   assert.strictEqual(registry.adapterIdForSourceId('tx_dallas_lis_pendens_dallas_tx_publicsearch_us'), '', 'manual source is not registered');
   for (const job of [{}, { market: { city: 'Charlotte', state: 'NC' } }, { market: { city: 'Memphis', state: 'TN' } }]) {
-    const catalogIds = sourceCatalog.buildSourceCatalog(job).map((source) => source.source_id);
-    assert.ok(!catalogIds.some((id) => autoIds.includes(id)), 'no distress source joins an automatic run until the catalog lists it');
+    const distressEntries = sourceCatalog.buildSourceCatalog(job).filter(source => autoIds.includes(source.source_id));
+    assert.ok(distressEntries.every(source => source.enabled === false && source.auto_select === false && source.promotion_status === 'blocked_pending_validated_preview'), 'catalogued distress sources remain OFF until validated preview and owner promotion');
   }
 
   // ---- A full run on a synthetic CSV ---------------------------------------------------

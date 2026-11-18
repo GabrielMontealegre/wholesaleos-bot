@@ -20,11 +20,23 @@ unauthenticated401 PASS. Counts remain a saved-preview projection, not live impo
 B-23c3 #526 RELEASED as `08253f4`: hosted44205741904 PASS326/0/0,
 automatic deployment7870354209 SUCCESS, bounded public/static + counts401 PASS.
 Three schema-bound profiles remain unscheduled; no property rows were fetched.
-B-23c4 corrects the current archive profile and the review service's hidden legacy
-URL; relative links use the validated response base, legacy parsing stays intact.
-New regression and cycle48 G1-G16 PASS; hosted gate pending. One exact expected
-current-host URL changes intentionally; no date/money/no-write check is weakened.
-No source was scheduled or collected; B-23c and OFF B-24a/#523 remain next.
+B-23c4 #527 RELEASED as `5183521`: corrected head a816d2f hosted44212368236
+PASS327/0/0, automatic deployment7873418253 SUCCESS, fixed public/static + counts401
+PASS. First failed44209632424 remains failed326/1/0; exact helper fixture stub
+keeps every assertion/timeout and never reads the real local helper.
+B-23d operational OFF catalog/daily guards and pure preview eligibility are ready
+for hosted CI per [architect #528](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/528#issuecomment-6967037126).
+All new sources are disabled/candidate; missing corpus yields reader:null and
+needs-sample-data, normal/fallback selection cannot run them. Counts retain OFF
+state and skipped daily control metadata. Legacy Detroit data/adapter stays separate.
+B-23 code release is pending its gate, not yet DONE.
+First529 hosted44234975957 failed326/2/0 on old metadata-catalog expectations;
+bounded correction preserves exact active/queue sources and requires added OFF
+entries plus exact Cleveland policy IDs. Failed evidence retained, no red merge.
+B-23 promotion: BLOCKED until Gabriel approves a preview run per source.
+No source was scheduled or collected. After B-23d release, harden existing OFF-only
+B-24a/#523 before merge: synthetic review proved date/price/cache/contact/cap defects;
+registry prices remain null and no vendor/provider action has occurred.
 
 - B-25: green PR #509 merged as `35a5f6e`; handoff PR #512 merged as `c53740b`.
   Automatic deployment succeeded. Fixed public health/dashboard/app/static checks passed;

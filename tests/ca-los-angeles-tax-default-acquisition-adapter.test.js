@@ -281,7 +281,12 @@ function fakePdfParse(pageTexts) {
   const laCatalog = sourceCatalog.buildSourceCatalog({ city: 'Los Angeles', county: 'Los Angeles', state: 'CA' });
   assert.deepStrictEqual(laCatalog.map((item) => item.source_id), [adapter.SOURCE_ID]);
   assert.strictEqual(laCatalog[0].official_source, true);
-  assert.deepStrictEqual(sourceCatalog.buildSourceCatalog({ city: 'Cleveland', county: 'Cuyahoga', state: 'OH' }), []);
+  const clevelandMarket = { city: 'Cleveland', county: 'Cuyahoga', state: 'OH' };
+  const clevelandCatalog = sourceCatalog.buildSourceCatalog(clevelandMarket);
+  assert.deepStrictEqual(clevelandCatalog.map((item) => item.source_id).sort(),
+    require('../modules/sources/distress-list-operational-policy').catalogForMarket(clevelandMarket).map((item) => item.source_id).sort());
+  assert.ok(clevelandCatalog.length > 0 && clevelandCatalog.every((item) => item.enabled === false && item.auto_select === false &&
+    item.promotion_status === 'blocked_pending_validated_preview'));
   assert.deepStrictEqual(queueService.defaultQueueSourceIdsForMarket({ city: 'Los Angeles', county: 'Los Angeles', state: 'CA' }), [adapter.SOURCE_ID]);
   assert.deepStrictEqual(queueService.defaultQueueSourceIdsForMarket({ city: 'Detroit', county: 'Wayne', state: 'MI' }), ['mi_wayne_detroit_land_bank_listings']);
   assert.ok(queueService.defaultQueueSourceIdsForMarket({ city: 'Dallas', county: 'Dallas', state: 'TX' }).includes('tx_dallas_county_clerk_foreclosure_notices'));

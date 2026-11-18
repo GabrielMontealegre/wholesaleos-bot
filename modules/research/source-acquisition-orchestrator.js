@@ -94,17 +94,18 @@ function selectAcquisitionSources(job, catalog) {
   const requestedFamilies = asArray(job.source_families || job.sourceFamilies || []).map(cleanText).filter(Boolean);
   const explicitlyRequested = requestedIds.length > 0 || requestedFamilies.length > 0;
   const registeredIds = new Set(sourceAdapterRegistry.listRegisteredSourceIds());
-  let selected = (Array.isArray(catalog) ? catalog : []).filter((source) => {
+  const eligible = (Array.isArray(catalog) ? catalog : []).filter(source => source.enabled !== false);
+  let selected = eligible.filter((source) => {
     if (!registeredIds.has(source.source_id)) return false;
     if (!explicitlyRequested && source.auto_select === false) return false;
     if (requestedIds.length && !requestedIds.includes(source.source_id)) return false;
     return sourceMatchesRequestedFamily(source, requestedFamilies);
   });
   if (!selected.length && !explicitlyRequested) {
-    selected = (Array.isArray(catalog) ? catalog : []).filter((source) => registeredIds.has(source.source_id));
+    selected = eligible.filter((source) => registeredIds.has(source.source_id));
   }
   if (!selected.length && !explicitlyRequested) {
-    selected = (Array.isArray(catalog) ? catalog : []).filter((source) => /dallas county clerk foreclosure notices/i.test(source.source_name || source.source_id));
+    selected = eligible.filter((source) => /dallas county clerk foreclosure notices/i.test(source.source_name || source.source_id));
   }
   return selected.slice(0, MAX_SELECTED_SOURCES);
 }
@@ -157,6 +158,12 @@ async function runAcquisitionCore(job, options = {}) {
   job = job || {};
   const startedAt = nowIso();
   const catalog = sourceCatalog.buildSourceCatalog(job);
+  const requestedIds = asArray(job.source_ids || job.sourceIds).map(cleanText);
+  const requestedFamilies = asArray(job.source_families || job.sourceFamilies).map(cleanText);
+  const disabledSources = catalog.filter(source => source.enabled === false &&
+    (!requestedIds.length || requestedIds.includes(source.source_id)) && sourceMatchesRequestedFamily(source, requestedFamilies))
+    .map(source => ({ source_id: source.source_id, enabled: false, status: source.status === 'needs_corpus' ? 'needs_corpus' : 'not_enabled',
+      status_label: source.status === 'needs_corpus' ? 'needs sample data' : 'not enabled', promotion_status: source.promotion_status }));
   const shouldRunMock = !!(asArray(job.mock_acquisition_candidates).length || asArray(options.mock_acquisition_candidates).length || job.source_acquisition_mode === 'mock');
   const context = {
     acquisition_run_id: job.discovery_batch_id || job.job_id,
@@ -231,7 +238,7 @@ async function runAcquisitionCore(job, options = {}) {
       ? 'available'
       : hasAttemptedAdapters
         ? 'needs_manual_review'
-        : 'not_configured';
+        : disabledSources.length ? 'not_enabled' : 'not_configured';
 
   const diagnostics = {
     selected_source_count: sourceIdsAttempted.length,
@@ -242,7 +249,8 @@ async function runAcquisitionCore(job, options = {}) {
     card_count: normalizedCards.length,
     packet_count: packets.length,
     mock_mode: shouldRunMock,
-    source_catalog_count: catalog.length
+    source_catalog_count: catalog.length,
+    disabled_sources: disabledSources
   };
   const documentHunterSummary = adapterResults.map((result) => result && result.document_hunter_summary).find((summary) => summary && typeof summary === 'object') || null;
 
@@ -253,6 +261,7 @@ async function runAcquisitionCore(job, options = {}) {
     started_at: startedAt,
     finished_at: nowIso(),
     catalog_source_count: catalog.length,
+    disabled_sources: disabledSources,
     source_families: Array.from(new Set(catalog.map((source) => source.source_family).filter(Boolean))).slice(0, 20),
     source_ids_attempted: sourceIdsAttempted,
     source_families_attempted: sourceFamiliesAttempted,

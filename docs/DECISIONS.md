@@ -1,5 +1,26 @@
 # Decisions
 
+ASSUMED 2026-11-18 UTC: B23d first hosted44234975957 failed326/2/0 only on
+legacy-only/empty metadata catalog assertions. Apply #528's intentional OFF catalog
+contract to MI254/256 and LA284: exact active Detroit legacy ID and existing queue
+defaults remain, added metadata must be OFF/blocked, Cleveland matches exact
+configured policy IDs rather than []. No runtime/safety/date/network assertion
+changes. Retain failed evidence and run only the corrected new head. -- AGENTS3/4.
+
+ASSUMED 2026-11-18 UTC: apply architect528 comment6967037126 once: remaining
+B-23 code ships default-OFF/fixture-only; operational promotion remains owner-blocked.
+Separate operational profiles from technical fixture codecs. All new catalog entries
+are disabled candidates; no validated source-specific corpus means reader:null and
+needs_corpus. Source selectors and every fallback exclude disabled entries; skip
+controls persist through existing diagnostics/count projection, not fake row counts.
+Keep the old Detroit ID/adapter/evidence unchanged and link the new DLBA ID only
+as candidate_successor metadata. Pure canPromoteSource inspects a trusted receipt's
+real-row/host/reference/capture structure; it neither authenticates a receipt nor
+authorizes/enables a source. No actual preview, schedule, fetch or import is added.
+Existing catalog/count assertions change only for this intentional operational
+status contract, retaining stronger OFF/no-fetch checks. -- AGENTS3/4/5, D-066,
+https://github.com/GabrielMontealegre/wholesaleos-bot/issues/528#issuecomment-6967037126
+
 ASSUMED 2026-11-18 UTC: archive-host PR527 first hosted44209632424 failed
 326/1/0 on ask-native-entry-ui's external-host assertion: three127.0.0.1 entries,
 not request paths. Its origin rejection precedes the helper stub; the actual
