@@ -11,9 +11,13 @@ every original assertion, fixture and timeout. No source collection was enabled.
 B-23b #517 RELEASED as `19e4a77`: head217e4ca hosted44194323949 PASS322/0/0,
 automatic deployment7868989719 SUCCESS, fixed public/static PASS. Every parsed
 row and duplicate audit is retained; the remote request-page bound stays1000.
-B-23c1 now preserves row metadata, proof-only rows and duplicate audit through
-shared candidate normalization/orchestration before any catalog wiring. Focused
-synthetic integration tests PASS; full hosted gate pending. No sources scheduled.
+B-23c1 #524 RELEASED as `16d1558`: hosted44198737032 PASS323/0/0,
+automatic deployment7869489755 SUCCESS, fixed public/static PASS. Row metadata,
+proof-only rows and audit now survive repeated normalization/orchestration.
+B-23c2 adds an admin-only/no-store source-count GET from strict saved snapshots:
+unknown counts remain null, blocked/latest conflicts do not inherit old success,
+and no row/audit/private text leaves the report. Focused tests PASS; hosted gate
+pending. No source fetch, scheduling or actual import is enabled.
 No source was scheduled or collected; B-23c and OFF B-24a/#523 remain next.
 
 - B-25: green PR #509 merged as `35a5f6e`; handoff PR #512 merged as `c53740b`.
