@@ -3,8 +3,9 @@
 const profiles = require('./distress-list-profiles');
 const adapter = require('./distress-list-acquisition-adapter');
 const registry = require('./source-adapter-registry');
+const operational = require('./distress-list-operational-policy');
 const byId = new Map(profiles.PROFILES.map(profile => [profile.source_id, profile]));
-const statuses = new Set(['available', 'blocked', 'needs_manual_review', 'manual_only', 'needs_reader_settings', 'not_configured']);
+const statuses = new Set(['available', 'blocked', 'needs_manual_review', 'manual_only', 'needs_reader_settings', 'not_configured', 'not_enabled', 'needs_corpus']);
 
 function own(object, key) {
   return object && Object.prototype.hasOwnProperty.call(object, key) ? object[key] : undefined;
@@ -28,8 +29,10 @@ function snapshotsFromJobs(jobs) {
   for (const job of Array.isArray(jobs) ? jobs : []) {
     const time = snapshotInstant(own(job, 'updated_at'));
     if (time == null) continue;
-    const outcomes = own(own(job, 'source_summary'), 'acquisition_core_adapter_results');
-    for (const outcome of Array.isArray(outcomes) ? outcomes : []) {
+    const sourceSummary = own(job, 'source_summary');
+    const outcomes = own(sourceSummary, 'acquisition_core_adapter_results');
+    const disabled = own(own(sourceSummary, 'acquisition_core_diagnostics'), 'disabled_sources');
+    for (const outcome of [...(Array.isArray(outcomes) ? outcomes : []), ...(Array.isArray(disabled) ? disabled : [])]) {
       const profile = byId.get(own(outcome, 'source_id'));
       if (!profile) continue;
       const summary = own(outcome, 'distress_summary');
@@ -65,11 +68,14 @@ function buildSourceCounts(snapshots) {
   const registeredIds = new Set(adapter.autoRunnableProfiles().map(profile => profile.source_id)
     .filter(id => registry.adapterIdForSourceId(id) === 'distress_list_acquisition_adapter'));
   const sources = profiles.PROFILES.map(profile => {
+    const policy = operational.profileForSourceId(profile.source_id);
     const observed = latest.get(profile.source_id);
     const snapshot = observed && !observed.conflict ? observed.snapshot : null;
     return {
       source_id: profile.source_id, source_kind: profile.source_kind, county: profile.county, state: profile.state,
-      readiness: !profile.runnable ? 'manual_only' : registeredIds.has(profile.source_id) ? 'ready_not_scheduled' : 'needs_reader_settings',
+      readiness: policy.status, status_label: policy.status_label, reader: policy.reader,
+      enabled: policy.enabled, promotion_status: policy.promotion_status, fixture_kind: policy.fixture_kind,
+      ...(policy.related_source_id ? { related_source_id: policy.related_source_id, relation: policy.relation } : {}),
       manual_reason: profile.manual_reason,
       registered: registeredIds.has(profile.source_id),
       observation_state: observed && observed.conflict ? 'conflicting_saved_outcomes' : snapshot ? 'saved_preview_outcome' : 'no_valid_saved_outcome',

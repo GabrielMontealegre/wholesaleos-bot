@@ -2,6 +2,7 @@
 
 const dallasPriority = require('./dallas-source-priority-router');
 const sourceAdapterRegistry = require('./source-adapter-registry');
+const distressPolicy = require('./distress-list-operational-policy');
 
 function cleanText(value) {
   return String(value == null ? '' : value).trim().replace(/\s+/g, ' ');
@@ -198,6 +199,7 @@ function buildSourceCatalog(input = {}) {
     .concat(detroitMarket ? DETROIT_LAND_BANK_SOURCES : [])
     .concat(sanDiegoMarket ? CA_SAN_DIEGO_TAX_DEFAULT_SOURCES : [])
     .concat(losAngelesMarket ? LOS_ANGELES_TAX_DEFAULT_SOURCES : [])
+    .concat(distressPolicy.catalogForMarket(input))
     .map(normalizeCatalogSource)
     .sort((a, b) => b.priority_score - a.priority_score || a.source_name.localeCompare(b.source_name));
 }

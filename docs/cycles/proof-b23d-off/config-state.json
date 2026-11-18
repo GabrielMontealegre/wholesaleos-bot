@@ -1,0 +1,12 @@
+{
+  "fixture_kind": "synthetic_configuration_only",
+  "configured_sources": 207,
+  "disabled_sources": 207,
+  "needs_corpus": 204,
+  "code_fixture_readers": 3,
+  "every_status_off_or_needs_sample": true,
+  "all_registered_catalogued_off": true,
+  "source_fetches": false,
+  "imports": false,
+  "promotion_actions": false
+}

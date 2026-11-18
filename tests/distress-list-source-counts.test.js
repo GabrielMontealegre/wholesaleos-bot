@@ -19,9 +19,10 @@ try {
   assert.equal(none.observed_source_count, 0);
   assert.equal(none.collection_enabled, false);
   assert(none.sources.every(source => source.rows_found === null && source.unique_preview_rows === null));
-  assert.equal(find([]).readiness, 'ready_not_scheduled');
-  assert(none.sources.some(source => source.readiness === 'manual_only'));
-  assert(none.sources.some(source => source.readiness === 'needs_reader_settings'));
+  assert.equal(find([]).readiness, 'needs_corpus');
+  assert(none.sources.some(source => source.manual_reason && source.reader === null));
+  assert(none.sources.some(source => source.readiness === 'needs_corpus'));
+  assert(none.sources.every(source => source.enabled === false && source.promotion_status === 'blocked_pending_validated_preview'));
   const input = [job('2026-11-16T12:00:00Z')];
   const before = JSON.stringify(input);
   const snapshots = counts.snapshotsFromJobs(input);
