@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "settings": [
+    {
+      "source_id": "nc_mecklenburg_tax_sale_meckags_mecklenburgcountync_gov",
+      "source_kind": "tax_sale",
+      "source_url": "https://meckags.mecklenburgcountync.gov/server/rest/services/TaxForeclosures/MapServer/0",
+      "reader": "arcgis_json",
+      "schema_url": "https://meckags.mecklenburgcountync.gov/server/rest/services/TaxForeclosures/MapServer/0?f=json",
+      "checked_at": "2026-11-17T23:56:01.308Z",
+      "evidence_level": "schema_only",
+      "reader_options": { "id_field": "objectid" },
+      "field_map": { "address": "situs", "zip": "zip", "document_number": "parcel_id", "amount_due": "due_amount", "status": "status" }
+    },
+    {
+      "source_id": "nc_guilford_tax_sale_gcgis_guilfordcountync_gov",
+      "source_kind": "tax_sale",
+      "source_url": "https://gcgis.guilfordcountync.gov/arcgis/rest/services/Foreclosure/ForeclosuresPublic/FeatureServer/0",
+      "reader": "arcgis_json",
+      "schema_url": "https://gcgis.guilfordcountync.gov/arcgis/rest/services/Foreclosure/ForeclosuresPublic/FeatureServer/0?f=json",
+      "checked_at": "2026-11-17T23:56:01.308Z",
+      "evidence_level": "schema_only",
+      "reader_options": { "id_field": "OBJECTID" },
+      "field_map": { "address": "LOCATION_ADDR", "document_number": "PARCEL_ID", "sale_date": "AuctionDate", "owner": "Owner", "status": "FLAG_STATUS" }
+    },
+    {
+      "source_id": "tn_davidson_code_case_services2_arcgis_com",
+      "source_kind": "code_case",
+      "source_url": "https://services2.arcgis.com/HdTo6HJqh92wn4D8/arcgis/rest/services/Property_Standards_Violations_2/FeatureServer/0",
+      "reader": "arcgis_json",
+      "schema_url": "https://services2.arcgis.com/HdTo6HJqh92wn4D8/arcgis/rest/services/Property_Standards_Violations_2/FeatureServer/0?f=json",
+      "checked_at": "2026-11-17T23:56:01.308Z",
+      "evidence_level": "schema_only",
+      "reader_options": { "id_field": "ObjectId" },
+      "field_map": { "address": "Property_Address", "city": "City", "zip": "ZIP", "document_number": "Request_Nbr", "owner": "Property_Owner", "status": "Status" }
+    }
+  ]
+}

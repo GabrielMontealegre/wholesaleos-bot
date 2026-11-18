@@ -157,7 +157,7 @@ async function runDistressListAcquisitionAdapter(options = {}) {
   let read;
   try {
     const body = profile.reader === 'xlsx' ? response.buffer : response.text();
-    read = readers.readWithProfile(profile, body, plan.reader_options);
+    read = readers.readWithProfile(profile, body, { ...profile.reader_options, ...plan.reader_options });
   } catch (error) {
     return emptyResult(profile, 'needs_manual_review', 'The source answered with data the reader could not read.', { attempted: true });
   }

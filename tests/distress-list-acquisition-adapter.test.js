@@ -107,7 +107,7 @@ function runOptions(responses, calls) {
 
   // ---- ArcGIS layer with epoch dates ---------------------------------------------------
   const arcCalls = [];
-  const arcBody = JSON.stringify({ objectIdFieldName: 'OBJECTID', features: [{ attributes: { OBJECTID: 4, SITE_ADDRESS: '300 Example Rd', SALE_DATE: Date.UTC(2026, 11, 3) } }] });
+  const arcBody = JSON.stringify({ objectIdFieldName: 'OBJECTID', features: [{ attributes: { OBJECTID: 4, LOCATION_ADDR: '300 Example Rd', AuctionDate: Date.UTC(2026, 11, 3) } }] });
   const arcResult = await adapter.runDistressListAcquisitionAdapter(Object.assign({ source_id: ARCGIS_SOURCE }, runOptions([{ status: 200, body: arcBody }], arcCalls)));
   assert.ok(arcCalls[0].url.includes('/query?'));
   assert.strictEqual(arcResult.candidates[0].source_row_reference, 'feature OBJECTID=4');
