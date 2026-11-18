@@ -1,6 +1,22 @@
 # Backlog
 
-## Latest Run Summary (2026-11-17)
+## Latest Run Summary (2026-11-18 UTC)
+
+B-23 code DONE per architect528 default-OFF scope: #529 RELEASED `c41a349`,
+headfd82b3c hosted44237117370 PASS328/0/0, auto7874412069 SUCCESS,
+fixed public health200/devices401/counts401/static-source checks PASS.
+207 profiles remain OFF; 204 need corpus and three use schema-only synthetic
+fixtures. B-23 promotion: BLOCKED until Gabriel approves a preview run per source.
+First529 failed44234975957 remains failed326/2/0; only intentional OFF metadata
+catalog assertions were corrected, retaining exact active sources/queue defaults.
+B-24a #523 original commits retained and mainc41a349 merged. OFF-core hardening
+is ready for its hosted head gate; no runtime callsite, real vendor, pricing,
+credential, spend or outreach action. B-24b transport/durable ledger/vendor-example
+fixtures stay BLOCKED on owner vendor/pricing choice and explicit approval.
+First hardened523 gate44240341791 failed329/1/0 only on public env-name metadata
+under env_key. Rename field credential_env, same exact names/OFF configuration;
+secret scanner and all assertions unchanged, new exact-name checks added.
+After B-24a release, continue B-07/B-21, then B-19.
 
 PR #433 is released as `c03f564`: hosted316/0/0; #434 is released as `8976683`:
 hosted318/0/0. Both automatic deployments and fixed public/static checks passed.
@@ -29,7 +45,7 @@ for hosted CI per [architect #528](https://github.com/GabrielMontealegre/wholesa
 All new sources are disabled/candidate; missing corpus yields reader:null and
 needs-sample-data, normal/fallback selection cannot run them. Counts retain OFF
 state and skipped daily control metadata. Legacy Detroit data/adapter stays separate.
-B-23 code release is pending its gate, not yet DONE.
+B-23 code release completed as recorded above; prior gate history follows.
 First529 hosted44234975957 failed326/2/0 on old metadata-catalog expectations;
 bounded correction preserves exact active/queue sources and requires added OFF
 entries plus exact Cleveland policy IDs. Failed evidence retained, no red merge.
@@ -4648,7 +4664,13 @@ Acceptance
   - Outreach Hub says "Run scrape to find real buyers", which is legacy wording.
   - Deal Matching stays on "Loading matches..." (replaced by B-19).
 
-## B-23 · Public distress lists importer (D-066) · TODO
+## B-23 · Public distress lists importer (D-066) · CODE DONE / PROMOTION BLOCKED
+
+Code shipped default-OFF through #513/#517/#524/#525/#526/#527/#529, per
+architect528 comment6967037126. Final releasec41a349 hosted328/0/0 and automatic
+deployment/public/static/counts401 verification PASS. No real-source preview or
+collection is enabled. B-23 promotion: BLOCKED until Gabriel approves a preview
+run per source. Missing validated corpus remains reader:null/needs sample data.
 
 Goal: the app pulls free public distress lists every day, like the operator did by hand on 2026-11-09:
 foreclosure notices, trustee sales, tax sales, tax-delinquent lists, lis pendens, probate, code cases and

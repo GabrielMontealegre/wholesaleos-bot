@@ -1,5 +1,34 @@
 # Decisions
 
+ASSUMED 2026-11-18 UTC: first hardened523 head15ec6d7/run44240341791 failed
+329/1/0,total330. Only secret gate reported entropy-assignment at module28/35:
+the env_key fields contain public environment VARIABLE NAMES, never credentials.
+Rename that metadata property credential_env and its internal readers; preserve
+the exact names, OFF state, tests, scanner and all detection rules. No encoding,
+string assembly, ignore or allowlist exception. Add exact-name assertions and
+run the unchanged offline gate before one new-head hosted run. -- AGENTS3/4/5.
+
+ASSUMED 2026-11-18 UTC: B24a523 ships a generic OFF core only; registry prices
+remain null, no production callsite/transport/ledger exists, and no vendor choice
+or disclosure rule is promoted. Harden confirmed synthetic review defects before
+hosted gate. Require injected ledger.runExclusive covering all shared clients,
+durable reservation/readback before transport, current switch/key/cap recheck,
+and retained reservations on uncertain outcomes; same-request uncertainty never
+automatically retries. This is NOT a production accounting implementation or
+authorization to spend. B24b must prove cross-worker atomicity, vendor fixtures,
+real pricing and owner permission before wiring. Scoped caches preserve original
+capture and require current authorization, never refresh provenance implicitly.
+Use strict injected calendar dates, finite prices, exact source references and
+own DNC/litigator booleans. Original core test assertions are retained; only its
+synthetic ledger gains runExclusive and positive comp fixture gains an explicit
+synthetic source URL/reference to satisfy AGENTS5. -- AGENTS3/4/5, D-066/D-012.
+
+VERIFIED 2026-11-18 UTC: B23 code DONE under architect528 OFF scope. PR529
+exactheadfd82b3c passed44237117370 328/0/0, mergec41a349, auto7874412069 and
+fixed public/static/counts401 PASS. All207 OFF; no real previews/imports. Promotion
+is BLOCKED until Gabriel approves a preview run per source; missing corpus stays
+reader:null/needs sample data. Original failed529 evidence remains retained.
+
 ASSUMED 2026-11-18 UTC: B23d first hosted44234975957 failed326/2/0 only on
 legacy-only/empty metadata catalog assertions. Apply #528's intentional OFF catalog
 contract to MI254/256 and LA284: exact active Detroit legacy ID and existing queue
