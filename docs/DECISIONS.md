@@ -1,5 +1,20 @@
 # Decisions
 
+VERIFIED 2026-11-18 UTC: B07a535 OFF code releasedf253691, exacthead2a996e9,
+hosted44270713029 PASS333/0/0, auto7878943552/publicstatic+auth controls PASS.
+Only code DONE under530 scope; live10-property acceptance owner-BLOCKED.
+
+ASSUMED 2026-11-18 UTC: B21a reuses the isolated OFF schema registry, existing
+comp normalizer/grid and field-only fixture validator. Official TxGIO layer
+metadata names are retained verbatim; mkt_value/land_value/imp_value remain
+assessments, date_acq is acquisition metadata, neither is sale/ARV evidence.
+No sale_price/sale_date field is invented. Official FL metadata PDF retrieval
+returned401: stop with no retry/mirror/range/alternative file, preserve null
+schema/map/columns and unsupported state. This tool outcome does not prove all
+Florida data needs login. No search snippet becomes a validated schema. No live
+profiles, file downloads, rows, legal/disclosure promotion or writes. Code-only
+completion and owner-blocked live acceptance stay separate. -- AGENTS3/5,530.
+
 ASSUMED 2026-11-18 UTC: apply genuinely new compatible architect530 answer
 6970839853 once: B19a532 is already released, so B07a/B21a OFF schema slices now
 precede remaining UI. Official-metadata maps and explicit synthetic schema-only

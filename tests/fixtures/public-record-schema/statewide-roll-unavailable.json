@@ -1,0 +1,10 @@
+{
+  "synthetic": true,
+  "kind": "schema_unavailable",
+  "profile_id": "fl_statewide_roll_schema_unsupported",
+  "metadata_url": "https://www.floridarevenue.com/property/Documents/2026NALSummaryTable.pdf",
+  "captured_date": "2026-11-18",
+  "capture_meaning": "retrieval_outcome_only_not_schema_capture",
+  "outcome": "http_401_via_read_only_web_tool",
+  "fields": null
+}

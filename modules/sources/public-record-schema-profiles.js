@@ -30,6 +30,9 @@ function validateSchemaFixture(id, fixture) {
   } catch (_) { return false; }
   const fields = own(fixture, 'fields');
   if (!Array.isArray(fields) || fields.length !== profile.schema_fields.length) return false;
+  const mapped = Object.values(profile.field_map || {}).flatMap(value => typeof value === 'string' ? [value] :
+    value && typeof value === 'object' ? Object.values(value) : []);
+  if (mapped.some(name => !profile.schema_fields.includes(name))) return false;
   const names = Array.from(fields).map(field => own(field, 'name'));
   return Array.from(fields).every(field => field && Object.keys(field).length === 1 && Object.hasOwn(field, 'name')) &&
     new Set(names).size === names.length && names.every(name => profile.schema_fields.includes(name));
