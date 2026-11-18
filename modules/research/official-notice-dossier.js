@@ -306,30 +306,32 @@ function createOfficialClient(options = {}) {
   return { get, events };
 }
 
-function archiveContainsDocument(html, documentUrl) {
+function archiveContainsDocument(html, documentUrl, archiveUrl) {
   const id = /(?:[?&]ADID=|\/Item\/)(\d+)\b/i.exec(clean(documentUrl));
   if (!id) return null;
-  const links = archiveDocumentLinks(html);
+  const links = archiveDocumentLinks(html, archiveUrl);
   if (!links.length) return null;
   return links.some((item) => new RegExp(`(?:[?&]ADID=|/Item/)${id[1]}\\b`, 'i').test(item.url));
 }
 
-function archiveDocumentLinks(html) {
+function archiveDocumentLinks(html, archiveUrl = 'https://www.co.ellis.tx.us/') {
+  const base = officialUrl(archiveUrl);
+  if (!base) return [];
   const $ = cheerio.load(String(html || ''));
   const links = [];
   $('a[href]').each((_, anchor) => {
     const href = $(anchor).attr('href');
     if (!/(?:[?&]ADID=|\/Item\/)\d+\b/i.test(href || '')) return;
     let url = '';
-    try { url = officialUrl(new URL(href, 'https://www.co.ellis.tx.us/').href); } catch (_) { /* invalid link */ }
+    try { url = officialUrl(new URL(href, base).href); } catch (_) { /* invalid link */ }
     if (url) links.push({ url, date: dateIso($(anchor).text()) });
   });
   return links;
 }
 
-function archiveDocumentForDate(html, date) {
+function archiveDocumentForDate(html, date, archiveUrl) {
   if (!/^20\d\d-\d\d-\d\d$/.test(clean(date))) return '';
-  const matches = archiveDocumentLinks(html).filter((item) => item.date === date);
+  const matches = archiveDocumentLinks(html, archiveUrl).filter((item) => item.date === date);
   return matches.length === 1 ? matches[0].url : '';
 }
 

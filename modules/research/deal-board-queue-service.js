@@ -1880,17 +1880,22 @@ async function recordNoticeScan(input = {}, options = {}) {
   if (!documentUrl) throw contactWorkflowError('Choose an official Ellis notice PDF URL.', 'notice_official_url_required', 400);
 
   const client = options.client_impl || officialNoticeDossier.createOfficialClient(options);
-  const archive = await client.get('https://www.co.ellis.tx.us/Archive.aspx?AMID=60');
+  const archiveProfiles = countySourceProfiles.profilesForCountyKind(firstRow.county, firstRow.state, 'trustee_sale_notice');
+  const archiveUrl = archiveProfiles.length === 1 && officialNoticeDossier.officialUrl(archiveProfiles[0].source_url);
+  if (!archiveUrl) throw contactWorkflowError('The official archive source is unavailable.', 'notice_archive_source_unavailable', 503);
+  const archive = await client.get(archiveUrl);
+  const archiveBase = officialNoticeDossier.officialUrl(archive.url || archiveUrl);
+  if (!archiveBase) throw contactWorkflowError('The archive response is not an official source.', 'notice_archive_source_invalid', 503);
   if (/[?&]AMID=/.test(documentUrl)) {
     const dateClue = parseSaleDateIso(firstRow.sale_date_or_event_date) ||
       officialNoticeDossier.dateIso(firstRow.sale_date_or_event_date) ||
       officialNoticeDossier.dateIso(firstRow.source_proof_text);
-    documentUrl = officialNoticeDossier.archiveDocumentForDate(archive.body.toString('utf8'), dateClue);
+    documentUrl = officialNoticeDossier.archiveDocumentForDate(archive.body.toString('utf8'), dateClue, archiveBase);
     if (!documentUrl) throw contactWorkflowError(
       'The archive did not identify one notice for this row. Paste its direct official PDF URL to review it.',
       'notice_direct_pdf_url_required', 400);
   }
-  const archiveContainsDocument = officialNoticeDossier.archiveContainsDocument(archive.body.toString('utf8'), documentUrl);
+  const archiveContainsDocument = officialNoticeDossier.archiveContainsDocument(archive.body.toString('utf8'), documentUrl, archiveBase);
   const response = await client.get(documentUrl);
   const scan = await (options.scan_impl || officialNoticeDossier.scanPdf)({
     buffer: response.body, document_url: response.url, subject_address: address
