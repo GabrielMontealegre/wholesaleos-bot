@@ -1,0 +1,11 @@
+{
+  "kind": "first_existing_focused_ui_gate",
+  "file": "local-voice-ui.test.js",
+  "exit_code": 1,
+  "wall_seconds": 2.9361919,
+  "observed_error": "ERR_NETWORK_ACCESS_DENIED",
+  "observed_frame": "tests/local-voice-ui.test.js:15:112",
+  "cause_proven": false,
+  "retried": false,
+  "full_suite_run": false
+}

@@ -590,6 +590,15 @@ function listJobs(limit, options = {}) {
   return readJobs(options.storePath).slice(0, max).map(publicJob);
 }
 
+function listDistressSourceOutcomes(options = {}) {
+  let raw;
+  try { raw = fs.readFileSync(options.storePath || STORE_FILE, 'utf8'); }
+  catch (error) { if (error.code === 'ENOENT') return []; throw error; }
+  const parsed = JSON.parse(raw);
+  if (!parsed || !Array.isArray(parsed.jobs)) throw Error('scout_source_outcomes_store_invalid');
+  return require('../sources/distress-list-source-counts').snapshotsFromJobs(normalizeJobs(parsed.jobs));
+}
+
 function getJob(jobId, options = {}) {
   const job = readJobs(options.storePath).find((candidate) => cleanText(candidate.job_id) === cleanText(jobId));
   return job ? publicJob(job) : null;
@@ -2470,6 +2479,7 @@ module.exports = {
   STATUSES,
   createJob,
   listJobs,
+  listDistressSourceOutcomes,
   getJob,
   runJob,
   continueJob,

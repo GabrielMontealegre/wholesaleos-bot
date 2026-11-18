@@ -1712,6 +1712,11 @@ app.get('/api/findme-scout/jobs', (req, res) => {
   }
 });
 
+require('./modules/sources/distress-list-status-routes').registerDistressListStatusRoutes(app, {
+  requireAdmin,
+  listOutcomes: () => findMeScoutJobs.listDistressSourceOutcomes()
+});
+
 app.get('/api/findme-scout/jobs/:jobId', (req, res) => {
   try {
     const job = findMeScoutJobs.getJob(req.params.jobId);

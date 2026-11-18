@@ -1,0 +1,12 @@
+{
+  "kind": "synthetic_diagnostic_not_acceptance_test",
+  "source_module": "modules/email/thread-view.js",
+  "received_time_module": "modules/records/mailbox-reply-evidence.js",
+  "input_date": "Mon, 30 Feb 2026 12:00:00 +0000",
+  "reference_now": "2026-11-03T19:18:00Z",
+  "invalid_calendar_returned_as_march_2_iso": true,
+  "input_unchanged": true,
+  "provider_calls": 0,
+  "business_writes": 0,
+  "application_runtime_changed": false
+}

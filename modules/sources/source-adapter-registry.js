@@ -9,6 +9,7 @@ const caTaxDefaultNoticeAcquisitionAdapter = require('./ca-tax-default-notice-ac
 const caLosAngelesTaxDefaultAcquisitionAdapter = require('./ca-los-angeles-tax-default-acquisition-adapter');
 const txCountyForeclosureAcquisitionAdapter = require('./tx-county-foreclosure-acquisition-adapter');
 const countySourceProfiles = require('./county-source-profile-registry');
+const distressListAcquisitionAdapter = require('./distress-list-acquisition-adapter');
 const listingEgressGuard = require('../security/listing-egress-guard');
 
 const LISTING_EGRESS_VALUES = Object.freeze(['required', 'optional_degrades', 'none']);
@@ -112,6 +113,23 @@ for (const profile of countySourceProfiles.profilesForCountyKind('Los Angeles', 
     listing_egress: 'none',
     adapter: caLosAngelesTaxDefaultAcquisitionAdapter,
     run: caLosAngelesTaxDefaultAcquisitionAdapter.runCaLosAngelesTaxDefaultAcquisitionAdapter
+  };
+}
+
+// B-23: public distress list profiles that need no per-source reader settings share one
+// generic adapter. Registering does not schedule anything: a source runs only when the
+// source catalog lists it (see source-acquisition-orchestrator.selectAcquisitionSources).
+for (const profile of distressListAcquisitionAdapter.autoRunnableProfiles()) {
+  if (ADAPTERS[profile.source_id]) continue;
+  ADAPTERS[profile.source_id] = {
+    source_id: profile.source_id,
+    source_family: profile.source_kind,
+    adapter_id: 'distress_list_acquisition_adapter',
+    adapter_family: 'public_distress_list_adapter',
+    source_name: profile.source_name,
+    listing_egress: 'none',
+    adapter: distressListAcquisitionAdapter,
+    run: distressListAcquisitionAdapter.runDistressListAcquisitionAdapter
   };
 }
 

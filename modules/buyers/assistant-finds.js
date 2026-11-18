@@ -3,13 +3,14 @@
 const { fitSummary, propertyType } = require('./buyer-fit');
 const activity = require('../records/record-activity');
 const buyerType = require('./buyer-type');
+const strategyProfile = require('./buyer-strategy-profile');
 const STATUSES = Object.freeze(['new', 'messaged', 'emailed', 'commented', 'replied', 'not_a_fit']);
 const MAX_ITEMS = 50;
 const MAX_ITEM_BYTES = 8192;
 const MAX_REQUEST_BYTES = 256 * 1024;
 const ITEM_FIELDS = new Set(['name', 'platform', 'group_name', 'group_id', 'profile_url', 'source_url',
   'what_they_buy', 'deal_type', 'states', 'areas', 'email', 'phone', 'drafted_message', 'captured_at',
-  'uid', 'buy_box', 'classification', 'post_age', 'post_url', 'contact_published', 'ref', 'buyer_type']);
+  'uid', 'buy_box', 'classification', 'post_age', 'post_url', 'contact_published', 'ref', 'buyer_type', 'strategy_profile']);
 const BOX_NUMBERS = ['price_min', 'price_max', 'arv_min', 'arv_max', 'all_in_max', 'beds_min', 'baths_min', 'sqft_min', 'sqft_max', 'year_min'];
 const BOX_TEXT = ['pct_arv', 'construction', 'flood', 'rehab_tolerance', 'funding', 'close_speed', 'capacity'];
 const BOX_FIELDS = new Set(['state', 'areas', 'zips', 'types', 'exclusions', 'wants_sent', ...BOX_NUMBERS, ...BOX_TEXT]);
@@ -122,6 +123,13 @@ function validateItems(body, now) {
     if (phone && !/^[+\d().\-\s]{7,40}$/.test(phone)) fail('find_contact_invalid');
     const type = buyerType.normalize(item.buyer_type);
     if (!type) fail('find_buyer_type_invalid');
+    const post = postUrl(item.post_url, item.platform, groupId);
+    // Optional (#402); the key is absent when not reported so older records keep their shape.
+    const strategy = item.strategy_profile == null ? {} : {
+      strategy_profile: strategyProfile.validate(item.strategy_profile, now.slice(0, 10)),
+      strategy_profile_source: { source_kind: 'assistant_report', source_url: post || source.url,
+        evidence_text: strategyProfile.evidence(item.strategy_profile) || text(item.what_they_buy, 500, true), captured_at: new Date(at).toISOString() }
+    };
     return {
       name: text(item.name, 120, true), platform: item.platform, uid: profile.uid,
       group_name: text(item.group_name, 200, item.platform === 'facebook'), group_id: groupId,
@@ -130,12 +138,12 @@ function validateItems(body, now) {
       states, areas: list(item.areas, 20, 80), email, phone,
       drafted_message: text(item.drafted_message, 600), captured_at: new Date(at).toISOString(),
       classification, buy_box: buyBox(item.buy_box), post_age: text(item.post_age, 100),
-      post_url: postUrl(item.post_url, item.platform, groupId),
+      post_url: post,
       contact_published: { email, phone }, ref: activity.ref(item.ref),
       buyer_type: type, buyer_type_source: type === 'unknown' ? null : {
         source_kind: 'assistant_report', source_url: item.post_url || source.url,
         evidence_text: item.buyer_type, captured_at: new Date(at).toISOString()
-      }
+      }, ...strategy
     };
   });
 }
@@ -165,6 +173,20 @@ function duplicateIndex(buyers, item) {
   return { index: -1 };
 }
 
+// Only a strictly newer assistant report replaces a profile (a retry with the same capture time
+// does not); an operator-entered profile is never overwritten.
+// The replaced profile stays in history for audit.
+function newerProfile(old = {}, item, now, operatorId) {
+  const previous = old && old.strategy_profile_source;
+  if (!item.strategy_profile || previous && (previous.source_kind === 'operator_input' || item.captured_at <= previous.captured_at)) return {};
+  // Same profile, newer report: advance the source date (no audit entry) so an older delayed report can't win later.
+  if (JSON.stringify(old.strategy_profile) === JSON.stringify(item.strategy_profile)) return { strategy_profile_source: item.strategy_profile_source };
+  return { strategy_profile: item.strategy_profile, strategy_profile_source: item.strategy_profile_source,
+    history: (old.history || []).concat({ kind: 'strategy_profile', to: 'strategy profile updated', field: 'strategy_profile',
+      old_value: old.strategy_profile || null, new_value: item.strategy_profile, at: now, operator_id: operatorId,
+      source_kind: 'assistant_report', source_url: item.strategy_profile_source.source_url }) };
+}
+
 function newFind(item, now) {
   return Object.assign({}, item, { status: 'new', approval: 'pending', first_seen_at: now, last_seen_at: now,
     consent: { profile: 'public want posted; not contacted', email: 'public want posted; not contacted', phone: 'public want posted; not contacted' }, history: [] });
@@ -183,6 +205,7 @@ function ingest(store, items, { now, operatorId, createId, actorLabel, channel }
             buyers[index].assistant_find?.buyer_type_source?.source_kind !== 'operator_input' &&
             (!buyers[index].assistant_find?.buyer_type_source?.captured_at || item.captured_at >= buyers[index].assistant_find.buyer_type_source.captured_at)
             ? { buyer_type: item.buyer_type, buyer_type_source: item.buyer_type_source } : {}),
+          ...(['platform_uid', 'reference'].includes(duplicate.basis) ? newerProfile(buyers[index].assistant_find, item, now, operatorId) : {}),
           ...(!['platform_uid', 'reference'].includes(duplicate.basis) ? { possible_duplicate_of: buyers[index].id, duplicate_basis: duplicate.basis } : {}) })
       });
       results.push({ id: buyers[index].id, result: 'duplicate' });
@@ -210,9 +233,11 @@ function ingest(store, items, { now, operatorId, createId, actorLabel, channel }
 
 function update(store, id, input, { now, operatorId }) {
   if (!input || typeof input !== 'object' || Array.isArray(input) || !Object.keys(input).length ||
-      Object.keys(input).some((key) => !['status', 'drafted_message', 'approval', 'reason', 'channel', 'buyer_type'].includes(key))) fail('find_update_invalid');
+      Object.keys(input).some((key) => !['status', 'drafted_message', 'approval', 'reason', 'channel', 'buyer_type', 'strategy_profile'].includes(key))) fail('find_update_invalid');
   const type = input.buyer_type === undefined ? undefined : buyerType.normalize(input.buyer_type);
   if (type === null) fail('find_buyer_type_invalid');
+  const profile = input.strategy_profile === undefined ? undefined : strategyProfile.validate(input.strategy_profile, now.slice(0, 10));
+  const profileEvidence = profile ? strategyProfile.evidence(input.strategy_profile) : '';
   if (input.status !== undefined && !STATUSES.includes(input.status)) fail('find_status_invalid');
   if (input.approval !== undefined && !['approved', 'rejected'].includes(input.approval)) fail('find_approval_invalid');
   const reason = text(input.reason, 300);
@@ -230,6 +255,13 @@ function update(store, id, input, { now, operatorId }) {
     find.history = (find.history || []).concat({ kind: 'buyer_type', from: buyers[index].assistant_find.buyer_type || 'unknown',
       to: type, at: now, operator_id: operatorId, channel: 'dashboard' });
   }
+  if (profile !== undefined) {
+    find.history = (find.history || []).concat({ kind: 'strategy_profile', to: 'strategy profile updated', field: 'strategy_profile',
+      old_value: find.strategy_profile || null, new_value: profile, at: now, operator_id: operatorId, channel: 'dashboard' });
+    find.strategy_profile = profile;
+    find.strategy_profile_source = { source_kind: 'operator_input', source_url: null,
+      evidence_text: profileEvidence || 'Entered by the operator', captured_at: now, operator_id: operatorId };
+  }
   if (input.approval !== undefined && input.approval !== find.approval) {
     find.history = (find.history || []).concat({ kind: 'approval', from: find.approval || 'pending', to: input.approval, reason, at: now, operator_id: operatorId, channel: 'dashboard' });
     find.approval = input.approval;
@@ -245,8 +277,8 @@ function update(store, id, input, { now, operatorId }) {
   let updated = activity.assign(Object.assign({}, store, { buyers }), 'buyer', id);
   const start = (store.buyers[index].assistant_find.history || []).length;
   (find.history || []).slice(start).forEach((entry, offset) => {
-    const type = entry.kind === 'approval' ? entry.to : entry.kind === 'buyer_type' ? 'status_change' : ({ messaged: 'message_sent', emailed: 'email_sent', replied: 'reply_received' })[entry.to] || 'status_change';
-    updated = activity.recordEvent(updated, 'buyer', id, type, 'Operator recorded ' + entry.to + '.', { now, operatorId }, { channel: entry.channel, attribution: 'operator_report', history_origin: 'buyer:' + id + ':' + (start + offset) });
+    const type = entry.kind === 'approval' ? entry.to : ['buyer_type', 'strategy_profile'].includes(entry.kind) ? 'status_change' : ({ messaged: 'message_sent', emailed: 'email_sent', replied: 'reply_received' })[entry.to] || 'status_change';
+    updated = activity.recordEvent(updated, 'buyer', id, type, entry.kind === 'strategy_profile' ? 'Operator recorded the buyer strategy profile.' : 'Operator recorded ' + entry.to + '.', { now, operatorId }, { channel: entry.channel, attribution: 'operator_report', history_origin: 'buyer:' + id + ':' + (start + offset) });
   });
   if (draft !== undefined) updated = activity.recordEvent(updated, 'buyer', id, 'message_drafted', 'Draft saved; not sent.', { now, operatorId });
   return updated;
@@ -258,6 +290,7 @@ function listFinds(store, { now }) {
     id: buyer.id, ...buyer.assistant_find, record_ref: activity.reference(buyer), email_subject: buyer.record_ref ? '[' + buyer.record_ref + '] Buyer enquiry' : '',
     trust_label: buyer.assistant_find.approval === 'approved' ? 'Verified source - approved by operator' : 'Imported - not verified',
     buyer_type_view: buyerType.view(buyer.assistant_find),
+    strategy_profile_view: strategyProfile.describe(strategyProfile.profileOf(buyer)),
     fits: fitSummary(buyer, store.leads || []), deal_fit:dealViews.get(buyer.id)
   })).sort((a, b) => b.first_seen_at.localeCompare(a.first_seen_at) || a.id.localeCompare(b.id));
   const week = new Date(now);
