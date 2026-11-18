@@ -48,3 +48,8 @@ deployment and perform fixed health200/devices401/distress401 plus new unauth
 sourced-matches401 and exact-source static booleans. Cancel private response
 bodies; no authenticated production snapshot/DB/credentials/cookie transfer,
 actual source/provider query or business write. B19c UI work comes separately.
+
+Released #533 as12937bd, exactheada16ae89, hosted44253602881 PASS332/0/0,
+auto7876553499 SUCCESS. Fixed public/static/distress401/new matches401 PASS;
+[public control proof](proof-b19b-snapshot/public-get.json). No private response
+body was read. Full B19 remains incomplete; no UI release is claimed.
