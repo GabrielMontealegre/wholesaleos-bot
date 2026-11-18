@@ -2,6 +2,13 @@
 
 ## Latest Run Summary (2026-11-18 UTC)
 
+B-07 metadata-only #531 RELEASED44569d6: head819ae41 hosted44245994767 PASS330/0/0,
+auto7875628684 SUCCESS and fixed public/static/counts401 PASS. #530 metadata checked
+once: open/comments0/updated2026-11-18T05:39:47Z. No compatible answer yet; no
+blocked source/runtime work or duplicated comments. B-19a pure sourced-report
+dual match index is ready for hosted CI; existing matching/UI/writers unchanged.
+This is not full B-19 DONE: deed-history/sign-up evidence and both-view UI remain.
+
 B-23 code DONE per architect528 default-OFF scope: #529 RELEASED `c41a349`,
 headfd82b3c hosted44237117370 PASS328/0/0, auto7874412069 SUCCESS,
 fixed public health200/devices401/counts401/static-source checks PASS.
@@ -4402,6 +4409,16 @@ Acceptance
 ---
 
 ## B-19 · Match engine: every deal against every buyer, with reasons · TODO
+
+B-19a first bounded code slice: pure sourced-match-index reuses existing buyer
+validation/eligibility/fit and reviewed-deals strict value checks. Only canonical
+saved reports with source/capture, known dated operator approval and explicit
+type/state/area criteria qualify; 90-day report capture window, not a claimed
+post or purchase date. Every criterion keeps report provenance. Deterministic
+deal/buyer indexes have no raw score, no input cap and no effects; strict price
+range does not treat a starting bid as asking. Deed-purchase/sign-up coverage is
+explicitly not integrated, not invented. Existing UI/runtime consumers unchanged;
+full B-19 remains TODO until those evidence paths and both views are completed.
 
 Goal: WholesaleOS matches sellers' properties and land to the right buyers by itself (D-021, D-027). This
 replaces the placeholder Deal Matching page, which uses a made-up score and no comps.

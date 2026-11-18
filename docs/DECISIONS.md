@@ -1,5 +1,24 @@
 # Decisions
 
+ASSUMED 2026-11-18 UTC: B19a begins with an additive pure index of canonical
+approved sourced reports, not a new buy-box writer or HTTP-payload trust API.
+Reuse assistant-finds validation, central buyer eligibility/buyer-fit and existing
+reviewed-deals strict value engine. Require exact own approval + dated history
+from a known canonical store user, matching source identity and valid nonfuture
+capture. Report capture older than90 days is stale for this reported-criteria
+slice; approval does not refresh it. This is NOT a post-date or purchase-recency
+rule. Deed-purchase/sign-up evidence is not integrated yet and reported as such.
+Source text/URL/capture travel per criterion; operator-approved report is not
+deed proof, legal verification or authentication. Keep strict asking-price range
+separate from existing negotiable candidates; starting bid is not asking. No new
+readiness/value/Send authority, persistence, route, UI or gate change. Full B19
+remains TODO for remaining evidence/UI slices. -- AGENTS3/4/5, B19 acceptance.
+
+VERIFIED 2026-11-18 UTC: B07 metadata531 released44569d6, exacthead819ae41,
+hosted44245994767 PASS330/0/0, auto7875628684 and fixed public/static/counts401
+PASS. Scope issue530 metadata once: comments0/open/updated05:39:47Z. No answer,
+no source promotion/private rows/real imports; independent B19 continues.
+
 VERIFIED 2026-11-18 UTC: OFF B24a523 releasedef94a6e, exacthead51193a4,
 hosted44243153743 PASS330/0/0, auto7875176500 and fixed public/static/counts401
 PASS. Failed329/1/0 evidence retained. Provider prices remain null/OFF, no runtime
