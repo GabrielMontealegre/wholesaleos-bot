@@ -25,14 +25,14 @@ const PROVIDERS = Object.freeze({
   propertyradar: Object.freeze({
     provider_id: 'propertyradar', label: 'PropertyRadar',
     capabilities: Object.freeze(['comps', 'property_detail', 'skip_trace', 'lists']),
-    env_switch: 'WOS_PROVIDER_PROPERTYRADAR_ENABLED', env_key: 'WOS_PROVIDER_PROPERTYRADAR_KEY',
+    env_switch: 'WOS_PROVIDER_PROPERTYRADAR_ENABLED', credential_env: 'WOS_PROVIDER_PROPERTYRADAR_KEY',
     env_monthly_cap_usd: 'WOS_PROVIDER_PROPERTYRADAR_MONTHLY_CAP_USD',
     cost_per_call_usd: Object.freeze({ comps: null, property_detail: null, skip_trace: null, lists: null })
   }),
   batchdata: Object.freeze({
     provider_id: 'batchdata', label: 'BatchData',
     capabilities: Object.freeze(['skip_trace', 'property_detail']),
-    env_switch: 'WOS_PROVIDER_BATCHDATA_ENABLED', env_key: 'WOS_PROVIDER_BATCHDATA_KEY',
+    env_switch: 'WOS_PROVIDER_BATCHDATA_ENABLED', credential_env: 'WOS_PROVIDER_BATCHDATA_KEY',
     env_monthly_cap_usd: 'WOS_PROVIDER_BATCHDATA_MONTHLY_CAP_USD',
     cost_per_call_usd: Object.freeze({ skip_trace: null, property_detail: null })
   })
@@ -85,7 +85,7 @@ function statusForCall(providerId, capability, options = {}, cached = false) {
     return { enabled: false, reason: 'This provider does not offer that service.' };
   }
   if (own(env, provider.env_switch) !== 'true') return { enabled: false, reason: 'Switched off. The owner turns it on.' };
-  const key = own(env, provider.env_key);
+  const key = own(env, provider.credential_env);
   if (typeof key !== 'string' || !key.trim()) return { enabled: false, reason: 'No key set on the server.' };
   const cost = provider.cost_per_call_usd[capability];
   if (typeof cost !== 'number' || !Number.isFinite(cost) || cost < 0) return { enabled: false, reason: 'Price per call not confirmed yet.' };
@@ -139,7 +139,7 @@ function createProviderClient(options = {}) {
       const payload = JSON.parse(canonicalJson(request == null ? {} : request));
       const hash = requestHash(providerId, capability, payload);
       return ledger.runExclusive(async () => {
-        const provider = own(PROVIDERS, providerId), key = provider && own(env, provider.env_key);
+        const provider = own(PROVIDERS, providerId), key = provider && own(env, provider.credential_env);
         if (credential !== key) { credential = key; scope = Symbol('private provider cache scope'); }
         const entry = responseCache.get(hash), hit = entry && entry.scope === scope;
         const rows = await ledger.rows();
@@ -155,11 +155,11 @@ function createProviderClient(options = {}) {
         const reservedStatus = statusForCall(providerId, capability, { env, ledger_rows: reservedRows, now_iso: nowIso }, true);
         if (!Array.isArray(reservedRows) || !reservedStatus.enabled || !reservedRows.some(row => own(row, 'provider_id') === providerId &&
           own(row, 'request_hash') === hash && own(row, 'cost_usd') === status.cost_usd && own(row, 'at') === nowIso && own(row, 'status') === 'reserved')) return review;
-        if (own(env, provider.env_switch) !== 'true' || own(env, provider.env_key) !== key) return review;
+        if (own(env, provider.env_switch) !== 'true' || own(env, provider.credential_env) !== key) return review;
         try {
           const response = await transport({ provider_id: providerId, capability, request: payload, key });
           const json = canonicalJson(response);
-          if (own(env, provider.env_switch) !== 'true' || own(env, provider.env_key) !== key) return review;
+          if (own(env, provider.env_switch) !== 'true' || own(env, provider.credential_env) !== key) return review;
           responseCache.set(hash, { scope, json, captured_at: nowIso });
           return { status: 'ok', request_hash: hash, response: JSON.parse(json), captured_at: nowIso, cost_usd: status.cost_usd };
         } catch (_) { return review; }

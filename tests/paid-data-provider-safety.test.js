@@ -24,6 +24,8 @@ const call = (instance, request, now = NOW) => instance.call('comps', request, {
 
 async function main() {
   for (const provider of Object.values(original.PROVIDERS)) assert(Object.values(provider.cost_per_call_usd).every(cost => cost === null));
+  assert.equal(original.PROVIDERS.propertyradar.credential_env, 'WOS_PROVIDER_PROPERTYRADAR_KEY');
+  assert.equal(original.PROVIDERS.batchdata.credential_env, 'WOS_PROVIDER_BATCHDATA_KEY');
   for (const id of ['__proto__', 'constructor', 'toString']) assert.equal(core.providerStatus(id, 'comps').enabled, false);
   const status = (env, rows = []) => core.providerStatus('propertyradar', 'comps', { env, ledger_rows: rows, now_iso: NOW });
   assert.equal(status(Object.create(environment())).enabled, false);

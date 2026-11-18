@@ -73,3 +73,12 @@ unauth devices401, distress-counts401 and exact-source static booleans. No priva
 response body, provider configuration, source preview or paid action is inspected.
 B23 code is DONE; source promotion remains owner-BLOCKED. B24a release is pending;
 then continue B07/B21 and B19, not unauthorized B24b activation.
+
+First hardened head15ec6d7/run44240341791 FAILED329/1/0,total330; provider
+core/safety tests passed. Only no-secrets-in-tracked-files reported module28/35
+entropy-assignment: registry env_key values are public environment-variable names,
+not key values. Bounded correction renames that metadata field credential_env and
+all internal readers. Exact variable names are unchanged and asserted explicitly.
+The scanner/test/detectors are untouched: no allowlist, ignore, encoding, split
+string or weakened gate. Original failed artifact is retained. Re-run only the
+corrected new head; do not merge red or retry the unchanged failed run.

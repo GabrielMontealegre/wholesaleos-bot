@@ -13,6 +13,9 @@ B-24a #523 original commits retained and mainc41a349 merged. OFF-core hardening
 is ready for its hosted head gate; no runtime callsite, real vendor, pricing,
 credential, spend or outreach action. B-24b transport/durable ledger/vendor-example
 fixtures stay BLOCKED on owner vendor/pricing choice and explicit approval.
+First hardened523 gate44240341791 failed329/1/0 only on public env-name metadata
+under env_key. Rename field credential_env, same exact names/OFF configuration;
+secret scanner and all assertions unchanged, new exact-name checks added.
 After B-24a release, continue B-07/B-21, then B-19.
 
 PR #433 is released as `c03f564`: hosted316/0/0; #434 is released as `8976683`:
