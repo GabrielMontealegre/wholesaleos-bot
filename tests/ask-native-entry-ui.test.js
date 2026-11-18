@@ -19,6 +19,8 @@ const {view}=require('./ask-workspace.test');
    const req=route.request(),url=new URL(req.url());
    if(req.method()!=='GET'){writes.push(url.pathname);return route.abort();}
    if(url.hostname==='fonts.googleapis.com')return route.fulfill({contentType:'text/css',body:''});
+   // The documented local helper is synthetic here, never a machine-local read.
+   if(url.href==='http://127.0.0.1:8797/helper/status')return route.fulfill({json:{paired:false}});
    if(url.origin!==base){external.push(url.hostname);return route.abort();}
    if(url.pathname==='/helper/status')return route.fulfill({json:{paired:false}});
    if(url.pathname==='/api/dashboard/ask-workspace'){

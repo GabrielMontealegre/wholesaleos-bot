@@ -51,3 +51,18 @@ After green merge, await exact-source automatic deployment and fixed public/stat
 checks plus counts endpoint unauth401 only. Do not invoke notice scan, OCR, source
 collection, business writes or authenticated customer reads in production.
 Remaining B-23 reader/host migration/catalog/daily work is not claimed complete.
+
+## First Hosted Gate
+
+Head3ca4f79 run44209632424 failed326/1/0,total327. Only
+ask-native-entry-ui.test.js:87 failed: external contained three127.0.0.1 hosts.
+Artifact retained527-first-hosted, never reclassified or retried unchanged.
+The artifact does not identify request paths or prove a complete causal timeline.
+
+Fixture trace: its cross-origin rejection occurs before a same-origin helper
+stub. The actual public-deals script declares helper origin127.0.0.1:8797 and
+GET /helper/status. Add only that exact URL's synthetic paired:false response
+before origin rejection, after GET-only enforcement. All other loopback ports,
+paths and external requests remain rejected/counted. No original assertion,
+timeout, runtime path or private/auth behavior changes. No real helper is read.
+New exact-head full hosted gate remains mandatory; no red merge is authorized.

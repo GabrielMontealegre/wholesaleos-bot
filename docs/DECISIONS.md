@@ -1,5 +1,15 @@
 # Decisions
 
+ASSUMED 2026-11-18 UTC: archive-host PR527 first hosted44209632424 failed
+326/1/0 on ask-native-entry-ui's external-host assertion: three127.0.0.1 entries,
+not request paths. Its origin rejection precedes the helper stub; the actual
+public-deals script documents GET http://127.0.0.1:8797/helper/status. Stub only
+that exact URL before origin rejection, after the existing GET-only guard.
+Every external/write/auth/privacy/date assertion and timeout stays unchanged;
+other ports/paths still abort and fail. This closes a fixture gap, not a proven
+CI path/timing or environment cause. One changed head gets one CI, no retry.
+-- AGENTS4 incidental fixture scaffolding, D-067a/c, no local helper/private read.
+
 ASSUMED 2026-11-17 local: D-066's archive host correction must reach both the
 profile-driven source adapter and the review service's independent index fetch.
 Use the existing county profile and validated response URL for relative links;
