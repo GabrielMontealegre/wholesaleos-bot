@@ -1,5 +1,17 @@
 # Decisions
 
+ASSUMED 2026-11-18 UTC: apply genuinely new compatible architect530 answer
+6970839853 once: B19a532 is already released, so B07a/B21a OFF schema slices now
+precede remaining UI. Official-metadata maps and explicit synthetic schema-only
+fixtures only. Unknown endpoint/layer/Wake columns/qualification codes stay null;
+no legal/disclosure promotion or runtime registry activation. Generic bath-parts
+normalization is additive inside existing disclosure comp engine, never a new
+engine; derived formula/field origins travel with that value and strict grid is
+unchanged. No actual property rows, amounts/addresses in PRs, bulk downloads,
+imports, paid/provider or business actions. CODE DONE requires hosted exact-head
+green and normal release verification; live acceptance stays owner-BLOCKED.
+-- AGENTS3/4/5, issue530#issuecomment-6970839853.
+
 VERIFIED 2026-11-18 UTC: B19b533 released12937bd2bb4870a9ba78cb19dccdbb2768d88279,
 exactheada16ae8959eb20846e57af496f4a2650cb6658457 hosted44253602881 PASS332/0/0,
 auto7876553499 SUCCESS. Fixed public health200/devices401/distress401/new

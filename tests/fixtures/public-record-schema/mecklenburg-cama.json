@@ -1,0 +1,12 @@
+{
+  "synthetic": true,
+  "kind": "schema_only",
+  "profile_id": "nc_mecklenburg_cama_schema_only",
+  "metadata_url": "https://maps.mecklenburgcountync.gov/opendata/metadata/Tax_Parcels_with_CAMA_Data.html",
+  "captured_date": "2026-11-18",
+  "fields": [
+    { "name": "parcelid" }, { "name": "saleprice" }, { "name": "saledate" },
+    { "name": "heatedarea" }, { "name": "bedrooms" }, { "name": "yearbuilt" },
+    { "name": "fullbath" }, { "name": "halfbath" }, { "name": "validsale" }, { "name": "naldesc" }
+  ]
+}

@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "profiles": [
+    {
+      "profile_id": "nc_mecklenburg_cama_schema_only",
+      "state": "NC",
+      "county": "Mecklenburg",
+      "enabled": false,
+      "api_kind": null,
+      "service_url": null,
+      "layer": null,
+      "reader": null,
+      "disclosure_state": null,
+      "qualified_sale_codes": null,
+      "current_record_count": null,
+      "source_updated_at": null,
+      "status": "blocked_owner_validation",
+      "evidence_level": "official_metadata_only",
+      "captured_date": "2026-11-18",
+      "metadata_url": "https://maps.mecklenburgcountync.gov/opendata/metadata/Tax_Parcels_with_CAMA_Data.html",
+      "allowed_metadata_hosts": ["maps.mecklenburgcountync.gov"],
+      "field_map": {
+        "parcel_id": "parcelid",
+        "sale_price": "saleprice",
+        "sale_date": "saledate",
+        "living_area": "heatedarea",
+        "bedrooms": "bedrooms",
+        "year_built": "yearbuilt",
+        "bathrooms_parts": { "full": "fullbath", "half": "halfbath" },
+        "sale_qualification": "validsale",
+        "qualification_description": "naldesc"
+      },
+      "schema_fields": ["parcelid", "saleprice", "saledate", "heatedarea", "bedrooms", "yearbuilt", "fullbath", "halfbath", "validsale", "naldesc"]
+    },
+    {
+      "profile_id": "nc_wake_extract_schema_unsupported",
+      "state": "NC",
+      "county": "Wake",
+      "enabled": false,
+      "api_kind": null,
+      "service_url": null,
+      "layer": null,
+      "reader": null,
+      "disclosure_state": null,
+      "qualified_sale_codes": null,
+      "status": "needs_validated_schema",
+      "evidence_level": "unverified",
+      "metadata_url": null,
+      "captured_date": null,
+      "field_map": null,
+      "schema_fields": null
+    }
+  ]
+}
