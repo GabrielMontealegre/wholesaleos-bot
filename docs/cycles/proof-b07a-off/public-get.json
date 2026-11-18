@@ -1,0 +1,36 @@
+{
+  "source_sha": "f253691bf0bce83c9244f3b43c9a2e358eef2054",
+  "authenticated": false,
+  "private_body_reads": false,
+  "provider_actions": false,
+  "business_writes": false,
+  "checks": [
+    {
+      "route": "/health",
+      "status": 200
+    },
+    {
+      "route": "/api/auth/devices",
+      "status": 401
+    },
+    {
+      "route": "/api/dashboard/public-distress-sources",
+      "status": 401
+    },
+    {
+      "route": "/api/dashboard/sourced-matches",
+      "status": 401
+    },
+    {
+      "route": "/dashboard/",
+      "status": 200,
+      "exact_static_source": true
+    },
+    {
+      "route": "/app",
+      "status": 200,
+      "exact_static_source": true
+    }
+  ],
+  "result": "PASS"
+}

@@ -2,6 +2,14 @@
 
 ## Latest Run Summary (2026-11-18 UTC)
 
+B07a #535 CODE DONE / RELEASEDf253691: exacthead2a996e9 hosted44270713029
+PASS333/0/0, auto7878943552/public static/auth controls PASS. Runtime OFF;
+live10-property acceptance BLOCKED-owner-validation. B21a now implements two OFF
+statewide schema profiles in the same isolated registry: official Texas field-only
+metadata fixture, Florida explicitly unsupported after official metadata PDF401.
+No retry/bypass/alternate file; no guessed FL columns or date/assessment-to-sale
+mapping. B21a hosted gate pending; live statewide import stays owner-BLOCKED.
+
 New run after fresh primary capacity returned: main9e50304, docs534 already
 released332/0/0/auto7876969698/public controls PASS; no completed release re-polled.
 Read genuinely NEW architect530 answer6970839853 once (06:19:20Z): finish532
@@ -4260,7 +4268,10 @@ Acceptance
 
 ---
 
-## B-07 · Charlotte automatic comps (Mecklenburg County, NC) · OFF CODE IN PROGRESS / LIVE OWNER-BLOCKED
+## B-07 · Charlotte automatic comps (Mecklenburg County, NC) · OFF CODE DONE / LIVE OWNER-BLOCKED
+
+B07a535 releasedf253691, hosted333/0/0, auto7878943552/public checksPASS.
+Only OFF metadata schema code is DONE; no live validation or import was performed.
 
 Architect530 answer6970839853 bounds B07a to official metadata field maps and
 synthetic schema-only fixtures, reusing existing comp engine/grid. Gate pending;
@@ -4526,7 +4537,14 @@ Acceptance
 
 ---
 
-## B-21 · Free statewide data, Texas and Florida first · LIVE ACCEPTANCE BLOCKED #530
+## B-21 · Free statewide data, Texas and Florida first · OFF CODE IN PROGRESS / LIVE OWNER-BLOCKED
+
+Architect530 answer6970839853 authorizes OFF metadata/schema-only code. B21a
+adds statewide OFF metadata profiles, not runnable readers. Texas fields are from
+official layer metadata; assessments/acquisition dates never become sale evidence.
+Florida metadata PDF returned401, so schema/map/columns remain null/unsupported.
+No bulk file, row or import was retrieved. CODE DONE awaits hosted exact-head green
+and normal release checks; live imports remain BLOCKED-owner-validation.
 
 Current no-real-import/private-content boundary prevents live statewide file/row
 ingestion. Scope question #530 requests compatible metadata/fixture-only code

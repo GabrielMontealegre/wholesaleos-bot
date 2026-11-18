@@ -1,0 +1,12 @@
+{
+  "synthetic": true,
+  "kind": "schema_only",
+  "profile_id": "tx_statewide_parcel_schema_only",
+  "metadata_url": "https://feature.geographic.texas.gov/arcgis/rest/services/Parcels/stratmap_land_parcels_48_most_recent/MapServer/layers",
+  "captured_date": "2026-11-18",
+  "fields": [
+    { "name": "prop_id" }, { "name": "owner_name" }, { "name": "mail_addr" }, { "name": "situs_addr" },
+    { "name": "situs_zip" }, { "name": "stat_land_use" }, { "name": "year_built" }, { "name": "tax_year" },
+    { "name": "date_acq" }, { "name": "fips" }, { "name": "mkt_value" }, { "name": "land_value" }, { "name": "imp_value" }
+  ]
+}
