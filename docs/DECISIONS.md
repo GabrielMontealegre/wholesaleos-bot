@@ -1,5 +1,18 @@
 # Decisions
 
+ASSUMED 2026-11-18 UTC: B19b exposes only the additive sourced report snapshot
+as an admin-only no-store GET. Mount authorization/method/body guard before body
+parsers, also defend route registration; reject query/clock overrides. Use existing
+readDBStrict with no permissive readDB/default data/writer fallback. Invalid/missing
+canonical collections produce generic503, not a fabricated empty success. Empty
+valid collections remain a truthful empty result. DTO has references/criteria,
+not unsigned JV street/source/comp details or monetary value. No new UI, scheduler,
+provider, consent or outreach authority. -- AGENTS3/4/5, existing Ask boundary.
+
+VERIFIED 2026-11-18 UTC: B19a532 released48f2904, head3fadef7,
+hosted44250222397 PASS331/0/0, auto7876130763 and fixed public/static/counts401
+PASS. Pure index only; full B19 incomplete. No completed release rechecked.
+
 ASSUMED 2026-11-18 UTC: B19a begins with an additive pure index of canonical
 approved sourced reports, not a new buy-box writer or HTTP-payload trust API.
 Reuse assistant-finds validation, central buyer eligibility/buyer-fit and existing
