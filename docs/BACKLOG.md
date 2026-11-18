@@ -30,6 +30,9 @@ All new sources are disabled/candidate; missing corpus yields reader:null and
 needs-sample-data, normal/fallback selection cannot run them. Counts retain OFF
 state and skipped daily control metadata. Legacy Detroit data/adapter stays separate.
 B-23 code release is pending its gate, not yet DONE.
+First529 hosted44234975957 failed326/2/0 on old metadata-catalog expectations;
+bounded correction preserves exact active/queue sources and requires added OFF
+entries plus exact Cleveland policy IDs. Failed evidence retained, no red merge.
 B-23 promotion: BLOCKED until Gabriel approves a preview run per source.
 No source was scheduled or collected. After B-23d release, harden existing OFF-only
 B-24a/#523 before merge: synthetic review proved date/price/cache/contact/cap defects;

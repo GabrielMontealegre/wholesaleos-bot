@@ -251,9 +251,16 @@ function fixtureFetch(totalPages, calls) {
   assert.ok(registered);
   assert.strictEqual(registered.adapter_id, 'mi_land_bank_acquisition_adapter');
   const detroitCatalog = sourceCatalog.buildSourceCatalog({ city: 'Detroit', county: 'Wayne', state: 'MI' });
-  assert.deepStrictEqual(detroitCatalog.map((item) => item.source_id), [adapter.SOURCE_ID]);
+  assert.deepStrictEqual(detroitCatalog.filter((item) => item.enabled !== false).map((item) => item.source_id), [adapter.SOURCE_ID]);
+  assert.ok(detroitCatalog.filter((item) => item.source_id !== adapter.SOURCE_ID).every((item) =>
+    item.enabled === false && item.auto_select === false && item.promotion_status === 'blocked_pending_validated_preview'));
   assert.strictEqual(detroitCatalog[0].official_source, true);
-  assert.deepStrictEqual(sourceCatalog.buildSourceCatalog({ city: 'Cleveland', county: 'Cuyahoga', state: 'OH' }), []);
+  const clevelandMarket = { city: 'Cleveland', county: 'Cuyahoga', state: 'OH' };
+  const clevelandCatalog = sourceCatalog.buildSourceCatalog(clevelandMarket);
+  assert.deepStrictEqual(clevelandCatalog.map((item) => item.source_id).sort(),
+    require('../modules/sources/distress-list-operational-policy').catalogForMarket(clevelandMarket).map((item) => item.source_id).sort());
+  assert.ok(clevelandCatalog.length > 0 && clevelandCatalog.every((item) => item.enabled === false && item.auto_select === false &&
+    item.promotion_status === 'blocked_pending_validated_preview'));
 
   const ledgerFiles = fs.readdirSync(tmpDir).filter((name) => /deal-board-doc-ledger/.test(name));
   assert.ok(ledgerFiles.length >= 1, 'rotation must use the snapshot ledger directory');

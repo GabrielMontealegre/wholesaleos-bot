@@ -1,5 +1,12 @@
 # Decisions
 
+ASSUMED 2026-11-18 UTC: B23d first hosted44234975957 failed326/2/0 only on
+legacy-only/empty metadata catalog assertions. Apply #528's intentional OFF catalog
+contract to MI254/256 and LA284: exact active Detroit legacy ID and existing queue
+defaults remain, added metadata must be OFF/blocked, Cleveland matches exact
+configured policy IDs rather than []. No runtime/safety/date/network assertion
+changes. Retain failed evidence and run only the corrected new head. -- AGENTS3/4.
+
 ASSUMED 2026-11-18 UTC: apply architect528 comment6967037126 once: remaining
 B-23 code ships default-OFF/fixture-only; operational promotion remains owner-blocked.
 Separate operational profiles from technical fixture codecs. All new catalog entries

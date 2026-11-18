@@ -71,6 +71,16 @@ Intentional existing assertion changes per the new architecture contract:
   line24 needs-reader-settings -> needs_corpus; add universal disabled/blocked check.
 No date, money, auth, external-request, privacy or no-write assertion is weakened.
 
+First hosted head7d50cd5/run44234975957:326 passed/2 failed/0 skipped,total328.
+Only catalog expectations failed: mi-land-bank-acquisition-adapter.test.js:254
+expected legacy-only metadata, and :256 plus
+ca-los-angeles-tax-default-acquisition-adapter.test.js:284 expected no Cleveland
+metadata. The bounded correction keeps the exact enabled Detroit legacy source
+set and LA/Detroit queue defaults, checks all added entries OFF/auto_select:false/
+blocked, and requires the exact configured Cleveland policy IDs (nonempty).
+This is the intentional #528 OFF catalog contract, not a safety waiver or runtime
+patch. The original failed artifact remains retained; no unchanged run is retried.
+
 Hosted exact-head full suite, automatic deployment and fixed public/static plus
 counts unauth401 remain required. B-23 code may be marked DONE only afterward.
 The synthetic [configuration proof](proof-b23d-off/config-state.json) records
