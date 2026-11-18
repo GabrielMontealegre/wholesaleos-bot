@@ -1,5 +1,13 @@
 # Decisions
 
+VERIFIED 2026-11-18 UTC: B19b533 released12937bd2bb4870a9ba78cb19dccdbb2768d88279,
+exactheada16ae8959eb20846e57af496f4a2650cb6658457 hosted44253602881 PASS332/0/0,
+auto7876553499 SUCCESS. Fixed public health200/devices401/distress401/new
+sourced-matches401 and exact-source dashboard/app booleans PASS. Private bodies
+cancelled, no authenticated snapshot/DB/source/provider/business action. B19a/b
+backend slices complete, not full B19. Next UI/evidence work needs a bounded cycle
+with sufficient fresh usage; no runtime/UI changes carried into reserve.
+
 ASSUMED 2026-11-18 UTC: B19b exposes only the additive sourced report snapshot
 as an admin-only no-store GET. Mount authorization/method/body guard before body
 parsers, also defend route registration; reject query/clock overrides. Use existing

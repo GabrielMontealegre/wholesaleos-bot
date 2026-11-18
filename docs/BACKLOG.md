@@ -3,11 +3,20 @@
 ## Latest Run Summary (2026-11-18 UTC)
 
 B-19a #532 RELEASED48f2904: head3fadef7 hosted44250222397 PASS331/0/0,
-auto7876130763 SUCCESS, fixed public/static/counts401 PASS. B-19b private snapshot
-GET is ready for hosted gate: admin/no-store/method/body/query boundary before
+auto7876130763 SUCCESS, fixed public/static/counts401 PASS. B-19b #533 private snapshot
+GET RELEASED12937bd: heada16ae89 hosted44253602881 PASS332/0/0,
+auto7876553499 SUCCESS, public health200/devices401/distress401/new matches401
+and exact-source static checks PASS. Admin/no-store/method/body/query boundary before
 parsing, strict existing-store read only, generic unavailable503 and no new writes.
 Synthetic populated/empty/unsigned-JV privacy and existing Ask boundary PASS.
 No UI or existing matching consumer changed; full B-19 remains incomplete.
+Next is B-19c: both matching views/old client-score removal with canonical private
+snapshot, source and value truth, auth cancellation and synthetic desktop/mobile
+verification. Deed/sign-up evidence still not integrated; no purchase facts invented.
+At this run's final preflight primary usage was86% USED; remaining normal headroom
+before the95% reserve threshold was insufficient for the full UI test/release cycle.
+No UI runtime edits were started or left dirty. Resume from then-current main only
+with sufficient fresh usage; final5% remains rollback/redeploy-only.
 
 B-07 metadata-only #531 RELEASED44569d6: head819ae41 hosted44245994767 PASS330/0/0,
 auto7875628684 SUCCESS and fixed public/static/counts401 PASS. #530 metadata checked
@@ -4428,7 +4437,8 @@ explicitly not integrated, not invented. Existing UI/runtime consumers unchanged
 full B-19 remains TODO until those evidence paths and both views are completed.
 B-19a released532/48f2904 hosted331/0/0 and bounded deployment verification PASS.
 B-19b adds only the protected snapshot GET, no automatic refresh or UI replacement;
-its hosted gate/deployment verification remain required before release.
+released533/12937bd with hosted332/0/0, auto7876553499 and public/static/new route401
+verification PASS. See docs/cycles/b19-backend-release-status.md for exact proof.
 
 Goal: WholesaleOS matches sellers' properties and land to the right buyers by itself (D-021, D-027). This
 replaces the placeholder Deal Matching page, which uses a made-up score and no comps.
