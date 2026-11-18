@@ -2,6 +2,15 @@
 
 ## Latest Run Summary (2026-11-18 UTC)
 
+B21a #536 OFF SCHEMA CODE DONE / RELEASED2fbedfa: exacthead8f1933c,
+hosted44274627417 PASS334/0/0, auto7879478596/public static/auth controls PASS.
+B07a535 and B21a536 complete architect530's bounded OFF-code scope. Live10-property
+and statewide-import acceptance remain BLOCKED-owner-validation; Florida schema
+remains unsupported after metadata401. No actual rows, bulk files or activation.
+Next remaining B19 UI/evidence cycle requires sufficient fresh account headroom:
+last preflight27%primary/97%secondary USED; no partial UI work started. Do not
+reset/purchase/escalate models or poll completed releases to use remaining quota.
+
 B07a #535 CODE DONE / RELEASEDf253691: exacthead2a996e9 hosted44270713029
 PASS333/0/0, auto7878943552/public static/auth controls PASS. Runtime OFF;
 live10-property acceptance BLOCKED-owner-validation. B21a now implements two OFF
@@ -4537,7 +4546,11 @@ Acceptance
 
 ---
 
-## B-21 · Free statewide data, Texas and Florida first · OFF CODE IN PROGRESS / LIVE OWNER-BLOCKED
+## B-21 · Free statewide data, Texas and Florida first · OFF SCHEMA CODE DONE / LIVE OWNER-BLOCKED
+
+B21a536 released2fbedfa, hosted334/0/0, auto7879478596/public checksPASS.
+This is code-only metadata/schema scaffolding, not live statewide coverage.
+Florida schema remains unsupported401/null and live imports owner-BLOCKED.
 
 Architect530 answer6970839853 authorizes OFF metadata/schema-only code. B21a
 adds statewide OFF metadata profiles, not runnable readers. Texas fields are from

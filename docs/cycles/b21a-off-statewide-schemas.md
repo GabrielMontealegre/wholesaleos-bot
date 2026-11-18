@@ -55,3 +55,8 @@ verification remain required. Then B21a OFF schema code may be CODE DONE; Florid
 schema remains unsupported401 and live statewide file ingestion/import remains
 BLOCKED-owner-validation. No Florida comps, live field validation, data migration,
 source-file audit or operational coverage is claimed. Remaining B19 follows.
+
+Released #536 as2fbedfa, exacthead8f1933c, hosted44274627417 PASS334/0/0,
+auto7879478596 SUCCESS and fixed public/static/auth controls PASS.
+[Public control proof](proof-b21a-off/public-get.json). OFF schema CODE DONE;
+Florida schema remains unsupported401, live acceptance remains owner-BLOCKED.
