@@ -2,6 +2,13 @@
 
 ## Latest Run Summary (2026-11-18 UTC)
 
+B-19a #532 RELEASED48f2904: head3fadef7 hosted44250222397 PASS331/0/0,
+auto7876130763 SUCCESS, fixed public/static/counts401 PASS. B-19b private snapshot
+GET is ready for hosted gate: admin/no-store/method/body/query boundary before
+parsing, strict existing-store read only, generic unavailable503 and no new writes.
+Synthetic populated/empty/unsigned-JV privacy and existing Ask boundary PASS.
+No UI or existing matching consumer changed; full B-19 remains incomplete.
+
 B-07 metadata-only #531 RELEASED44569d6: head819ae41 hosted44245994767 PASS330/0/0,
 auto7875628684 SUCCESS and fixed public/static/counts401 PASS. #530 metadata checked
 once: open/comments0/updated2026-11-18T05:39:47Z. No compatible answer yet; no
@@ -4419,6 +4426,9 @@ deal/buyer indexes have no raw score, no input cap and no effects; strict price
 range does not treat a starting bid as asking. Deed-purchase/sign-up coverage is
 explicitly not integrated, not invented. Existing UI/runtime consumers unchanged;
 full B-19 remains TODO until those evidence paths and both views are completed.
+B-19a released532/48f2904 hosted331/0/0 and bounded deployment verification PASS.
+B-19b adds only the protected snapshot GET, no automatic refresh or UI replacement;
+its hosted gate/deployment verification remain required before release.
 
 Goal: WholesaleOS matches sellers' properties and land to the right buyers by itself (D-021, D-027). This
 replaces the placeholder Deal Matching page, which uses a made-up score and no comps.
