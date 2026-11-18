@@ -1,5 +1,13 @@
 # Decisions
 
+VERIFIED 2026-11-18 UTC: B21a536 OFF schema code released
+2fbedfaa877369b43dc0167be44db11f432a0622, exacthead8f1933c857becda0c816e290d97f7c8a90d87566,
+hosted44274627417 PASS334/0/0, auto7879478596 and fixed public/static/auth controls
+PASS. B07a535 and B21a536 satisfy530's bounded code scope only. No actual rows,
+bulk download/import, source activation, legal/disclosure promotion or private
+body/provider/business action. Florida schema unsupported401/live acceptance
+owner-BLOCKED. FullB19 remains incomplete; next UI cycle needs account headroom.
+
 VERIFIED 2026-11-18 UTC: B07a535 OFF code releasedf253691, exacthead2a996e9,
 hosted44270713029 PASS333/0/0, auto7878943552/publicstatic+auth controls PASS.
 Only code DONE under530 scope; live10-property acceptance owner-BLOCKED.
