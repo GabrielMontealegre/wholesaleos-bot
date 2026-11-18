@@ -1,5 +1,16 @@
 # Decisions
 
+ASSUMED 2026-11-17 local: D-066's archive host correction must reach both the
+profile-driven source adapter and the review service's independent index fetch.
+Use the existing county profile and validated response URL for relative links;
+retain two-argument legacy parser defaults/frozen URLs and all host allowlists.
+The official replacement index was observed, not notice PDF/property content.
+Intentional assertion change: cycle-48:177 exact current-service document host
+www.co.ellis.tx.us -> www.elliscountytx.gov, same path/document ID, still strict
+equality. Legacy parser/date/money/no-write assertions unchanged. Preserve the
+first expected-host failure, no unchanged rerun. No source promotion/import.
+-- AGENTS3/4/5, D-066 host fix and current source/provenance truth.
+
 ASSUMED 2026-11-17 local: B-23c3 binds reader settings to exact source ID,
 kind, URL and reader using a data-only table. Only three official ArcGIS schemas
 were reviewed; metadata/count GETs fetched no property rows and promoted no

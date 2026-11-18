@@ -110,11 +110,11 @@ const PROFILES = [
     source_name: 'Ellis County Clerk Foreclosure Archive',
     county: 'Ellis',
     state: 'TX',
-    source_url: 'https://co.ellis.tx.us/Archive.aspx?AMID=60',
-    human_portal_url: 'https://co.ellis.tx.us/Archive.aspx?AMID=60',
+    source_url: 'https://www.elliscountytx.gov/Archive.aspx?AMID=60',
+    human_portal_url: 'https://www.elliscountytx.gov/Archive.aspx?AMID=60',
     official_hosts: ['co.ellis.tx.us', 'elliscountytx.gov'],
     city_names: ['Waxahachie', 'Ennis', 'Midlothian', 'Red Oak', 'Ferris', 'Palmer', 'Italy', 'Maypearl', 'Ovilla', 'Milford', 'Bardwell', 'Alma', 'Garrett'],
-    search_hints: ['site:co.ellis.tx.us foreclosure', 'Ellis County Texas notice of trustee sale filetype:pdf'],
+    search_hints: ['site:elliscountytx.gov foreclosure', 'Ellis County Texas notice of trustee sale filetype:pdf'],
     blocked_note: 'Open CivicPlus archive; current notice documents are image scans without a text layer - open the direct links (OCR is the future automation lever).'
   },
   {

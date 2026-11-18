@@ -17,10 +17,13 @@ proof-only rows and audit now survive repeated normalization/orchestration.
 B-23c2 #525 RELEASED as `af59c6a`: hosted44202437105 PASS325/0/0,
 automatic deployment7869884489 SUCCESS, fixed public/static and new endpoint
 unauthenticated401 PASS. Counts remain a saved-preview projection, not live imports.
-B-23c3 now adds source/URL/kind/reader-bound schema field maps for three ArcGIS
-profiles. Metadata/count-only review and synthetic tests PASS; hosted gate pending.
-One existing fixture uses actual column names with all assertions unchanged.
-No source fetch of property rows, scheduling, catalog promotion or actual import.
+B-23c3 #526 RELEASED as `08253f4`: hosted44205741904 PASS326/0/0,
+automatic deployment7870354209 SUCCESS, bounded public/static + counts401 PASS.
+Three schema-bound profiles remain unscheduled; no property rows were fetched.
+B-23c4 corrects the current archive profile and the review service's hidden legacy
+URL; relative links use the validated response base, legacy parsing stays intact.
+New regression and cycle48 G1-G16 PASS; hosted gate pending. One exact expected
+current-host URL changes intentionally; no date/money/no-write check is weakened.
 No source was scheduled or collected; B-23c and OFF B-24a/#523 remain next.
 
 - B-25: green PR #509 merged as `35a5f6e`; handoff PR #512 merged as `c53740b`.

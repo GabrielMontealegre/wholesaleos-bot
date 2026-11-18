@@ -174,7 +174,7 @@ async function run() {
     scan_impl: async () => ({ matched_subject: true, proposals: [], crops: [], page_confidences: [90] })
   });
   assert.strictEqual(fromListing.matched_subject, true, 'G10: stored archive listing resolves only by exact dated link');
-  assert.strictEqual(service.latestDealBoardSnapshot({ market }).rows[0].notice_scan.document_url, documentUrl);
+  assert.strictEqual(service.latestDealBoardSnapshot({ market }).rows[0].notice_scan.document_url, 'https://www.elliscountytx.gov/Archive.aspx?ADID=5233');
   assert.deepStrictEqual(fs.readFileSync(evidenceFile), evidenceBefore, 'G14 staged ownership not applied');
   assert.deepStrictEqual(fs.readFileSync(dbFile), dbBefore, 'G14 saved leads unchanged');
   assert.strictEqual(after.full_snapshot_identity_counts.rows_total, 1, 'G16');
