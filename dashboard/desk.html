@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>DealPeak</title>
+<link rel="manifest" href="/dashboard/desk-manifest.json">
+<link rel="icon" type="image/png" sizes="192x192" href="/dashboard/icon-192.png">
+<link rel="apple-touch-icon" href="/dashboard/icon-192.png">
+<meta name="theme-color" content="#050505">
+<style>
+  :root { --bg:#050505; --gold:#d9b35f; --fg:#f2efe6; --muted:#a59f8f; }
+  * { box-sizing:border-box }
+  body { margin:0; min-height:100vh; background:var(--bg); color:var(--fg);
+    font:16px/1.5 "Segoe UI",system-ui,sans-serif; display:flex; align-items:center; justify-content:center;
+    padding:24px max(16px,env(safe-area-inset-right)) 24px max(16px,env(safe-area-inset-left)); text-align:center }
+  main { max-width:420px; width:100% }
+  img { width:148px; height:148px; border-radius:32px; box-shadow:0 10px 40px rgba(217,179,95,.18) }
+  h1 { font:600 1.6rem/1.2 Georgia,serif; letter-spacing:.12em; color:var(--gold); margin:18px 0 2px }
+  .by { font-size:.75rem; letter-spacing:.3em; color:var(--muted); margin-bottom:26px }
+  a.btn, button.btn { display:block; width:100%; padding:15px 18px; border-radius:12px; font:700 1.05rem "Segoe UI",system-ui,sans-serif;
+    text-decoration:none; border:1px solid var(--gold); cursor:pointer; margin-top:12px }
+  .open { background:var(--gold); color:#141006 }
+  .install { background:transparent; color:var(--gold) }
+  .install[hidden] { display:none }
+  p.note { color:var(--muted); font-size:.88rem; margin-top:18px }
+</style>
+</head>
+<body>
+<main>
+  <img src="/dashboard/icon-512.png" alt="DealPeak by Montsan logo">
+  <h1>DEALPEAK</h1>
+  <div class="by">BY MONTSAN</div>
+  <a class="btn open" id="open" href="https://claude.ai/artifact/9Xhqgu1ADHgPMSqof3AqfE">Open my Deal Desk</a>
+  <button class="btn install" id="install" type="button" hidden>Install DealPeak on this phone</button>
+  <p class="note" id="note">To put DealPeak on your home screen: tap the browser menu (3 dots), then <b>Install app</b> or <b>Add to Home screen</b>.</p>
+</main>
+<script>
+  // Opened from the home-screen icon: go straight to the Deal Desk.
+  var standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+  if (standalone) location.replace(document.getElementById('open').href);
+  // In the browser: offer a one-tap install where the browser allows it.
+  var promptEvent = null, btn = document.getElementById('install');
+  addEventListener('beforeinstallprompt', function (e) {
+    e.preventDefault(); promptEvent = e; btn.hidden = false;
+    document.getElementById('note').textContent = 'Tap "Install DealPeak" once. After that, open it from your home screen.';
+  });
+  btn.addEventListener('click', function () {
+    if (!promptEvent) return;
+    promptEvent.prompt();
+    promptEvent.userChoice.then(function () { promptEvent = null; btn.hidden = true; });
+  });
+  addEventListener('appinstalled', function () {
+    document.getElementById('note').textContent = 'Installed. Open DealPeak from your home screen.';
+  });
+</script>
+</body>
+</html>
