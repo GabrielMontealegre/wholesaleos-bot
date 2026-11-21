@@ -762,6 +762,30 @@ until the later writer slice. Existing8field envelopes/history/actors unchanged.
 No migration,deletion,contact-to-reply inference or new operator gate.
 --AGENTS safety/data truth and D064/457--2026-10-27.
 
+## D-068 - Persona panel findings become backlog items B-26 to B-35 (Gabriel, 2026-11-20)
+
+A test of main with simulated users and fake data gave the app 2.4/5 stars. The 20 users were wholesalers,
+investors and agents, all on phones. Gabriel approved all ten improvements on 2026-11-20 ("Yes, all 10").
+
+Order: password hashing first (B-26), then:
+- the call-first lead card;
+- missing-number actions;
+- Approve and Reject at the top;
+- the leads page on a phone;
+- plain words;
+- the DealPeak brand;
+- speed;
+- a link per screen;
+- small fixes (B-27 to B-35).
+
+These limits stay:
+- No server-side sending or calling (A-012).
+- Call and Text open the operator's own phone (D-007).
+- Unproven numbers stay "Possible number — not confirmed" (D-006).
+- Paid skip trace stays off (B-24).
+
+The product name in the UI is DealPeak by Montsan.
+
 ## D-067 - Unblock the gates: CI decides, frozen slices ship or get cut (Architect, 2026-11-09)
 
 Gabriel, 2026-11-09, told the architect to unblock Codex. Codex merged nothing from 2026-11-06 to

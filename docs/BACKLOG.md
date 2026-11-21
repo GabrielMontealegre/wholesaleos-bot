@@ -225,11 +225,152 @@ loopback `fetch failed`, EPERM/EACCES, fixture start timeout) is not a gate fail
 3. **B-24: paid data provider adapter, switch off.** This absorbs #494, the skip-trace button (D-067e).
 4. **B-07 and B-21: comps.**
 5. **B-19: match engine.**
-6. Then: 454 board v1 under the #503 contract (D-067f), #450 clock fix with #412 phase B, and the rest of the
+6. **Persona panel block (D-068).** Do B-26 first, as soon as the current slice is done (it is a small security fix).
+   Then B-27 → B-35 in order.
+7. Then: 454 board v1 under the #503 contract (D-067f), #450 clock fix with #412 phase B, and the rest of the
    backlog in its existing order.
 
 Gabriel only (do not wait on these, do not do them): #428 credential rotation confirmation, turning on the
 reply Send switch, picking and paying for the B-24 provider, any outreach.
+
+---
+
+## PERSONA PANEL BLOCK (D-068, Gabriel approved 2026-11-20): B-26 … B-35
+
+Source: a test of main d8f2296 with simulated users and 100% fake data: 20 users on phones at 360 / 393 / 430 px
+and 5 judges.
+- Result: 2.4/5 stars, usability score (SUS) 42.5, 74% of steps done.
+- Navigation works. What fails is the value on the first screen: no owner phone, unclear numbers,
+  buried actions.
+- Full report on the owner's computer: `Panel de Personas/resultados/wholesaleos/mejoras_wholesaleos_2026-11-20.md`.
+
+Rules for the whole block:
+- Every item keeps the §5 safety invariants. Nothing here turns on server-side sending, calling or paid data.
+- Every UI item ships with 1366 / 400 / 412 screenshots (fake data) and plain-English text (§11).
+
+## B-26 · Hash dashboard passwords · TODO (do first, small)
+
+Goal: `/api/auth/email-login` compares the plain-text `users[].password` stored in the JSON database. Store a hash instead.
+
+Acceptance
+- Store a slow salted hash and compare it in constant time. Node `crypto.scrypt` is enough; no new dependency.
+- Existing plain-text rows upgrade on the next successful login. No stored user is deleted or locked out.
+- Trace every writer and reader of `users[].password` in the PR.
+- Never log, return or export a password or a hash. `publicUser` never includes it.
+- Tests: right password, wrong password, missing password, a legacy plain row upgraded once, and the hash
+  never in API responses or logs.
+- Later, as a separate item: two-step login and a plain "what data we keep / export my data" page.
+
+## B-27 · Call-first lead card · TODO (extends B-15; pulls the call and text links of B-10 and B-06 forward)
+
+Acceptance
+- **Top of every lead card, on one screen at 400 px:**
+  - the owner's name, or "Owner not found yet";
+  - the best phone;
+  - **Call** (`tel:`) and **Text** (`sms:` with an editable prefilled body), which open the operator's own phone.
+  - Each tap logs an activity entry (who, when, which number). No server sending; A-012 stays.
+- **Phones:**
+  - Phones come only from existing source-backed routes, such as `free_contact_routes`.
+  - Unproven numbers read "Possible number — not confirmed" (D-006).
+  - Do-not-call, wrong and rejected numbers never get a Call or Text button.
+  - With no phone, show the "Find the owner's phone" links (B-06).
+- **Below that, in plain words:**
+  - why they may sell;
+  - the sale or auction date, with the D-018 caution if it is unproven;
+  - the debt clue, labeled as in §5;
+  - the equity band;
+  - one next step.
+- Technical fields (source family, parser, extraction, evidence) fold into a closed "Source details".
+- The address shows city, state and ZIP once. Today they repeat.
+- Negative tests: no phone, rejected phone, possible phone, bank or government owner (no reach-out),
+  missing owner.
+
+## B-28 · Missing numbers become actions; one profit number · TODO
+
+Acceptance
+- Replace every "Not established" with what is missing and the action: "Missing: contract price · Add it".
+- A deal shows one profit figure, labeled **Estimated** or **Confirmed**.
+  - One tap shows the math: value after repairs − repairs − our fee, or the contract spread.
+  - The comps and dates behind it can be tapped.
+- Fix the card that shows "$4,313 our share" and "Our share: Not established" together.
+  Trace every writer and reader of the share/room fields.
+- Derived values stay labeled derived and never unlock a gate (§5). A 2-comp value stays "preliminary".
+
+## B-29 · Approve and Reject at the top of a pending deal · TODO
+
+Acceptance
+- The "I reviewed" checkbox plus Approve and Reject sit at the top of a pending reviewed deal, above
+  "Copy message / Review steps".
+- Visible at 400 px without scrolling.
+- The existing server checks stay unchanged.
+- Tests: the buttons are present, disabled until "I reviewed" is ticked, and the existing approval rules hold.
+
+## B-30 · Leads page on a phone · TODO (folds in the remaining #294 work)
+
+Acceptance
+- At 480 px or less:
+  - the list shows first;
+  - filters sit behind one "Filters" button;
+  - Admin and System tools move to Settings.
+- Cards instead of the cut-off table: address, reason, owner, Call. No horizontal scroll at 360 px.
+- The red left border gets a legend or a text label.
+- Checkboxes get labels and a 44 px tap area.
+- Body text 16 px, tap targets at least 44 px, no small grey-on-grey text. Users with weak eyesight scored worst.
+- Every button has an accessible name. The judges found 22 unnamed buttons and 12 that are 20 px tall in
+  the deal view.
+
+## B-31 · Plain words and the user's own name · TODO
+
+Acceptance
+- Replace user-facing jargon (put the tooltips in glossary.json):
+  - holder → Seller (or Owner);
+  - source proof → "Where this came from";
+  - blind teaser → "Buyer preview (no address)";
+  - "Room (our share)" → "Est. profit";
+  - "Gold - Interim grade" → an A–D grade with a tooltip;
+  - ARV, MAO and JV get a plain tooltip the first time they appear.
+- "Waiting on Gabriel", "Gabriel buyer list" and similar labels use the logged-in user's name, or "you".
+  No owner name is hard-coded in UI text.
+
+## B-32 · DealPeak look and home screen · TODO
+
+Acceptance
+- **Login and header** show **DealPeak by Montsan**:
+  - dark background, gold accent, the compass logo;
+  - logo assets are in `exports/assistant/brand/dealpeak/`; copy the app icons into the dashboard;
+  - a one-line benefit.
+- **Home:**
+  - the best deal and its profit sit at the top, above the counters;
+  - counters showing 0 collapse;
+  - the menu icon gets the word "Menu", plus a large "Leads to call" button.
+- "Your session ended. Sign in again." shows only after a real expiry, never on a first visit.
+
+## B-33 · Speed on a phone · TODO
+
+Today:
+- About 3.3 MB and 75 requests before the sign-in screen works, which is about 19 s on slow 4G.
+- `dashboard/index.html` is 1.9 MB and `tabler.scoped.css` is 679 KB.
+- `/api/dashboard/market-demand-index?limit=400` returns 1 MB after login.
+
+Acceptance
+- Split the bundle and load each page when it is opened.
+- Load the market index only when it is needed.
+- Target: the sign-in screen works after less than 600 KB has been transferred.
+- Record the before and after sizes in the PR.
+
+## B-34 · A link per screen · TODO
+
+Acceptance
+- Every page has a URL hash route; Today's Deals already reads the hash for filters.
+- The phone's Back button and shared links work.
+- A deep link to a lead card works after sign-in.
+
+## B-35 · Small UI fixes · TODO
+
+Acceptance
+- A tooltip that stays stuck after a tap closes on the next tap.
+- The menu uses one consistent icon set, with no mixed emoji.
+- "More" is regrouped so no menu shows more than about 12 items.
 
 ---
 
