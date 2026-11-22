@@ -1,5 +1,16 @@
 # Decisions
 
+VERIFIED 2026-11-22 UTC: B27e549 RELEASEDfd8afaf2dbb7befb067cb84ccdb8908d20a02cd6,
+head29ce1a7c27d3c3f616f3c387b37f72063a2cf9ad hosted45001842370 PASS345/0/0.
+Auto7976217418 SUCCESS, public health200/exact dashboard+app/contactv4/stylev3/
+operationalv6/sourcev60 PASS. Synthetic source/saved cards1366/400/412/360 and
+disclosures passed; no private production endpoint/body/UI inspection, login,
+real contact/provider/business action or manual Railway operation. D069 unchanged.
+Local314/31/0 retained failed; first547 hosted339/2/0 retained. No gate waiver.
+B27's approved admin scope complete per543; non-admin ownership remains later,
+not B27. NextB28 is not started: fresh83% primary preflight cannot support a full
+new UI/test/release cycle plus rollback reserve. Preserve final5% strictly.
+
 VERIFIED 2026-11-22 UTC: B27d548 releasedc85c7d35540da429f08a4e233f1f960454b60f5a,
 head129c3f76a61231a392c17ffa2d7526988005a412 hosted44999681064 PASS344/0/0.
 Auto7975891917 SUCCESS, public health/exact static-only checks PASS; no private
