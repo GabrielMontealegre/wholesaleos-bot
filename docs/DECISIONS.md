@@ -1,5 +1,20 @@
 # Decisions
 
+ASSUMED 2026-11-22 UTC: split B27c request-time response/auth/cache hardening
+from source-card UI/tap integration for reviewability (AGENTS2). D069 global
+lock policy stays unchanged; its anonymous-admin fallback never authorizes the
+new derived brief or saved contact tap. Real signed admin is required for taps;
+queue brief reads additionally accept the existing exact deal_board:read scope.
+Cached summaries are stripped, never promoted to evidence, exported or written.
+Conservative institution/known ownership-outcome holds do not assert legal facts;
+taxpayer identity is not promoted to owner. Capture metadata is not sale authority.
+Existing assertions changed only for cache-bust v58 -> v59 at
+dashboard-public-deal-queue.test.js:877 and :934; same script-presence intent.
+Its :853 registration-shape assertion also includes the new options argument,
+preserving the same requireAdminOrAgent gate plus an added summary-guard assertion.
+Geography/detail VM harnesses receive the new authorization dependency without
+weakening prior assertions. No provider/contact/business or production-private proof.
+
 ASSUMED 2026-11-22 UTC: apply genuinely new architect543 answer7074699953 once.
 It authorizes request-time contact summaries only on existing authenticated,
 no-store queue/alias and saved-lead APIs. No new route/static export/persisted

@@ -7,6 +7,7 @@
   const esc = value => String(value == null ? '' : value).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   function safeUrl(value) { try { const u = new URL(value); return ['https:', 'http:'].includes(u.protocol) && !u.username && !u.password ? u.href : ''; } catch (_) { return ''; } }
   const isAdmin = () => Boolean(root.APP && root.APP.unlocked && root.APP.currentUser && root.APP.currentUser.role === 'admin');
+  const canEnhance = row => isAdmin() && row && row.contact_brief && row.contact_brief.source_kind === 'derived_contact_brief';
   const icon = name => '<img src="/dashboard/workspace/vendor/lucide-1.60.0/' + name + '.svg" width="18" height="18" alt="" aria-hidden="true">';
   function addressLine(row) {
     const raw = String(row.full_address || row.address || row.property_address || row.site_address || '').trim();
@@ -74,7 +75,7 @@
       actor: () => isAdmin() && root.APP.currentUser.id, createId: () => root.crypto.randomUUID(),
       openLocal: target => root.WOSLeadContact.openLocal(target), lock: () => root.WOSDashboardAuth.lockIdentity(root.APP) });
     const oldDetail = root.renderLeadDetail;
-    if (oldDetail) root.renderLeadDetail = function(row) { return (isAdmin() ? markup(row) : '') + oldDetail.apply(this, arguments); };
+    if (oldDetail) root.renderLeadDetail = function(row) { return (canEnhance(row) ? markup(row) : '') + oldDetail.apply(this, arguments); };
     const oldOpen = root.openLeadModal;
     if (oldOpen) root.openLeadModal = function() {
       const result = oldOpen.apply(this, arguments);
@@ -89,6 +90,7 @@
     };
     function clear() {
       controller.clear();
+      (root.APP && root.APP.leads || []).forEach(row => { if (row && typeof row === 'object') delete row.contact_brief; });
       document.querySelectorAll('.lc-brief').forEach(element => {
         const message = document.createElement('p'); message.textContent = 'Dashboard login required.'; element.replaceWith(message);
       });
@@ -114,5 +116,5 @@
     }, true);
   }
   function openLocal(target) { root.location.href = target; }
-  return { markup, href, addressLine, createController, isAdmin, install, openLocal };
+  return { markup, href, addressLine, createController, isAdmin, canEnhance, install, openLocal };
 });
