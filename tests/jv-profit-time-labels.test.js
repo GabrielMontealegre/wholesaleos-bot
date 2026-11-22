@@ -11,7 +11,7 @@ const event={to:'dead',operator_id:'Synthetic operator',evidence_text:'Synthetic
 const deal={approval:'approved',evaluation:{matches:[],status:'dead'},jv_workflow:{stage:'dead',label:'Dead',next_stage:null,
   stages:[],events:[{...event,happened_at:cases[0][0],recorded_at:cases[1][0]}],signature_reviews:[],history_invalid:false}};
 const profit={net_fee:{low:17000,high:24000},our_net:{low:8500,high:12000},buyer_price:{low:160000,high:165000},
-  contract_price:{low:140000,high:141000},costs:{low:1000,high:2000},path:'assignment',field_provenance:{}};
+  contract_price:{low:140000,high:141000},costs:{low:1000,high:2000},path:'assignment',field_provenance:{},source_kind:'derived_workflow',reported_only:true,buyer_confirmed:false,report_id:'synthetic-time-fixture',our_share:0.5,missing:[]};
 let phase='startup';
 async function main(){
   const {browser}=await launchChromiumWithResolvedBrowser(require('playwright'),{headless:true});
@@ -33,7 +33,7 @@ async function main(){
       const d=structuredClone(deal),p=structuredClone(profit);
       d.jv_workflow.events=values.map(at=>({...d.jv_workflow.events[0],happened_at:at,recorded_at:at}));
       d.jv_workflow.signature_reviews=values.map(at=>({happened_at:at,operator_id:'Synthetic reviewer',evidence_text:'Synthetic review prose.'}));
-      ['buyer_price','contract_price','costs'].forEach((key,i)=>{p.field_provenance[key]={source_url:'https://evidence.example/'+key,captured_at:values[i%values.length]};});
+      ['buyer_price','contract_price','costs'].forEach((key,i)=>{p.field_provenance[key]={...p.field_provenance[key],source_kind:'imported_report',evidence_text:'Synthetic reported price evidence.',source_url:'https://evidence.example/'+key,captured_at:values[i%values.length]};});
       const before=JSON.stringify({d,p});document.getElementById('profit').innerHTML=wosMatchProfit.markup(p);document.getElementById('jv').innerHTML=wosJVWorkflow.render(d);
       document.querySelectorAll('details').forEach(el=>{el.open=true;});return before===JSON.stringify({d,p});
     },{deal,profit,values});}
@@ -41,8 +41,9 @@ async function main(){
       phase=width+':labels';await page.goto(base);
       for(const [value,label] of cases){assert(await render([value]));const a=await page.locator('#profit').innerText(),b=await page.locator('#jv').innerText();assert(a.includes('('+label+')'));assert(b.includes(' - '+label+' - '));assert(b.includes('Operator report recorded '+label));assert(b.includes('Operator review - '+label));}
       phase=width+':proof';assert(await render(cases.slice(0,3).map(row=>row[0])));
-      assert((await page.locator('#profit').innerText()).includes('Potential net fee: $17,000 - $24,000'));
-      assert((await page.locator('#profit').innerText()).includes('Our share: $8,500 - $12,000'));
+      assert((await page.locator('#profit').innerText()).includes('Net fee before split'));
+      assert((await page.locator('#profit').innerText()).includes('$17,000 - $24,000'));
+      assert((await page.locator('#profit').innerText()).includes('Estimated profit: $8,500 - $12,000'));
       assert((await page.locator('#profit').innerText()).includes('no confirmed buyer'));
       assert((await page.locator('#jv').innerText()).includes(event.evidence_text));
       assert.equal(await page.locator('#jv img').count(),0);

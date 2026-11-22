@@ -6,7 +6,7 @@ async function run() {
   const fixture = createFixtureApp(), writes = [], external = [], errors = [];
   const server = await new Promise(resolve => { const s = fixture.app.listen(0, '127.0.0.1', () => resolve(s)); });
   const base = 'http://127.0.0.1:' + server.address().port;
-  let browser, measured = true;
+  let browser, measured = true, observedRoom;
   const reference = 'WOS-FL-4321', sourceName = 'Fixture WOS-FL-9876 contact';
   try {
     browser = (await launchChromiumWithResolvedBrowser(require('playwright'), { headless: true })).browser;
@@ -19,6 +19,7 @@ async function run() {
       if (url.origin !== base) { external.push(url.hostname); return route.abort(); }
       if (url.pathname === '/api/dashboard/todays-deals') {
         const response = await route.fetch(), payload = await response.json();
+        observedRoom = payload.items[0].evaluation.matches[0].estimated_spread.low;
         payload.items[0].record_ref = reference;
         payload.items[0].holder_contact.name = sourceName;
         payload.counts = { total: payload.counts.total, shown: payload.counts.shown, ...(measured ? { vetted_today: 0, daily_target: 10, jv: 0 } : {}) };
@@ -57,7 +58,9 @@ async function run() {
       assert.equal(await page.getByRole('button', { name: 'I re-checked the listing today', exact: true }).count(), 1);
       assert.equal(await page.locator('[data-deal-action="recheck"]').getAttribute('data-deal-action'), 'recheck');
       assert.equal(await page.locator('[data-review-comps]').isChecked(), false);
-      assert.equal(await page.locator('.td-compact-math div:last-child dd').innerText(), '$6,625');
+      assert.equal(observedRoom, 6625, 'Existing buyer-criteria spread stays unchanged');
+      assert.equal(await page.locator('.td-compact-math>div').count(), 2, 'Criteria spread is no longer a competing profit headline');
+      assert.equal(await page.getByText('Our share: Not established', {exact:true}).count(), 0);
       await capture('deal-open-' + width);
       await capture('claimed-value-' + width, '.td-math');
       await capture('recheck-command-' + width, '[data-deal-action="recheck"]');

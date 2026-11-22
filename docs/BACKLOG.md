@@ -1,5 +1,17 @@
 # Backlog
 
+## Latest Run Summary (2026-11-22 UTC, B28a In Progress)
+
+B28a removes competing criteria-room/share headlines from Today and JV cards;
+the shared deal/buyer/private owner-review panel shows one Estimated profit from
+the existing reported-price calculator, with closed source/cost/split math and
+explicit missing fields. No calculator, DTO, writer, gate or authorization change.
+B28 remains IN PROGRESS: actionable missing-field editing/navigation and remaining
+pipeline/Ask/approval surfaces follow in B28b. Exact-head hosted CI, automatic
+deployment and public health/static verification are required before release.
+Synthetic browser evidence is under docs/screens/2026-11-22-profit-view.
+No private production inspection or business/provider action is authorized.
+
 ## Latest Run Summary (2026-11-22 UTC, B27 Released)
 
 B27 approved admin scope DONE under architect543 answer7074699953; non-admin
