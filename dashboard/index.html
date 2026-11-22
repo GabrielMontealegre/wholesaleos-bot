@@ -478,9 +478,14 @@ function showDashboardLogin(message) {
   window.WOSDashboardAuth.lockIdentity(APP);
   var pinScreen = document.getElementById('pin-screen');
   var appEl = document.getElementById('app');
-  if (disposeDashboardLogin) disposeDashboardLogin();
   if (pinScreen) pinScreen.style.display = 'flex';
   if (appEl) appEl.style.display = 'none';
+  if (disposeDashboardLogin && pinScreen && pinScreen.querySelector('#login')) {
+    var status = pinScreen.querySelector('#login-error');
+    if (status) status.textContent = message || '';
+    return;
+  }
+  if (disposeDashboardLogin) disposeDashboardLogin();
   disposeDashboardLogin = window.WOSDashboardLogin.mount(pinScreen, { message: message, onAuthenticated: unlockDashboardUser });
 }
 
@@ -28956,7 +28961,7 @@ if(document.readyState==="loading"){
   };
   function renderCompactLeadModal(lead) {
     var ref = typeof getLeadReferenceId === 'function' ? getLeadReferenceId(lead) : (lead.reference_id || lead.ref_id || lead.id || 'Lead');
-    var callFirst = window.WOSLeadContact && window.WOSLeadContact.isAdmin();
+    var callFirst = window.WOSLeadContact && window.WOSLeadContact.canEnhance(lead);
     var address = (callFirst ? window.WOSLeadContact.addressLine(lead) : compactLeadFullAddress(lead)) || 'Address not available';
     var sourceType = (typeof leadQueueTypeSource === 'function' ? leadQueueTypeSource(lead) : '') || compactLeadPick(lead, ['source_category','source_type','category','type']) || 'Source unknown';
     var sourceName = compactLeadPick(lead, ['source_name','source','jurisdiction','county']) || 'Source not verified';
@@ -28987,7 +28992,7 @@ if(document.readyState==="loading"){
         '<button type="button" onclick="closeModal()" aria-label="Close lead" title="Close" style="width:44px;height:44px;flex:none;border-radius:4px;border:1px solid #334155;background:#111827;color:#fff;font-size:18px;font-weight:900;cursor:pointer;line-height:1">X</button>' +
       '</div>' +
       '<div data-lc-saved-body style="overflow:auto;padding:14px 16px;display:flex;flex-direction:column;gap:12px">' +
-        (window.WOSLeadContact && window.WOSLeadContact.isAdmin() ? window.WOSLeadContact.markup(lead) : '') +
+        (callFirst ? window.WOSLeadContact.markup(lead) : '') +
         (typeof renderDallasSheriffPipelinePanel === 'function' ? renderDallasSheriffPipelinePanel(lead) : '') +
         renderDallasVerifiedBanner(lead) +
         renderDallasCompIntelligence(lead) +
@@ -29131,8 +29136,8 @@ function wosRealPullState(stateCode, cardEl) {
 <script src="/dashboard/wos-todays-deals.js?v=19"></script>
 <link rel="stylesheet" href="/dashboard/wos-jv-list-tools.css?v=1">
 <script src="/dashboard/wos-jv-list-tools.js?v=1"></script>
-<script src="/dashboard/wos-public-deals.js?v=58"></script>
-<script src="/dashboard/wos-operational-views.js?v=4"></script>
+<script src="/dashboard/wos-public-deals.js?v=59"></script>
+<script src="/dashboard/wos-operational-views.js?v=5"></script>
 <script src="/dashboard/wos-marketplace.js?v=1"></script>
 <link rel="stylesheet" href="/dashboard/wos-inbox.css?v=3">
 <script src="/dashboard/wos-email-reader.js?v=6"></script>
@@ -29170,7 +29175,7 @@ function wosRealPullState(stateCode, cardEl) {
 <script src="/dashboard/wos-operator-profile.js?v=2"></script>
 <script src="/dashboard/workspace/components.js?v=7"></script>
 <link rel="stylesheet" href="/dashboard/wos-lead-contact.css?v=1">
-<script src="/dashboard/wos-lead-contact.js?v=1"></script>
+<script src="/dashboard/wos-lead-contact.js?v=2"></script>
 <script src="/dashboard/wos-ask-model.js?v=1"></script>
 <script src="/dashboard/wos-ask-demo.js?v=5"></script>
 </body>

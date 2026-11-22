@@ -33,6 +33,7 @@ const context={app:{get(_path,fn){handler=fn;}},db:{getLeads:()=>rows},leadLocat
   classifyLeadQualityForList:()=>({rank:0,flags:[]}),parseLeadListLimit:v=>Number(v)||2,parseLeadListOffset:v=>Number(v)||0,
   withLeadIntelligence:v=>v,sanitizeLeadForList:v=>({...v}),isDallasLeadForList:()=>false,isDallasSheriffTaxSaleLeadForList:()=>false,
   operationalLeads:{classify:()=>({}),counts:()=>({})},leadContactBrief:require('../modules/research/lead-contact-brief'),
+  contactSummaryAuthorized:()=>true,
   buildLeadIntakeStatus:()=>({}),console:{error(){throw Error('unexpected route error');}}};
 vm.runInNewContext(source.slice(source.indexOf('const LEADS_LIST_DEFAULT_LIMIT'),source.indexOf('function parseLeadListLimit')),context);
 vm.runInNewContext(source.slice(start,end),context);

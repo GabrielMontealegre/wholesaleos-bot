@@ -29,6 +29,9 @@ assert.equal(brief({ ...row, phone: '5559999999' }).phone.number, accepted.phone
 for (const patch of [
   { free_contact_routes: [] }, { do_not_call: true }, { do_not_contact: true }, { do_not_call: 'false' }, { archived: true },
   { owner_type: 'bank' }, { owner_type: 'government' }, { seller_type: 'bank-owned' },
+  { owner_record: { owner_name: 'Synthetic Bank' } }, { owner_record: { owner_name: 'City of Synthetic' } },
+  { sale_outcome: 'SOLD_TO_THIRD_PARTY' }, { sale_outcome: 'REVERTED_TO_LENDER' },
+  { owner_record: { owner_name: 'Synthetic Taxpayer', owner_role: 'taxpayer_of_record' }, owner_clue: 'Taxpayer of record: Synthetic Taxpayer' },
   { owner_record: { owner_name: 'Synthetic Agency', owner_type: 'government' } },
   { source_proof_text: '' }, { source_structured_address_verified: false },
   { contact_workflow_outcome: 'not_interested' }, { lifecycle_status: { quarantined: true } }, { lifecycle_status: { quarantined: 'false' } },
@@ -66,16 +69,20 @@ const server = fs.readFileSync(path.join(__dirname, '..', 'server.js'), 'utf8');
 assert.equal((server.match(/leadContactBrief\.buildLeadContactBrief\(/g) || []).length, 4,
   'list, list fallback, operational list and detail recompute from canonical rows');
 assert.ok(server.includes('safeLeadListValue(leadContactBrief.buildLeadContactBrief(lead), 4)'), 'list limits still apply');
-let detail;
+let detail, summaryAllowed = true;
 const registration = server.indexOf("app.get('/api/leads/:id',");
 vm.runInNewContext(server.slice(registration, server.indexOf('\n});', registration) + 4), {
   app: { get(_route, handler) { detail = handler; } }, db: { getLeads: () => [{ ...row, contact_brief: { call_href: 'tel:forged' } }] },
   operationalLeads: require('../modules/research/operational-lead-eligibility'),
-  leadContactBrief: { buildLeadContactBrief: brief }, withLeadIntelligence: value => value
+  leadContactBrief: { buildLeadContactBrief: brief }, withLeadIntelligence: value => value,
+  contactSummaryAuthorized: () => summaryAllowed
 });
 const response = { json(value) { this.body = value; } };
 detail({ params: { id: row.id } }, response);
 assert.equal(response.body.contact_brief.call_href, accepted.call_href, 'actual detail response ignores cached action forgery');
+summaryAllowed = false;
+detail({ params: { id: row.id } }, response);
+assert.equal(Object.hasOwn(response.body, 'contact_brief'), false, 'unsigned detail omits even a cached brief');
 const originalFetch = global.fetch, originalNow = Date.now, originalWrite = fs.writeFileSync;
 try {
   global.fetch = () => { throw Error('network forbidden'); };

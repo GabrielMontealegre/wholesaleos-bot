@@ -30,6 +30,7 @@ function createHarness() {
   const timers = [];
   const fetchCalls = [];
   const snapshotRequests = [];
+  const windowListeners = new Map();
 
   class FakeNode {
     constructor(tag, id) {
@@ -139,11 +140,13 @@ function createHarness() {
       let rejectRequest;
       const promise = new Promise((resolve, reject) => { resolveRequest = resolve; rejectRequest = reject; });
       const request = {
+        aborted: false,
         resolve(data) { resolveRequest({ ok: true, status: 200, json: () => Promise.resolve(data) }); },
         reject(error) { rejectRequest(error); }
       };
       if (options.signal && options.signal.addEventListener) {
         options.signal.addEventListener('abort', () => {
+          request.aborted = true;
           const error = new Error('aborted');
           error.name = 'AbortError';
           rejectRequest(error);
@@ -159,7 +162,8 @@ function createHarness() {
     window: {
       APP: { page: 'findme_scout' },
       localStorage: { getItem() { return null; }, setItem() {} },
-      open() { return null; }
+      open() { return null; },
+      addEventListener(name, handler) { windowListeners.set(name, handler); }
     },
     document,
     MutationObserver: function MutationObserver() { this.observe = function () {}; },
@@ -207,7 +211,8 @@ function createHarness() {
     assert.ok(candidates.length, 'snapshot timeout timer exists');
     candidates[candidates.length - 1].fn();
   }
-  return { context, hooks, host, timers, fetchCalls, snapshotRequests, destroyAndRemount, flush, runLatestRequestTimeout };
+  return { context, hooks, host, timers, fetchCalls, snapshotRequests, destroyAndRemount, flush, runLatestRequestTimeout,
+    endSession() { windowListeners.get('wos:session-ended')(); } };
 }
 
 (async () => {
@@ -275,8 +280,26 @@ function createHarness() {
   await marketSwitch.flush();
   assert.ok(!marketBody.innerHTML.includes('WRONG_MARKET_ROWS'), 'R7 previous-market response is discarded');
 
+  const locked = createHarness();
+  locked.hooks.mountForCurrentPage();
+  const lockedSection = locked.hooks.liveSection();
+  locked.snapshotRequests[0].resolve(snapshot('SYNTHETIC_PRIVATE_CACHED'));
+  await locked.flush();
+  assert.ok(lockedSection._wosRenderedData, 'fixture has a populated session cache');
+  locked.endSession();
+  assert.strictEqual(lockedSection._wosRenderedData, null, 'session end clears the rendered snapshot cache');
+  assert.ok(!lockedSection.querySelector('.wos-public-deals-body').innerHTML.includes('SYNTHETIC_PRIVATE_CACHED'));
+  const late = createHarness();
+  late.hooks.mountForCurrentPage();
+  late.snapshotRequests[0].resolve(snapshot('SYNTHETIC_PRIVATE_LATE'));
+  late.endSession();
+  assert.strictEqual(late.snapshotRequests[0].aborted, true, 'session end aborts the pending request');
+  await late.flush();
+  assert.ok(late.hooks.liveSection().querySelector('.wos-public-deals-body').innerHTML.includes('Dashboard login required.'));
+  assert.ok(!late.hooks.liveSection().querySelector('.wos-public-deals-body').innerHTML.includes('SYNTHETIC_PRIVATE_LATE'), 'even a response settled before abort cannot repaint');
+
   // R9: the render path is read-only and starts no operational endpoint.
-  const allCalls = [success, rejected, timedOut, outOfOrder, noSection, marketSwitch]
+  const allCalls = [success, rejected, timedOut, outOfOrder, noSection, marketSwitch, locked, late]
     .flatMap((harness) => harness.fetchCalls);
   assert.strictEqual(allCalls.filter((call) => call.method !== 'GET').length, 0, 'R9 render path performs zero POSTs');
   assert.strictEqual(allCalls.some((call) => /\/run|\/upload|\/proposal|\/confirmation|\/capture/.test(call.url)), false, 'R9 starts no batch, capture, or confirmation');

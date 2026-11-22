@@ -14,7 +14,7 @@
   function matchable(row, buyer) { return eligible(row) && Number(row.arv) > 0 && Number(row.offer) > 0 && buyer && buyer.matching_eligible === true; }
   function rowCard(row) {
     var state = row.operational_eligibility || {};
-    var callFirst = root.WOSLeadContact && root.WOSLeadContact.isAdmin();
+    var callFirst = root.WOSLeadContact && root.WOSLeadContact.canEnhance(row);
     return '<article class="ops-record" data-ops-id="' + esc(row.id) + '"><div class="ops-pii ops-address">' + esc(callFirst ? root.WOSLeadContact.addressLine(row) : row.property_address || row.address || 'Record without a property address') + '</div>' +
       (callFirst ? root.WOSLeadContact.markup(row) : '<p>' + esc([row.city, row.county, row.state].filter(Boolean).join(', ')) + '</p>') +
       '<p>' + esc(state.reason || 'Needs address proof') + '</p>' +

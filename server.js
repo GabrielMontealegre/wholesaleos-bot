@@ -281,6 +281,24 @@ function bearerToken(req) {
   return match ? match[1].trim() : '';
 }
 
+function contactSummaryAuthorized(req, res, allowAgent = false) {
+  try {
+    const identity = signedDashboardIdentity(req, res);
+    if (identity.ok) return identity.user.role === 'admin';
+    return allowAgent === true && dashboardPairing.verifyAgent(bearerToken(req), 'deal_board:read', { env: process.env }).ok === true;
+  } catch (_) { return false; }
+}
+
+function requireSignedContactAdmin(req, res, next) {
+  try {
+    const identity = signedDashboardIdentity(req, res);
+    if (!identity.ok) return res.status(401).json({ code: 'SESSION_REQUIRED' });
+    if (identity.user.role !== 'admin') return res.status(403).json({ code: 'ADMIN_REQUIRED' });
+    req.currentUser = identity.user;
+    return next();
+  } catch (_) { return res.status(503).json({ code: 'AUTHORIZATION_UNAVAILABLE' }); }
+}
+
 function requireAdmin(req, res, next) {
   try {
     const identity = dashboardIdentity(req, res);
@@ -1406,6 +1424,7 @@ app.get('/api/leads', (req, res) => {
     var requestedLimit = (top300 === '1' || top300 === 'true') ? 300 : parseLeadListLimit(req.query.limit);
     var requestedOffset = parseLeadListOffset(req.query.offset);
     var pageLeads = filtered.slice(requestedOffset, requestedOffset + requestedLimit);
+    var contactSummaryAllowed = contactSummaryAuthorized(req, res);
     var safeLeads = pageLeads.map(function(lead) {
       try {
         var enriched = withLeadIntelligence(lead);
@@ -1415,7 +1434,8 @@ app.get('/api/leads', (req, res) => {
         if (isDallasSheriffTaxSaleLeadForList(enriched)) safe.sheriff_tax_sale_acquisition = dallasSheriffTaxSaleAcquisitionStatus(enriched);
         safe.lead_quality = quality;
         safe.operational_eligibility = operationalLeads.classify(lead);
-        safe.contact_brief = safeLeadListValue(leadContactBrief.buildLeadContactBrief(lead), 4);
+        if (contactSummaryAllowed) safe.contact_brief = safeLeadListValue(leadContactBrief.buildLeadContactBrief(lead), 4);
+        else delete safe.contact_brief;
         safe.repair_flags = Array.from(new Set([].concat(safe.repair_flags || [], quality.flags || [])));
         return safe;
       } catch (err) {
@@ -1426,7 +1446,8 @@ app.get('/api/leads', (req, res) => {
         }));
         fallback.lead_quality = fallbackQuality;
         fallback.operational_eligibility = operationalLeads.classify(lead);
-        fallback.contact_brief = safeLeadListValue(leadContactBrief.buildLeadContactBrief(lead), 4);
+        if (contactSummaryAllowed) fallback.contact_brief = safeLeadListValue(leadContactBrief.buildLeadContactBrief(lead), 4);
+        else delete fallback.contact_brief;
         if (isDallasLeadForList(lead)) fallback.dallas_verified_acquisition = dallasVerifiedAcquisitionStatus(lead);
         if (isDallasSheriffTaxSaleLeadForList(lead)) fallback.sheriff_tax_sale_acquisition = dallasSheriffTaxSaleAcquisitionStatus(lead);
         fallback.repair_flags = Array.from(new Set([].concat(fallback.repair_flags || [], fallbackQuality.flags || [])));
@@ -1470,7 +1491,13 @@ app.get('/api/dashboard/operational-leads', requireAdmin, (req, res) => {
     const all = store.leads || [];
     const normalize = value => String(value || '').trim().toLowerCase().replace(/\s+county$/, '');
     const scoped = all.filter(row => ['state', 'county', 'city'].every(key => !req.query[key] || normalize(row[key]) === normalize(req.query[key])));
-    const projected = scoped.map(row => ({ ...row, operational_eligibility: operationalLeads.classify(row), contact_brief: leadContactBrief.buildLeadContactBrief(row) }));
+    const summaryAllowed = contactSummaryAuthorized(req, res);
+    const projected = scoped.map(row => {
+      const result = { ...row, operational_eligibility: operationalLeads.classify(row) };
+      if (summaryAllowed) result.contact_brief = leadContactBrief.buildLeadContactBrief(row);
+      else delete result.contact_brief;
+      return result;
+    });
     const lane = String(req.query.lane || 'working');
     if (!['all', 'working', 'needs_address_proof', 'source_conflict', 'archived', 'callable'].includes(lane)) return res.status(400).json({ code: 'operational_lane_invalid' });
     let rows = projected.filter(row => lane === 'all' || lane === 'callable' ? lane === 'all' || row.operational_eligibility.callable : row.operational_eligibility.lane === lane);
@@ -2253,7 +2280,9 @@ app.post('/api/preview/free-public-deal-board', requireAdmin, async (req, res) =
 });
 
 // Dashboard research queue: snapshot cache only - never saved leads/Analyzer/Dossier/Pipeline.
-researchQueueReadRoute.registerResearchQueueReadRoutes(app, requireAdminOrAgent);
+researchQueueReadRoute.registerResearchQueueReadRoutes(app, requireAdminOrAgent, {
+  authorizeSummary: (req, res) => contactSummaryAuthorized(req, res, true)
+});
 
 app.get('/api/dashboard/research-queue/county-appraisal-preview', requireAdmin, (req, res) => {
   try {
@@ -2791,7 +2820,10 @@ app.patch('/api/leads/:id/address', (req, res) => {
 app.get('/api/leads/:id', (req, res) => {
   const lead = db.getLeads().find(l => l.id === req.params.id);
   if (!lead) return res.status(404).json({ error: 'Lead not found' });
-  res.json({ ...withLeadIntelligence(lead), operational_eligibility: operationalLeads.classify(lead), contact_brief: leadContactBrief.buildLeadContactBrief(lead) });
+  const result = { ...withLeadIntelligence(lead), operational_eligibility: operationalLeads.classify(lead) };
+  if (contactSummaryAuthorized(req, res)) result.contact_brief = leadContactBrief.buildLeadContactBrief(lead);
+  else delete result.contact_brief;
+  res.json(result);
 });
 
 app.post('/api/leads', (req, res) => {
@@ -2820,7 +2852,7 @@ require('./modules/records/operator-profile').registerRoutes(app, { db, requireA
 require('./modules/agents/ask-workspace').register(app, { db, requireAdmin });
 require('./modules/buyers/sourced-match-routes').register(app, { db, requireAdmin });
 require('./modules/records/record-activity-routes').registerRecordActivityRoutes(app, { db, requireAdmin });
-require('./modules/records/lead-contact-tap-routes').registerLeadContactTapRoutes(app, { db, requireAdmin });
+require('./modules/records/lead-contact-tap-routes').registerLeadContactTapRoutes(app, { db, requireAdmin: requireSignedContactAdmin });
 require('./modules/records/conversation-routes').registerConversationRoutes(app, { db, requireAdmin, assistantSnapshotImport: true });
 require('./modules/records/assistant-snapshot-routes').registerAssistantSnapshotRoutes(app, { db, requireAdmin });
 require('./modules/records/assistant-upload-key-routes').registerAssistantUploadKeyRoutes(app, { db, requireAdmin });

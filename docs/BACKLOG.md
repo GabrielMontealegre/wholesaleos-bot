@@ -1,5 +1,21 @@
 # Backlog
 
+## Latest Run Summary (2026-11-22 UTC, B27c Boundary)
+
+B27c #547 first hosted44996024369 FAILED339/2/0 total341, retained.
+Local full suite FAILED310/31/0 total341, missing dependencies observed; no retry.
+Synthetic login geometry reproduced a detached control during repeated401 form
+replacement. Preserve identity/cache clearing and reuse the current locked form;
+fresh-session disposal remains. Original login tests/assertions unchanged.
+
+Docs #546 RELEASEDd510670: hosted44992737484 PASS340/0/0, automatic
+deployment7975016494 SUCCESS, health/static-only verification PASS. No private
+production endpoints were read after D069. B27c implements the approved request-time
+response boundary before source-card UI: strict signed-admin/exact helper scope,
+no persisted/public summary, canonical regeneration, session-cache clearing and
+signed-admin-only saved tap guard. Full B27 is still incomplete; source-card
+UI/tap integration follows separately, then B28 onward. D069 is unchanged.
+
 ## Latest Run Summary (2026-11-22 UTC, Saved Contact Release)
 
 B27a542 RELEASEDb7d088d336/0/0. B27b544 RELEASED85a0450,
@@ -313,8 +329,12 @@ B27b #544 RELEASED85a0450: saved-lead admin drawer and operational cards, editab
 SMS, canonical admin-only request activity and1366/400/412/360 fake browser proof.
 No message body uploaded, no completed-contact claim, no server send. Non-admin
 behavior and source preview projection unchanged. Both exposure/role changes
-were rejected by approval review and NOT applied; #543 remains approval-BLOCKED.
-Full B27 not DONE; other operator roles and source cards still need bounded approval.
+were rejected by approval review and NOT applied. NEW architect #543 answer
+7074699953 authorizes request-time summaries in existing private queue/alias and
+saved APIs only; no preview projection/static export/persisted summary. First UI
+and tap scope is admin-only; non-admin ownership is a later item, not B27.
+Full B27 not DONE. B27c hardens that response/auth/cache boundary first; source
+UI/tap integration follows in a separate bounded slice under the same approval.
 First544 hosted44986983142 FAILED331/8/0 total339, retained. New production
 contact JS/CSS omitted from the exact asset inventory; startup check rejects them.
 Add only those two reviewed files; no checker/test weakening or fixture serving.

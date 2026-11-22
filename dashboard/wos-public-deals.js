@@ -24,6 +24,7 @@
   var LOCAL_HELPER = 'http://127.0.0.1:8797';
   var SUPPORTED_HELPER_PROTOCOLS = [1];
   var lastData = null;
+  var snapshotControllers = new Set();
   var dealGlossary = [];
   var lastNote = '';
   var pendingRequestId = 0;
@@ -2049,6 +2050,7 @@
 
   function requestLatestSnapshot() {
     var controller = typeof AbortController === 'function' ? new AbortController() : null;
+    if (controller) snapshotControllers.add(controller);
     var timeout = setTimeout(function () {
       if (controller) controller.abort();
     }, SNAPSHOT_TIMEOUT_MS);
@@ -2071,7 +2073,7 @@
         }
         throw error;
       })
-      .finally(function () { clearTimeout(timeout); });
+      .finally(function () { clearTimeout(timeout); if (controller) snapshotControllers.delete(controller); });
   }
 
   function fetchLatest(container, note) {
@@ -2795,6 +2797,19 @@
       if (section) refreshLocalHelperStatus(section);
     }, 15000);
   }
+
+  if (typeof window.addEventListener === 'function') window.addEventListener('wos:session-ended', function () {
+    activeRequestId = ++pendingRequestId;
+    snapshotControllers.forEach(function (controller) { controller.abort(); });
+    snapshotControllers.clear(); lastData = null; lastNote = ''; dataByMarket = {};
+    var section = document.getElementById('wos-public-deals');
+    if (section) {
+      section._wosRenderedData = null; section._wosRenderedNote = '';
+      clearSnapshotWatchdog(section);
+      var body = section.querySelector('.wos-public-deals-body');
+      if (body) body.innerHTML = '<p>Dashboard login required.</p>';
+    }
+  });
 
   window.__wosPublicDealsTestHooks = {
     sourceStateLabel: sourceStateLabel,

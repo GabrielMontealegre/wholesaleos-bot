@@ -28,9 +28,11 @@ function blockedRoute(row, route) {
 }
 function institution(row) {
   return [row.owner_type, row.owner_record && row.owner_record.owner_type, row.seller_type]
-    .some(value => /^(bank|bank_owned|government|government_owned|government_office)$/.test(status(value)));
+    .some(value => /^(bank|bank_owned|government|government_owned|government_office)$/.test(status(value))) ||
+    /\bBANK\b|^(?:CITY OF|COUNTY OF|STATE OF|UNITED STATES|U\.?S\.? DEPARTMENT|HOUSING AUTHORITY)\b/i.test(text(row.owner_record && row.owner_record.owner_name));
 }
 function owner(row) {
+  if (row.owner_record && row.owner_record.owner_role === 'taxpayer_of_record') return { name: null, origin: null };
   for (const [origin, value] of [
     ['owner_record.owner_name', row.owner_record && row.owner_record.owner_name],
     ['owner_name_if_visible', row.owner_name_if_visible], ['owner_clue', row.owner_clue]
@@ -50,23 +52,25 @@ function buildLeadContactBrief(input) {
   const selected = confirmed[0] || routes[0] || null;
   const eligibility = operational.classify({ ...row, free_contact_routes: confirmed });
   const lifecycle = row.lifecycle_status || {};
+  const ownershipNeedsReview = ['SOLD_TO_THIRD_PARTY', 'REVERTED_TO_LENDER'].includes(text(row.sale_outcome));
   const uncertainRestrictions = ['do_not_call', 'do_not_contact'].some(key => row[key] != null && typeof row[key] !== 'boolean') ||
     (lifecycle.quarantined != null && typeof lifecycle.quarantined !== 'boolean');
-  const allowed = Boolean(confirmed[0] && eligibility.callable && !institution(row) && lifecycle.quarantined !== true && !uncertainRestrictions);
   const identity = owner(row);
+  const allowed = Boolean(identity.name && confirmed[0] && eligibility.callable && !institution(row) && !ownershipNeedsReview && lifecycle.quarantined !== true && !uncertainRestrictions);
   const number = selected ? '+1' + digits(selected.value) : null;
   return {
     source_kind: 'derived_contact_brief', owner: identity,
     phone: selected ? {
       number, confirmed: confirmed.includes(selected),
       label: confirmed.includes(selected) ? 'Source-backed owner or occupant number' : 'Possible number - not confirmed',
-      source_kind: selected.source_kind, source_url: sourceUrl(selected.source_url), evidence_text: text(selected.evidence_text)
+      source_kind: selected.source_kind, source_url: sourceUrl(selected.source_url), evidence_text: text(selected.evidence_text),
+      captured_at: text(selected.captured_at || selected.source_captured_at) || null
     } : null,
     call_allowed: allowed, text_allowed: allowed,
     call_href: allowed ? 'tel:' + number : null, text_href: allowed ? 'sms:' + number : null,
     local_action_only: true,
     reason: allowed ? 'Review the linked source before contacting this person.' :
-      institution(row) ? 'Bank or government owner: no seller outreach.' :
+      institution(row) || ownershipNeedsReview ? 'Review this owner\'s role and current ownership before contacting anyone.' :
       lifecycle.quarantined === true ? 'Verify the lead date and current status before contacting anyone.' :
       !selected ? 'Find the owner\'s phone in the source record.' :
       !confirmed.length ? 'The source does not confirm that this number reaches the owner or occupant.' :
