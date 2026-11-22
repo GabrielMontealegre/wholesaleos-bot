@@ -825,6 +825,18 @@ until the later writer slice. Existing8field envelopes/history/actors unchanged.
 No migration,deletion,contact-to-reply inference or new operator gate.
 --AGENTS safety/data truth and D064/457--2026-10-27.
 
+## D-069 - PIN lock off on the hosted app, temporarily (Gabriel, 2026-11-22)
+
+Gabriel was locked out (forgotten PIN) and ordered the lock removed "until we finish". He was told once that
+the repository is public, the production address appears in its docs, and with no lock anyone who finds it sees
+every lead with owner names and phones. He chose to remove it.
+
+- Where Railway runs the app, a request without a valid session is treated as the admin.
+- Local runs and tests keep the lock. Real sessions still work.
+- To turn it back on: set `WOS_LOGIN_LOCK=on` in Railway, or revert the change.
+- Codex: do not re-enable it and do not build on it. B-26 and the rest of D-068 continue as written.
+  Restoring the lock is a release step before anyone else gets access.
+
 ## D-068 - Persona panel findings become backlog items B-26 to B-35 (Gabriel, 2026-11-20)
 
 A test of main with simulated users and fake data gave the app 2.4/5 stars. The 20 users were wholesalers,
