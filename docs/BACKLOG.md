@@ -1,5 +1,17 @@
 # Backlog
 
+## Latest Run Summary (2026-11-22 UTC, B27 Source Cards)
+
+B27c #547 RELEASED407a9b1: correctedheadf36a638 hosted44997352778 PASS342/0/0,
+auto7975575248 SUCCESS; health/static-only dashboard/app/contact/style/operational/
+source verification PASS. First547 failed339/2/0 and local310/31/0 retained.
+Repeated401 sign-in presentation fixed without changing authorization or assertions.
+B27d source cards now reuse the shared admin-only contact panel and existing
+contact-workflow endpoint for canonical private local-app intent records only.
+No source snapshot/contact outcome/saved lead/public projection changes. New
+synthetic route/controller/four-width source and saved UI checks PASS; hosted
+exact-head gate and deployment still required before release. Full B27 pending.
+
 ## Latest Run Summary (2026-11-22 UTC, B27c Boundary)
 
 B27c #547 first hosted44996024369 FAILED339/2/0 total341, retained.
@@ -316,7 +328,7 @@ Acceptance
   never in API responses or logs.
 - Later, as a separate item: two-step login and a plain "what data we keep / export my data" page.
 
-## B-27 · Call-first lead card · TODO (extends B-15; pulls the call and text links of B-10 and B-06 forward)
+## B-27 · Call-first lead card · IN PROGRESS (extends B-15; pulls the call and text links of B-10 and B-06 forward)
 
 B27a #542 RELEASEDb7d088d: shared source-backed contact summary behind authenticated
 saved-lead list/detail and operational views, preserving list size limits.
@@ -335,6 +347,11 @@ saved APIs only; no preview projection/static export/persisted summary. First UI
 and tap scope is admin-only; non-admin ownership is a later item, not B27.
 Full B27 not DONE. B27c hardens that response/auth/cache boundary first; source
 UI/tap integration follows in a separate bounded slice under the same approval.
+B27c #547 is released407a9b1, hosted342/0/0/auto7975575248/public-static PASS.
+B27d source UI/intent branch is awaiting its own exact-head hosted gate. Shared
+panel, editable device-only SMS and canonical activity are admin-only; source
+technical detail is collapsed, date uncertainty stays explicit, money is typed
+source evidence only and equity remains unknown rather than inventing a figure.
 First544 hosted44986983142 FAILED331/8/0 total339, retained. New production
 contact JS/CSS omitted from the exact asset inventory; startup check rejects them.
 Add only those two reviewed files; no checker/test weakening or fixture serving.

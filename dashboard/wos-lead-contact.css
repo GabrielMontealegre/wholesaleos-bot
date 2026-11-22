@@ -7,3 +7,7 @@
 .lc-text textarea{display:block;resize:vertical;width:100%;min-height:82px;box-sizing:border-box;font:inherit;font-size:16px;line-height:1.5;color:#edf1f5;background:#222a33;border:1px solid #748193;border-radius:4px;padding:8px;margin-top:5px}
 .lc-proof,.lc-search{font-size:13px;min-width:0}.lc-proof p{white-space:normal}.lc-brief :is(a,summary,textarea):focus-visible{outline:2px solid #75baff;outline-offset:2px}
 .lc-brief .lc-actions .lc-call{color:#fff!important}.lc-brief .lc-actions .lc-text>summary{background:#23549a!important;color:#fff!important}
+.lc-source-card{padding:12px!important;margin:0 0 8px!important;border:1px solid #58626e!important;border-radius:6px!important;background:#15191e!important;color:#edf1f5!important;overflow-wrap:anywhere;min-width:0}
+.lc-source-card>.lc-source-address{font-size:16px;font-weight:650;margin:0 0 8px}.lc-source-card>p,.lc-source-card>div{margin-bottom:8px}
+.lc-source-details{min-width:0;max-width:100%;margin-top:8px}.lc-source-details>summary{min-height:44px;display:flex;align-items:center;cursor:pointer;color:#9dc9ff}
+.lc-source-technical{padding:8px;background:#fff;color:#1f2937;min-width:0;max-width:100%}

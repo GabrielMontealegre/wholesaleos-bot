@@ -38,6 +38,20 @@ const row = require('./helpers/lead-contact-fixture').lead(); row.contact_brief 
     assert.equal((await controller.request(row, 'call')).locked, true);
   }
   assert.equal(locked, 2); assert.equal(opened.length, 2);
+  actor = 'synthetic-admin';
+  next = async (url, request) => {
+    assert.equal(url, '/api/dashboard/free-public-deal-board/contact-workflow');
+    const payload = JSON.parse(request.body);
+    assert.deepEqual(Object.keys(payload).sort(), ['action', 'channel', 'confirm', 'market', 'number', 'queue_key', 'request_id']);
+    assert.equal(payload.action, 'local_contact_requested'); assert.equal(payload.queue_key, 'synthetic-source');
+    assert.deepEqual(payload.market, { city: 'Example City', county: 'Example', state: 'TX' });
+    return response(200);
+  };
+  const sourceRow = { ...row, id: undefined, queue_key: 'synthetic-source', contact_summary_authorized: true,
+    contact_market: { city: 'Example City', county: 'Example', state: 'TX' } };
+  assert.equal((await controller.request(sourceRow, 'text', 'Synthetic local-only body')).ok, true);
+  assert.equal(opened.at(-1), 'sms:+15550101234?body=Synthetic%20local-only%20body');
+  assert.equal((await controller.request({ ...sourceRow, contact_summary_authorized: 'true' }, 'call')).ok, false);
   const html = ui.markup(row); assert.ok(html.includes('Synthetic Owner')); assert.ok(html.includes('data-lc-message'));
   assert.equal(ui.addressLine(row), row.address);
   assert.equal(ui.addressLine({ address: '100 Test St', city: 'Example City', state: 'TX', zip: '75001' }), row.address);

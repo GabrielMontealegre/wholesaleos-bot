@@ -2501,7 +2501,14 @@ app.post('/api/dashboard/free-public-deal-board/manual-evidence/subject-fact-con
 
 // Explicit operator input on preview snapshot rows. This never creates or
 // updates a saved lead and never runs automatically.
+const sourceContactTapHandler = require('./modules/records/lead-contact-tap-routes').createSourceContactTapHandler({
+  db, readSnapshot: input => dealBoardQueueService.latestDealBoardSnapshot(input)
+});
 app.post('/api/dashboard/free-public-deal-board/contact-workflow', requireAdmin, (req, res) => {
+  if (req.body && req.body.action === 'local_contact_requested') {
+    res.set('Cache-Control', 'no-store');
+    return requireSignedContactAdmin(req, res, () => sourceContactTapHandler(req, res));
+  }
   try {
     res.set('Cache-Control', 'no-store');
     res.json(dealBoardQueueService.recordContactWorkflow(req.body || {}, {
