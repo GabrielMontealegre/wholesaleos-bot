@@ -1,5 +1,13 @@
 # Decisions
 
+VERIFIED 2026-11-22 UTC: B27b544 released85a0450d9aa2bd6f69bf0d2f82bceb5c056c78aa,
+exactheade60c8cf03a9489cf0fcd3b1ed6afa62892fe968b hosted44988469122 PASS339/0/0;
+auto7974464627 and fixed public/static/auth checks PASS, including new JS/CSS and
+operational assets. Six fake screenshots and four-width browser proof; no real
+login/contact/private response/provider/business action. Full B27 NOT DONE; #543
+approval boundary remains. First544 failed331/8/0 retained, exact inventory fix
+only. Post-release docs frozen locally at93% primary pending fresh hosted capacity.
+
 ASSUMED 2026-11-22 UTC: first B27b544 hosted44986983142 remains failed331/8/0,
 total339. Exact production inventory rejected the two new contact JS/CSS assets
 and startup hit checkProductionAssets. Approve only these reviewed production
