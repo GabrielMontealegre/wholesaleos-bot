@@ -1,5 +1,16 @@
 # Decisions
 
+ASSUMED 2026-11-22 UTC: B-27 starts with a shared canonical contact brief behind
+existing authenticated saved-lead APIs; B27a is not full B27 DONE. Both card
+surfaces, explicit local tel/sms tap activity and1366/400/412 proof remain.
+Existing property, contact role/provenance and lifecycle guards stay required;
+cached brief or readiness flags never authorize a link. Rejected/wrong/DNC routes
+are excluded; unconfirmed source routes remain possible-number information only.
+Approval review rejected extending the public-source preview projection with
+phone evidence: leave it unchanged and verify its access boundary before any
+separate integration proposal. No new public contact data, source collection,
+real contact, paid-provider action, money/gate authority or server sending.
+
 VERIFIED 2026-11-22 UTC: B-26 #540 released73ef8b2dcff5ef9b2e120bc70492e1cfe84fd156,
 exactheadd28c96f987c9e6bd6e1500d9533930bb88ceb58e hosted44970017622 PASS335/0/0.
 Automatic deployment7972140937 SUCCESS; fixed public health200, devices/distress/

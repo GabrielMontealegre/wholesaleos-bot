@@ -284,6 +284,14 @@ Acceptance
 
 ## B-27 · Call-first lead card · TODO (extends B-15; pulls the call and text links of B-10 and B-06 forward)
 
+B27a IN PROGRESS: shared source-backed contact summary behind authenticated
+saved-lead list/detail and operational views, preserving list size limits.
+Recomputes evidence; no bare phone, cached readiness, wrong/rejected/DNC or
+institutional-owner action. Public-source preview projection remains unchanged
+after approval review rejected adding phone evidence there. Verify its access
+boundary before a separate integration proposal. B27b still needs card wiring,
+editable local SMS, explicit tap activity and1366/400/412 proof. Full B27 not DONE.
+
 Acceptance
 - **Top of every lead card, on one screen at 400 px:**
   - the owner's name, or "Owner not found yet";
