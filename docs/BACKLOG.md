@@ -284,13 +284,22 @@ Acceptance
 
 ## B-27 · Call-first lead card · TODO (extends B-15; pulls the call and text links of B-10 and B-06 forward)
 
-B27a #542 IN PROGRESS: shared source-backed contact summary behind authenticated
+B27a #542 RELEASEDb7d088d: shared source-backed contact summary behind authenticated
 saved-lead list/detail and operational views, preserving list size limits.
 Recomputes evidence; no bare phone, cached readiness, wrong/rejected/DNC or
 institutional-owner action. Public-source preview projection remains unchanged
 after approval review rejected adding phone evidence there. Verify its access
-boundary before a separate integration proposal. B27b still needs card wiring,
-editable local SMS, explicit tap activity and1366/400/412 proof. Full B27 not DONE.
+boundary before a separate integration proposal. Correctedhead81ec495 hosted
+44983184110 PASS336/0/0, auto7973817440/public static/auth checks PASS.
+B27b IN PROGRESS: saved-lead admin drawer and operational cards, editable local
+SMS, canonical admin-only request activity and1366/400/412/360 fake browser proof.
+No message body uploaded, no completed-contact claim, no server send. Non-admin
+behavior and source preview projection unchanged. Both exposure/role changes
+were rejected by approval review and NOT applied; #543 remains approval-BLOCKED.
+Full B27 not DONE; other operator roles and source cards still need bounded approval.
+First544 hosted44986983142 FAILED331/8/0 total339, retained. New production
+contact JS/CSS omitted from the exact asset inventory; startup check rejects them.
+Add only those two reviewed files; no checker/test weakening or fixture serving.
 Scope/approval clarification requested in needs-architect #543; own issue is not
 an architect answer. First542 hosted44981753158 failed335/1/0 on geography VM
 missing new dependencies. Real module/serializer injected; all assertions retained.

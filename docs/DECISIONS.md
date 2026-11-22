@@ -1,5 +1,26 @@
 # Decisions
 
+ASSUMED 2026-11-22 UTC: first B27b544 hosted44986983142 remains failed331/8/0,
+total339. Exact production inventory rejected the two new contact JS/CSS assets
+and startup hit checkProductionAssets. Approve only these reviewed production
+filenames in the existing exact inventory; no test/fixture/private file, relaxed
+checker, changed assertion or gate waiver. New-head gate once; no unchanged retry.
+
+VERIFIED 2026-11-22 UTC: B27a542 releasedb7d088d346dbf351653a61cc78b5fbbdec47e156,
+exacthead81ec495eebd69c34f3bcebb02c3b0a6e81220030 hosted44983184110 PASS336/0/0.
+Auto7973817440 SUCCESS, fixed public health/static/auth controls PASS. Firstfailed
+44981753158 retained335/1/0; dependency-only geography VM correction kept assertions.
+
+ASSUMED 2026-11-22 UTC: B27b first saved-card UI stays admin-only because approval
+review rejected widening the new tap writer to authenticated users with shared/
+unassigned leads. Rejected patch NOT applied. Non-admin behavior unchanged;
+needs-architect543/owncomment7074180482 requests explicit roles/ownership and
+source-card approval. Local app request is a new private activity type, never
+message_sent/call_note/contacted, and changes no lead fact/status/reference.
+Actor/time/number are canonical/server-owned, message body stays on device;
+nonce replay is quiet, stale evidence denies, no automatic retry/native launch
+before acknowledgement. Full B27 remains incomplete, not redefined to this slice.
+
 ASSUMED 2026-11-22 UTC: first B27a542 hosted44981753158 remains failed335/1/0,
 total336. lead-geography's real-route VM omitted the new contact-brief and list
 serializer dependencies. Add the real module and source serializer declarations

@@ -2800,6 +2800,7 @@ require('./modules/records/operator-profile').registerRoutes(app, { db, requireA
 require('./modules/agents/ask-workspace').register(app, { db, requireAdmin });
 require('./modules/buyers/sourced-match-routes').register(app, { db, requireAdmin });
 require('./modules/records/record-activity-routes').registerRecordActivityRoutes(app, { db, requireAdmin });
+require('./modules/records/lead-contact-tap-routes').registerLeadContactTapRoutes(app, { db, requireAdmin });
 require('./modules/records/conversation-routes').registerConversationRoutes(app, { db, requireAdmin, assistantSnapshotImport: true });
 require('./modules/records/assistant-snapshot-routes').registerAssistantSnapshotRoutes(app, { db, requireAdmin });
 require('./modules/records/assistant-upload-key-routes').registerAssistantUploadKeyRoutes(app, { db, requireAdmin });
