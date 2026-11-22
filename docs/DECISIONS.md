@@ -1,5 +1,13 @@
 # Decisions
 
+VERIFIED 2026-11-22 UTC: B-26 #540 released73ef8b2dcff5ef9b2e120bc70492e1cfe84fd156,
+exactheadd28c96f987c9e6bd6e1500d9533930bb88ceb58e hosted44970017622 PASS335/0/0.
+Automatic deployment7972140937 SUCCESS; fixed public health200, devices/distress/
+matches401, exact-source dashboard/app static checks PASS. Synthetic-only auth
+proof; no real credential, stored hash, private response, login, provider or
+business operation. Local295/40/0 remains failed with observed missing dotenv and
+EPERM fixture mkdir errors; no rerun, gate waiver or changed existing assertion.
+
 ASSUMED 2026-11-22 UTC: D-068's newer owner-approved B-26 is dashboard password
 hashing, not the older paid-assistant issue #538 bearing the same item ID.
 Apply AGENTS section 3 precedence; no paid-assistant/provider work is authorized

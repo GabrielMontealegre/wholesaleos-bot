@@ -1,5 +1,19 @@
 # Backlog
 
+## Latest Run Summary (2026-11-22 UTC)
+
+B-26 #540 RELEASED73ef8b2: exactheadd28c96f hosted44970017622
+PASS335/0/0; automatic deployment7972140937 SUCCESS. Fixed public health200,
+devices/distress/matches401 and exact-source dashboard/app static checks PASS.
+No real login, stored credential read, private response, provider or business action.
+Synthetic password, migration, writer/API redaction and remembered-token tests PASS.
+Local full suite295/40/0 included missing dotenv and fixture mkdir EPERM failures;
+retained as failed, no rerun or assertion weakening. Hosted exact-head is the gate.
+D-068's newer owner-approved password B-26 takes precedence over older unrelated
+paid-assistant issue538's reused ID (ASSUMED logged). Next B-27, then B-28 to B-35.
+Previously released frozen slices/engines/source code remain complete; operational
+source activation/live acceptance stays owner-BLOCKED and full B-19 UI incomplete.
+
 ## Latest Run Summary (2026-11-18 UTC)
 
 B21a #536 OFF SCHEMA CODE DONE / RELEASED2fbedfa: exacthead8f1933c,
@@ -248,13 +262,14 @@ Rules for the whole block:
 - Every item keeps the §5 safety invariants. Nothing here turns on server-side sending, calling or paid data.
 - Every UI item ships with 1366 / 400 / 412 screenshots (fake data) and plain-English text (§11).
 
-## B-26 · Hash dashboard passwords · IN PROGRESS (hosted gate required)
+## B-26 · Hash dashboard passwords · DONE (#540, released 2026-11-22 UTC)
 
 Implementation: versioned salted scrypt hashes, successful-login-only legacy
 upgrade, both credential writers hardened, user response allowlists, remembered
 device binding preserved for legacy users and updated for hashed users.
 Synthetic tests cover migration once, no-write failures, forged hash updates,
-response/error/log redaction and remembered-token invalidation. Not released yet.
+response/error/log redaction and remembered-token invalidation. Hosted335/0/0,
+automatic deployment and bounded public/static/auth-state verification PASS.
 
 Goal: `/api/auth/email-login` compares the plain-text `users[].password` stored in the JSON database. Store a hash instead.
 
