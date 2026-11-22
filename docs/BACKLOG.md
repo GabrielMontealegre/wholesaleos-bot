@@ -297,6 +297,9 @@ No message body uploaded, no completed-contact claim, no server send. Non-admin
 behavior and source preview projection unchanged. Both exposure/role changes
 were rejected by approval review and NOT applied; #543 remains approval-BLOCKED.
 Full B27 not DONE; other operator roles and source cards still need bounded approval.
+First544 hosted44986983142 FAILED331/8/0 total339, retained. New production
+contact JS/CSS omitted from the exact asset inventory; startup check rejects them.
+Add only those two reviewed files; no checker/test weakening or fixture serving.
 Scope/approval clarification requested in needs-architect #543; own issue is not
 an architect answer. First542 hosted44981753158 failed335/1/0 on geography VM
 missing new dependencies. Real module/serializer injected; all assertions retained.

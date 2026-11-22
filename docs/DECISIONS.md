@@ -1,5 +1,11 @@
 # Decisions
 
+ASSUMED 2026-11-22 UTC: first B27b544 hosted44986983142 remains failed331/8/0,
+total339. Exact production inventory rejected the two new contact JS/CSS assets
+and startup hit checkProductionAssets. Approve only these reviewed production
+filenames in the existing exact inventory; no test/fixture/private file, relaxed
+checker, changed assertion or gate waiver. New-head gate once; no unchanged retry.
+
 VERIFIED 2026-11-22 UTC: B27a542 releasedb7d088d346dbf351653a61cc78b5fbbdec47e156,
 exacthead81ec495eebd69c34f3bcebb02c3b0a6e81220030 hosted44983184110 PASS336/0/0.
 Auto7973817440 SUCCESS, fixed public health/static/auth controls PASS. Firstfailed

@@ -85,6 +85,8 @@
   "wos-jv-list-tools.css",
   "wos-jv-list-tools.js",
   "wos-jv-workflow.js",
+  "wos-lead-contact.css",
+  "wos-lead-contact.js",
   "wos-lead-triage.js",
   "wos-leads-detail.js",
   "wos-list-filters.js",
