@@ -47,10 +47,10 @@ function currentUser(store, id) {
 }
 function digest(token, user, options) {
   if (typeof user.role !== 'string' || !user.role.trim() || user.role.length > 40) fail('store_invalid', 503);
-  for (const key of ['pin', 'password', 'created']) if (user[key] != null && !['string', 'number'].includes(typeof user[key])) fail('store_invalid', 503);
+  for (const key of ['pin', 'password', 'password_hash', 'created']) if (user[key] != null && !['string', 'number'].includes(typeof user[key])) fail('store_invalid', 503);
   const configured = optionsFor(options, options.now), secret = sessions.configuredSecret(configured);
   const adminPin = user.id === 'admin' ? String(configured.env.WOS_ADMIN_PIN || '').trim() : '';
-  const binding = crypto.createHmac('sha256', secret).update(JSON.stringify(['remembered_credentials_v1', user.id, user.role, user.pin ?? null, user.password ?? null, user.created ?? null, adminPin])).digest('hex');
+  const binding = crypto.createHmac('sha256', secret).update(JSON.stringify(['remembered_credentials_v1', user.id, user.role, user.pin ?? null, user.password_hash ?? user.password ?? null, user.created ?? null, adminPin])).digest('hex');
   return crypto.createHash('sha256').update('remembered_dashboard_token_v1\0' + binding + '\0' + token).digest('hex');
 }
 function issueDevice(store, identity, options = {}) {
