@@ -5,9 +5,10 @@ and its report-review dialog, with a real missing-price source link, not an
 invented editor. fromReport only adapts exact pending imported-report DTOs with
 current provenance and unwithheld identities; flagged/conflicting/wrong-origin
 data cannot supply amounts or correction links. Existing pipeline-money values
-are consumed unchanged; buyer criteria never become reported prices. Expose the
-same already-private report provenance in eligible match-profit responses only;
-blank/withheld/flagged responses get no source. No new route/public asset/export,
+are consumed unchanged; buyer criteria never become reported prices. Reuse only
+already-returned report/field provenance in the browser; no extra match-profit
+response field (self-review removed that proposal under D069). Blank/withheld/
+flagged responses get no added source. No new route/public asset/export,
 writer, calculator, gate or auth authority. Pipeline report provenance already
 flows pipeline-reports.project -> pipeline-workspace and report-review; match
 profit is read by reviewed-deals/deal-fit-view/private owner review, never by
@@ -23,6 +24,12 @@ assistant-find-routes existing preview/commit uses production-data-boundary,
 which rejects explicit synthetic=true flags in production, not all real imports.
 No production imports are performed. Full B28 still needs explicit source-bound
 entry/editing and other surfaces; the source link does not satisfy Add-it alone.
+First B28b PR553 head7947f0b hosted45023492304 PASS348/0/0 is retained but NOT
+merged because self-review removed the extra response field before release.
+No backend DTO changes remain. New test asserts its absence and no source action
+when every existing field proof is absent. Focused negatives/private recipient
+body proof PASS. Localfull317/31/0 remains failed; correction during local run
+means no exact-head claim. New corrected-head hosted gate, no unchanged retry.
 
 VERIFIED 2026-11-22 UTC: B28a551 RELEASED7d7229423e95c7be30cc82b7088e9ebdc2b7fff2,
 head06243af114a6b0d4feec0c7f9d19ae12f694d995 hosted45019148882 PASS346/0/0.

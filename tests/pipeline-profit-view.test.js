@@ -2,8 +2,11 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),http=require('node:http'),https=require('node:https');
 const workspace=require('../modules/records/pipeline-workspace'),profit=require('../dashboard/wos-match-profit');
 const pipeline=require('../dashboard/wos-pipeline-workspace'),review=require('../dashboard/wos-pipeline-report-review');
-const {priced,now}=require('./match-profit.test');
+const {priced,value,now}=require('./match-profit.test');
 const store=priced(),before=JSON.stringify(store),item=workspace.build(store,{now}).items.find(r=>r.kind==='pipeline_report');
+assert.equal(Object.hasOwn(value(store),'report_provenance'),false,'No added match-profit response field or authority under hosted lock-off');
+assert(profit.markup(value(priced({contract_price:null}))).includes('data-profit-source-action'),'Existing field provenance can open the same source');
+assert(!profit.markup(value(priced({contract_price:null,buyer_price:null,costs:null}))).includes('data-profit-source-action'),'No report source inferred when all existing field proofs are missing');
 assert.deepEqual(profit.present(profit.fromReport(item)).profit,{low:8500,high:12000});
 for(const html of [pipeline.markup({...workspace.build(store,{now}),items:[item]}),review.markup(item)]){
  assert.equal((html.match(/data-profit-headline/g)||[]).length,1);assert(html.includes('Estimated profit: $8,500 - $12,000'));

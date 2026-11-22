@@ -23,7 +23,8 @@
   function markup(p){
     const view=present(p),labels={buyer_price:'buyer price',contract_price:'contract price',costs:'total costs',our_share:'your recorded share'};
     p=p||{};
-    const correctionSource=p.source_kind==='derived_workflow'&&p.reported_only===true&&p.buyer_confirmed===false&&typeof p.report_id==='string'&&p.report_id?source(p.report_provenance):'';
+    const correctionProof=p.report_provenance||Object.values(p.field_provenance||{}).find(v=>source(v));
+    const correctionSource=p.source_kind==='derived_workflow'&&p.reported_only===true&&p.buyer_confirmed===false&&typeof p.report_id==='string'&&p.report_id?source(correctionProof):'';
     const fields=[['buyer_price','Reported buyer price'],['contract_price','Reported contract price'],['costs','Total costs']];
     return '<div class="match-profit"><strong data-profit-headline>Estimated profit: '+(view.profit?esc(range(view.profit)):'unavailable')+'</strong>'+
       (view.missing.length?'<ul class="profit-missing">'+view.missing.map(key=>'<li>Missing: '+labels[key]+'. Review the source report.</li>').join('')+'</ul>':'')+

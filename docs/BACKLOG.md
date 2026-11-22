@@ -13,6 +13,11 @@ preview/commit -> pipeline-reports.upsert append-only validation. No new entry
 form, auto-import, preview or commit is added. Full B28 remains IN PROGRESS:
 explicit source-bound entry/editing and remaining Ask/approval/other missing-value
 surfaces still required. Source review is not represented as an Add-it editor.
+First PR553 head7947f0b hosted45023492304 PASS348/0/0, not merged: self-review
+removed an unnecessary match-profit response field under D069. Only already
+returned browser provenance is consumed. Corrected-head hosted gate required.
+Local full317/31/0 retained failed (missing dependency errors observed), no retry;
+local correction occurred during that run, so it is not an exact-head release gate.
 
 ## Latest Run Summary (2026-11-22 UTC, B28a Released)
 
