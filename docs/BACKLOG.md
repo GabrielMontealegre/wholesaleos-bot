@@ -1,5 +1,23 @@
 # Backlog
 
+## Latest Run Summary (2026-11-22 UTC, B27 Released)
+
+B27 approved admin scope DONE under architect543 answer7074699953; non-admin
+ownership remains a separate later item, not B27. Source and saved contact cards
+are released through #542/#544/#547/#548/#549. Final #549 head29ce1a7 hosted
+45001842370 PASS345/0/0, mergefd8afaf; auto7976217418 SUCCESS, public health200
+and exact dashboard/app/contact/style/operational/source assets PASS. Actual
+synthetic1366/400/412/360 source/saved cards, local SMS intent, auth clearing,
+context and closed/open disclosures passed; six saved/three source proof screens.
+No private production endpoint/body/login/UI inspection, real contact/provider/
+business action or manual Railway operation. D069 remains owner-controlled and
+is not used as feature authority. Local314/31/0 remains failed with dependency
+errors observed; first547 hosted339/2/0 retained, no retry/waiver.
+Next is B28: trace every share/room/profit writer and reader, then missing-value
+actions and one labeled profit figure. B28-B35/B19UI remain incomplete. Fresh
+primary83% used preflight leaves insufficient normal headroom for another full
+UI/test/release cycle; no partial B28 runtime started. Final5% stays rollback-only.
+
 ## Latest Run Summary (2026-11-22 UTC, B27 Acceptance Closeout)
 
 B27d #548 RELEASEDc85c7d3, head129c3f7 hosted44999681064 PASS344/0/0,
@@ -343,7 +361,7 @@ Acceptance
   never in API responses or logs.
 - Later, as a separate item: two-step login and a plain "what data we keep / export my data" page.
 
-## B-27 · Call-first lead card · IN PROGRESS (extends B-15; pulls the call and text links of B-10 and B-06 forward)
+## B-27 · Call-first lead card · DONE (approved admin scope per #543; extends B-15)
 
 B27a #542 RELEASEDb7d088d: shared source-backed contact summary behind authenticated
 saved-lead list/detail and operational views, preserving list size limits.
@@ -360,19 +378,24 @@ were rejected by approval review and NOT applied. NEW architect #543 answer
 7074699953 authorizes request-time summaries in existing private queue/alias and
 saved APIs only; no preview projection/static export/persisted summary. First UI
 and tap scope is admin-only; non-admin ownership is a later item, not B27.
-Full B27 not DONE. B27c hardens that response/auth/cache boundary first; source
-UI/tap integration follows in a separate bounded slice under the same approval.
+B27c hardened the response/auth/cache boundary; source UI/taps followed in a
+separate bounded slice under that approval. No role expansion was inferred.
 B27c #547 is released407a9b1, hosted342/0/0/auto7975575248/public-static PASS.
-B27d source UI/intent branch is awaiting its own exact-head hosted gate. Shared
+B27d source UI/intent branch passed its exact-head hosted gate. Shared
 panel, editable device-only SMS and canonical activity are admin-only; source
 technical detail is collapsed, date uncertainty stays explicit, money is typed
 source evidence only and equity remains unknown rather than inventing a figure.
 B27d548 is now released344/0/0/auto7975891917/public-static PASS. B27e finishes
 compact context on saved operational cards and folds the saved drawer's legacy
-technical body. This final acceptance slice still requires its own green gate.
+technical body. Final B27e #549 is RELEASEDfd8afaf: exacthead29ce1a7 hosted
+45001842370 PASS345/0/0, auto7976217418/public health+static-only PASS. Current
+raw proof beats cached context/date/dossier; strict date and typed-money readers
+remain authoritative. Actual synthetic source/saved cards and disclosures passed
+at1366/400/412/360. B27's approved admin scope is complete; non-admin ownership
+is explicitly a later item per543, not an omitted B27 acceptance requirement.
 First544 hosted44986983142 FAILED331/8/0 total339, retained. New production
 contact JS/CSS omitted from the exact asset inventory; startup check rejects them.
-Add only those two reviewed files; no checker/test weakening or fixture serving.
+Only those two reviewed files were added; no checker/test weakening or fixture serving.
 Scope/approval clarification requested in needs-architect #543; own issue is not
 an architect answer. First542 hosted44981753158 failed335/1/0 on geography VM
 missing new dependencies. Real module/serializer injected; all assertions retained.
