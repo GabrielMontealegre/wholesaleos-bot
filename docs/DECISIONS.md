@@ -1,5 +1,27 @@
 # Decisions
 
+VERIFIED 2026-11-22 UTC: B27c547 released407a9b1f22edd816329adf1c46df1f359e5fe011,
+headf36a6380ac7a45f1616469e2c635056f0b5fc312 hosted44997352778 PASS342/0/0.
+Auto7975575248 SUCCESS, public health/static-only verification PASS. No production
+private response/auth check; D069 remains unchanged. Original339/2/0 retained.
+
+ASSUMED 2026-11-22 UTC: B27d uses the existing contact-workflow endpoint's explicit
+local_contact_requested branch, guarded again by strict signed admin, not D069
+fallback. Re-read canonical snapshot row and rebuild evidence before intent;
+append private activity only, never contact outcome/snapshot/lead/status/reference.
+Capture selected city/county/state when rendering, not a later filter value;
+drop selector key/label metadata instead of loosening the exact input shape.
+First synthetic UI proof timed out because selector metadata violated that shape;
+corrected payload and real handler/browser proof PASS, all assertions retained.
+Technical source data stays in a closed disclosure. Existing typed dossier facts
+are clues only; no minimum bid/appraisal/unknown amount becomes debt or an offer.
+Raw sale-origin/parsed response fields are display only, never a new date gate;
+missing/wrong-origin dates show the D018 caution. Equity remains unknown. No
+new resolver/engine, new HTTP route/static asset or persisted contact summary.
+Existing assertion edits: dashboard-public-deal-queue original877/934 cache-bust
+59 ->60 only; retain exact script-presence intent. Extend controller assertions,
+do not replace or relax them. Non-admin ownership stays a later item per543.
+
 ASSUMED 2026-11-22 UTC: B27c547 first hosted44996024369 remains FAILED339/2/0,
 total341 (remembered-device-ui layout:47:83, shared-dashboard-login route-fetch
 closed-target:23). Separate isolated signed-out browser check reproduced a

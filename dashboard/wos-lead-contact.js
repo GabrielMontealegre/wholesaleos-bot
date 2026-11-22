@@ -10,7 +10,7 @@
   const canEnhance = row => isAdmin() && row && row.contact_brief && row.contact_brief.source_kind === 'derived_contact_brief';
   const icon = name => '<img src="/dashboard/workspace/vendor/lucide-1.60.0/' + name + '.svg" width="18" height="18" alt="" aria-hidden="true">';
   function addressLine(row) {
-    const raw = String(row.full_address || row.address || row.property_address || row.site_address || '').trim();
+    const raw = String(row.full_address || row.address || row.property_address || row.normalized_address || row.site_address || '').trim();
     const city = String(row.city || row.property_city || row.situs_city || '').trim();
     const state = String(row.state || row.property_state || row.situs_state || '').trim();
     const zip = String(row.zip || row.zipcode || row.postal_code || '').trim();
@@ -25,7 +25,7 @@
     if (!prefix || brief.call_href !== 'tel:' + number || brief.text_href !== 'sms:' + number || typeof message !== 'string' || message.length > 1600) return '';
     return prefix + number + (channel === 'text' ? '?body=' + encodeURIComponent(message) : '');
   }
-  function markup(row) {
+  function markup(row, sourceMarket) {
     const brief = row.contact_brief || {}, phone = brief.phone, name = brief.owner && brief.owner.name;
     const enabled = Boolean(href(brief, 'call'));
     let actions = '';
@@ -33,11 +33,13 @@
       '<details class="lc-text"><summary style="color:#fff!important;background:#23549a!important">' + icon('message-circle') + 'Text</summary><label>Message<textarea maxlength="1600" data-lc-message>Hi, I have a question about your property.</textarea></label>' +
       '<a href="' + esc(brief.text_href) + '" data-lc-channel="text">Open Messages</a></details></div>';
     else if (!phone && typeof root.buildEnrichmentLaunchpad === 'function') {
-      const links = root.buildEnrichmentLaunchpad(row).links.filter(link => ['County Record', 'TruePeopleSearch', 'CyberBackgroundChecks'].includes(link.label) && safeUrl(link.url));
+      const searchRow = sourceMarket ? { ...row, address: addressLine(row), city: '', state: '', zip: '', owner_name: name || '' } : row;
+      const links = root.buildEnrichmentLaunchpad(searchRow).links.filter(link => ['County Record', 'TruePeopleSearch', 'CyberBackgroundChecks'].includes(link.label) && safeUrl(link.url));
       actions = '<details class="lc-search"><summary>Find the owner\'s phone</summary>' + links.map(link => '<a href="' + esc(safeUrl(link.url)) + '" target="_blank" rel="noopener noreferrer">' + esc(link.label) + '</a>').join('') + '</details>';
     }
     const proof = phone && safeUrl(phone.source_url);
-    return '<section class="lc-brief" data-lc-id="' + esc(row.id) + '" data-lc-number="' + esc(phone && phone.number || '') + '" aria-label="Owner contact">' +
+    const sourceContext = sourceMarket ? ' data-lc-queue="' + esc(row.queue_key) + '" data-lc-market="' + esc(JSON.stringify(sourceMarket)) + '"' : '';
+    return '<section class="lc-brief" data-lc-id="' + esc(row.id || '') + '"' + sourceContext + ' data-lc-number="' + esc(phone && phone.number || '') + '" aria-label="Owner contact">' +
       '<div class="lc-owner">' + esc(name || 'Owner not found yet') + '</div><div class="lc-phone">' + esc(phone ? phone.number : 'Phone not found yet') + '</div>' +
       (phone ? '<p>' + esc(phone.label) + '</p>' : '') + actions +
       (!enabled ? '<p>' + esc(brief.reason || 'Review the source record before contacting anyone.') + '</p>' : '') +
@@ -50,14 +52,16 @@
     async function request(row, channel, message = '') {
       if (active) return { ok: false, busy: true };
       const identity = actor(), target = href(row.contact_brief, channel, message);
-      if (!identity || !target || !row.id) return { ok: false };
+      const source = row.contact_summary_authorized === true && row.queue_key && row.contact_market;
+      if (!identity || !target || !(source || row.id)) return { ok: false };
       const ticket = ++sequence, controller = new AbortController(); active = controller;
       const timer = setTimeout(() => controller.abort(), timeout);
       try {
-        const response = await fetchImpl('/api/dashboard/leads/' + encodeURIComponent(row.id) + '/contact-tap', {
+        const response = await fetchImpl(source ? '/api/dashboard/free-public-deal-board/contact-workflow' : '/api/dashboard/leads/' + encodeURIComponent(row.id) + '/contact-tap', {
           method: 'POST', credentials: 'include', cache: 'no-store', redirect: 'error', signal: controller.signal,
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ confirm: true, channel, number: row.contact_brief.phone.number, request_id: createId() })
+          body: JSON.stringify({ confirm: true, channel, number: row.contact_brief.phone.number, request_id: createId(),
+            ...(source ? { action: 'local_contact_requested', queue_key: row.queue_key, market: row.contact_market } : {}) })
         });
         if ([401, 403].includes(response.status)) { await response.body?.cancel(); clear(); lock(); return { ok: false, locked: true }; }
         if (!response.ok) { await response.body?.cancel(); return { ok: false }; }
@@ -109,6 +113,10 @@
       if (!button.hasAttribute('href') || !call || !text) { status.textContent = 'Refresh this lead before contacting anyone.'; return; }
       const row = { id: panel.dataset.lcId, contact_brief: { call_allowed: true, text_allowed: true,
         phone: { number: panel.dataset.lcNumber }, call_href: call.getAttribute('href'), text_href: text.getAttribute('href') } };
+      if (panel.dataset.lcQueue) {
+        try { row.contact_market = JSON.parse(panel.dataset.lcMarket); } catch (_) { return; }
+        row.queue_key = panel.dataset.lcQueue; row.contact_summary_authorized = true;
+      }
       const message = panel.querySelector('[data-lc-message]'); status.textContent = 'Recording this request...';
       const result = await controller.request(row, button.dataset.lcChannel, message ? message.value : '');
       if (!panel.isConnected || !isAdmin()) return;

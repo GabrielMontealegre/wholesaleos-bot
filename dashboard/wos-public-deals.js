@@ -249,7 +249,7 @@
     var checked = route.last_checked_at || route.source_last_checked_at || route.checked_at ||
       row.source_last_checked_at || row.last_checked_at || 'Not recorded';
     var controls = '';
-    if (sellerEligible && route.route_kind === 'phone') {
+    if (sellerEligible && route.route_kind === 'phone' && !enhancedSourceContact(row)) {
       controls = ' <a class="wos-seller-call" href="tel:' + esc(value) + '" style="font-size:11px;font-weight:700;color:#065f46;">Call seller</a>' +
         ' <button type="button" class="wos-copy-seller-number" data-contact-value="' + esc(value) + '" style="padding:2px 6px;border:1px solid #86efac;border-radius:5px;background:#f0fdf4;color:#065f46;font-size:10px;cursor:pointer;">Copy number</button>';
     }
@@ -1014,7 +1014,12 @@
     return typeof value === 'string' && typeof kind === 'string' && Object.prototype.hasOwnProperty.call(sourceStateKinds, kind) && sourceStateKinds[kind].indexOf(value) !== -1 ? sourceStateLabels[value] : 'Status not confirmed';
   }
 
+  function enhancedSourceContact(row) {
+    return row.contact_summary_authorized === true && window.WOSLeadContact && window.WOSLeadContact.canEnhance(row);
+  }
+
   function rowCard(row, embedded) {
+    var callFirst = enhancedSourceContact(row);
     var zipReview = row.quality_bucket === 'NEEDS_ZIP_REVIEW';
     var title = row.normalized_address || row.partial_address || row.headline || 'Source proof row';
     var lines = [];
@@ -1130,7 +1135,7 @@
     if (row.row_state_next_action) {
       lines.push('<div style="font-size:12px;color:#1f2937;margin-top:2px;">Work-queue action: <b>' + esc(row.row_state_next_action) + '</b></div>');
     }
-    lines.push(contactWorkflowControl(row));
+    if (!callFirst) lines.push(contactWorkflowControl(row));
     lines.push(ledgerList(row));
     if (safeArray(row.seller_questions).length) {
       lines.push('<details style="margin-top:4px;font-size:12px;"><summary style="cursor:pointer;color:#2563eb;">Seller questions (' + row.seller_questions.length + ')</summary><ul style="margin:4px 0 0 18px;padding:0;">' +
@@ -1139,8 +1144,39 @@
     if (safeArray(row.blocked_sources).length) {
       lines.push('<div style="font-size:11px;color:#991b1b;margin-top:3px;">Blocked: ' + esc(safeArray(row.blocked_sources).map(function (b) { return b.source + ' (' + b.reason + ')'; }).join('; ')) + '</div>');
     }
-    return '<div class="wos-public-deal-row" data-queue-key="' + esc(row.queue_key || '') + '" style="' +
-      (embedded ? 'padding:8px 0;background:#fff;' : 'border:1px solid #e5e7eb;border-radius:8px;padding:10px 12px;margin-bottom:8px;background:#fff;') + '">' + lines.join('') + '</div>';
+    var content = lines.join('');
+    if (callFirst) {
+      var contactMarket = selectedMarket();
+      var dateField = row.sale_date_source_field;
+      var saleFields = ['sale_date', 'auction_date', 'date_of_sale', 'trustee_sale_date', 'foreclosure_sale_date'];
+      var dateOrigin = dateField === 'event_date' ? row.event_date_origin : row.sale_date_or_event_date_origin;
+      var saleOrigin = saleFields.indexOf(dateField) !== -1 ||
+        ['event_date', 'sale_date_or_event_date'].indexOf(dateField) !== -1 && saleFields.indexOf(dateOrigin) !== -1;
+      var sourceDateKnown = saleOrigin && row[dateField] && row.sale_date_parse_status === 'parsed' && row.sale_date_iso;
+      var dateLabel = sourceDateKnown
+        ? 'Sale date from source: ' + row[dateField] : 'Sale date not confirmed - ask on the call.';
+      var debt = row.leverage_dossier && row.leverage_dossier.debt || {};
+      var debtClues = [['Original loan amount - not the current payoff.', debt.original_loan_amount], ['Recorded lien amount', debt.lien_amounts],
+        ['Property tax due', debt.tax_due], ['Judgment amount', debt.judgment_amount]]
+        .filter(function (item) {
+          var fact = item[1], proof = fact && fact.provenance || {};
+          return fact && ['VERIFIED', 'CLUE'].indexOf(fact.status) !== -1 && fact.value != null &&
+            typeof proof.source_kind === 'string' && proof.source_kind.trim() && typeof proof.evidence_text === 'string' && proof.evidence_text.trim() &&
+            /^https?:\/\/[^@\s/]+(?:\/|$)/i.test(String(proof.source_url || ''));
+        })
+        .map(function (item) { return dossierFact(item[0], item[1]); }).join('') || '<p>Debt not verified.</p>';
+      content = '<div class="lc-source-address">' + esc(window.WOSLeadContact.addressLine(row) || title) + '</div>' +
+        window.WOSLeadContact.markup(row, { city: contactMarket.city, county: contactMarket.county, state: contactMarket.state }) +
+        '<p><b>Why they may sell:</b> ' + esc(distress.distress_reason || row.why_this_might_be_a_deal || row.motivation_evidence_text || 'Motivation not confirmed - review the source.') + '</p>' +
+        '<p>' + esc(dateLabel) + '</p>' +
+        (sourceDateKnown && saleDateInfo(row).passed ? '<p>Sale date passed - confirm ownership first.</p>' : '') +
+        '<div><b>Debt clues</b>' + debtClues + '</div>' +
+        '<p><b>Equity band:</b> Unknown - value and current debt need verification.</p>' +
+        '<p><b>Next step:</b> ' + esc(row.row_state_next_action || row.next_best_action || 'Review the source before contacting anyone.') + '</p>' +
+        '<details class="lc-source-details"><summary>Source details</summary><div class="lc-source-technical">' + lines.slice(1).join('') + '</div></details>' + contactWorkflowControl(row);
+    }
+    return '<div class="wos-public-deal-row' + (callFirst ? ' lc-source-card' : '') + '" data-queue-key="' + esc(row.queue_key || '') + '" style="' +
+      (callFirst ? '' : embedded ? 'padding:8px 0;background:#fff;' : 'border:1px solid #e5e7eb;border-radius:8px;padding:10px 12px;margin-bottom:8px;background:#fff;') + '">' + content + '</div>';
   }
 
   function propertyGroupCard(group, rowsByKey) {
