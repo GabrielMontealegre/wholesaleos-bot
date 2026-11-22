@@ -7,7 +7,7 @@ const imports = require('./buyer-find-import');
 const reviewedDeals = require('../deals/reviewed-deals');
 const REQUESTS_PER_HOUR = 12;
 
-function registerAssistantFindRoutes(app, { db, requireAdmin, pairingOptions = {}, now = () => new Date().toISOString(), onIncomingInteractions=()=>{} }) {
+function registerAssistantFindRoutes(app, { db, requireAdmin, requireImportAdmin = requireAdmin, pairingOptions = {}, now = () => new Date().toISOString(), onIncomingInteractions=()=>{} }) {
   const rejectProductionImport = require('../security/production-data-boundary').rejectImport();
   const requests = new Map();
   const previews = new Map();
@@ -58,7 +58,7 @@ function registerAssistantFindRoutes(app, { db, requireAdmin, pairingOptions = {
       res.json({ ...finds.listFinds(db.readDBStrict(), { now: now() }), capabilities: { can_import: true } });
     } catch (error) { failure(res, error); }
   });
-  app.post('/api/dashboard/buyers-found/import/preview', requireAdmin, rejectProductionImport, (req, res) => {
+  app.post('/api/dashboard/buyers-found/import/preview', requireImportAdmin, rejectProductionImport, (req, res) => {
     try {
       const at = now();
       expirePreviews(Date.parse(at));
@@ -69,7 +69,7 @@ function registerAssistantFindRoutes(app, { db, requireAdmin, pairingOptions = {
       res.set('Cache-Control', 'no-store').json({ preview_id: id, ...plan.summary });
     } catch (error) { failure(res, error); }
   });
-  app.post('/api/dashboard/buyers-found/import/commit', requireAdmin, rejectProductionImport, (req, res) => {
+  app.post('/api/dashboard/buyers-found/import/commit', requireImportAdmin, rejectProductionImport, (req, res) => {
     try {
       const body = req.body;
       if (!body || typeof body !== 'object' || Array.isArray(body) || typeof body.preview_id !== 'string' ||

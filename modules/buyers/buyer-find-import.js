@@ -5,8 +5,14 @@ const deals = require('../deals/reviewed-deals');
 const activity = require('../records/record-activity');
 const conversations = require('../records/conversations');
 const pipeline = require('../records/pipeline-reports');
+const pipelineReviews = require('../records/pipeline-report-review');
 const BULK_APPROVAL_CLASSES = new Set(['end_buyer', 'end_buyer_strict', 'end_buyer_stale']);
 function fail(code, status = 400) { const error = new Error(code); error.code = code; error.status = status; throw error; }
+function editableRevision(store, revision, now) {
+  const view=pipeline.project(store,{now}),item=view.items.find(row=>row.id===revision),reviewed=pipelineReviews.project(store,{now,items:view.items}),review=reviewed.reviews.get(revision);
+  if(view.coverage.invalid_reports||view.coverage.conflicting_report_ids||reviewed.coverage.invalid_reviews||!item||item.address_withheld||review?.can_review!==true||review.conflict)fail('find_pipeline_changed',409);
+  return {report:(store.pipeline_reports || []).find(row=>row.id===revision)?.report,version:review.version};
+}
 
 function validateAgentItems(body, now) {
   if (!body || typeof body !== 'object' || Array.isArray(body) || Object.keys(body).some(key => key !== 'items')) fail('find_request_invalid');
@@ -19,7 +25,8 @@ function validateAgentItems(body, now) {
 }
 
 function prepareImport(store, body, { now }) {
-  if (!body || typeof body !== 'object' || Array.isArray(body) || Object.keys(body).some(key => key !== 'items')) fail('find_request_invalid');
+  if (!body || typeof body !== 'object' || Array.isArray(body) || Object.keys(body).some(key => !['items','expected_pipeline_revision','expected_pipeline_version'].includes(key))) fail('find_request_invalid');
+  if(Object.hasOwn(body,'expected_pipeline_version')!==Object.hasOwn(body,'expected_pipeline_revision'))fail('find_request_invalid');
   if (Buffer.byteLength(JSON.stringify(body)) > finds.MAX_REQUEST_BYTES) fail('find_request_too_large', 413);
   if (!Array.isArray(body.items) || !body.items.length || body.items.length > finds.MAX_ITEMS) fail('find_item_limit');
   const items = [];
@@ -35,6 +42,14 @@ function prepareImport(store, body, { now }) {
     }
     catch (error) { rejected.push({ item: index + 1, reason: /^find_[a-z_]+$/.test(error.code || '') ? error.code : 'find_item_invalid' }); }
   });
+  const latestRevision = id => (store.pipeline_reports || []).filter(row=>row.report?.report_id===id).sort((a,b)=>b.report.captured_at.localeCompare(a.report.captured_at))[0]?.id || null;
+  if(Object.hasOwn(body,'expected_pipeline_revision')){
+    if(typeof body.expected_pipeline_revision!=='string'||! /^[a-f0-9]{64}$/.test(body.expected_pipeline_revision)||typeof body.expected_pipeline_version!=='string'||! /^[a-f0-9]{64}$/.test(body.expected_pipeline_version)||body.items.length!==1||items.length!==1||items[0].kind!=='pipeline_item')fail('find_request_invalid');
+    if(latestRevision(items[0].report_id)!==body.expected_pipeline_revision)fail('find_pipeline_changed',409);
+    const current=editableRevision(store,body.expected_pipeline_revision,now),prior=current.report,editable=new Set(['buyer_price','contract_price','costs','our_share','captured_at','evidence_text']);
+    if(current.version!==body.expected_pipeline_version)fail('find_pipeline_changed',409);
+    if(!prior||Object.keys(prior).some(key=>!editable.has(key)&&JSON.stringify(prior[key])!==JSON.stringify(items[0][key])))fail('find_pipeline_context_changed',409);
+  }
   let sequence = 0;
   const preview = ingestMixed(store, items, { now, operatorId: 'preview', createId: () => '__preview_' + (++sequence) });
   const counts = { new_items: 0, updates:0, duplicates: 0, rejected: rejected.length, bulk_approval_eligible: 0 };
@@ -45,11 +60,17 @@ function prepareImport(store, body, { now }) {
     } else if(result.result==='updated') counts.updates++; else counts.duplicates++;
   });
   const deal_versions = items.filter(item=>item.kind==='deal_update').map(item=>({ref:item.ref,value:JSON.stringify((store.reviewed_deals || []).find(d=>activity.reference(d)===item.ref))}));
-  return { items, deal_versions, summary: { counts, rejected } };
+  const pipeline_versions=items.filter(item=>item.kind==='pipeline_item').map(item=>({report_id:item.report_id,revision:latestRevision(item.report_id)}));
+  return { items, deal_versions, pipeline_versions, pipeline_editor_revision:body.expected_pipeline_revision || null, pipeline_editor_version:body.expected_pipeline_version || null, summary: { counts, rejected } };
 }
 
 function commitImport(store, plan, { now, operatorId, createId, bulkApprove = false }) {
   if (!plan.items.length) fail('find_import_empty');
+  for(const version of plan.pipeline_versions || []){
+    const current=(store.pipeline_reports || []).filter(row=>row.report?.report_id===version.report_id).sort((a,b)=>b.report.captured_at.localeCompare(a.report.captured_at))[0]?.id || null;
+    if(current!==version.revision)fail('find_pipeline_changed',409);
+  }
+  if(plan.pipeline_editor_revision&&editableRevision(store,plan.pipeline_editor_revision,now).version!==plan.pipeline_editor_version)fail('find_pipeline_changed',409);
   for (const version of plan.deal_versions || []) {
     if (JSON.stringify((store.reviewed_deals || []).find(d=>activity.reference(d)===version.ref)) !== version.value) fail('find_deal_update_conflict',409);
   }
