@@ -1,5 +1,23 @@
 # Backlog
 
+## Latest Run Summary (2026-11-22 UTC, Saved Contact Release)
+
+B27a542 RELEASEDb7d088d336/0/0. B27b544 RELEASED85a0450,
+exactheade60c8cf hosted44988469122 PASS339/0/0; auto7974464627 SUCCESS,
+fixed public/static/auth checks including contact JS/CSS/operational assets PASS.
+Synthetic drawer/cards1366/400/412/360 and six screenshots PASS; no real contact,
+private response or business action. First544 failed331/8/0 retained; only exact
+production JS/CSS inventory corrected, checker/assertions unchanged.
+Full B27 remains incomplete. NEW architect543 answer7074699953 (05:21:10Z)
+authorizes request-time summaries only in existing authenticated/no-store queue
+and saved-lead responses, no new projection/export/persistence. First UI/tap
+slice stays admin-only; non-admin ownership is a later item, not B27. Continue
+admin source-card UI under these limits, then B28 onward. D069 hosted lock-off
+is owner-controlled: do not change or use its fallback to authorize new summaries.
+Production verification now uses health/static only, never a private response.
+B19 UI/B28-B35 remain incomplete. Natural capacity returned; publish this
+reconciled docs-only record through its own hosted gate, preserving all history.
+
 ## Latest Run Summary (2026-11-22 UTC)
 
 B-26 #540 RELEASED73ef8b2: exactheadd28c96f hosted44970017622
@@ -291,7 +309,7 @@ institutional-owner action. Public-source preview projection remains unchanged
 after approval review rejected adding phone evidence there. Verify its access
 boundary before a separate integration proposal. Correctedhead81ec495 hosted
 44983184110 PASS336/0/0, auto7973817440/public static/auth checks PASS.
-B27b IN PROGRESS: saved-lead admin drawer and operational cards, editable local
+B27b #544 RELEASED85a0450: saved-lead admin drawer and operational cards, editable local
 SMS, canonical admin-only request activity and1366/400/412/360 fake browser proof.
 No message body uploaded, no completed-contact claim, no server send. Non-admin
 behavior and source preview projection unchanged. Both exposure/role changes
