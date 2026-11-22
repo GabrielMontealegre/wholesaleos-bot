@@ -17,8 +17,8 @@
     var callFirst = root.WOSLeadContact && root.WOSLeadContact.canEnhance(row);
     return '<article class="ops-record" data-ops-id="' + esc(row.id) + '"><div class="ops-pii ops-address">' + esc(callFirst ? root.WOSLeadContact.addressLine(row) : row.property_address || row.address || 'Record without a property address') + '</div>' +
       (callFirst ? root.WOSLeadContact.markup(row) : '<p>' + esc([row.city, row.county, row.state].filter(Boolean).join(', ')) + '</p>') +
-      '<p>' + esc(state.reason || 'Needs address proof') + '</p>' +
-      '<p>' + (Number(row.arv) > 0 ? 'Recorded value requires review' : 'Value unknown') + '</p><div class="ops-actions">' + sourceLink(row) +
+      (callFirst ? '<details class="lc-ops-details"><summary>Source details</summary>' : '') + '<p>' + esc(state.reason || 'Needs address proof') + '</p>' +
+      '<p>' + (Number(row.arv) > 0 ? 'Recorded value requires review' : 'Value unknown') + '</p>' + (callFirst ? sourceLink(row) + '</details>' : '') + '<div class="ops-actions">' + (callFirst ? '' : sourceLink(row)) +
       '<button type="button" data-ops-open="' + esc(row.id) + '">Open Lead Details</button></div></article>';
   }
   function markup(page, data) {
@@ -103,6 +103,6 @@
     var button = event.target.closest('[data-ops-open]');
     if(button){open(button.dataset.opsOpen);return;}
     var card = event.target.closest('.ops-record');
-    if(card && !event.target.closest('a,button,input,select,textarea')) open(card.dataset.opsId);
+    if(card && !event.target.closest('a,button,input,select,textarea,details,summary')) open(card.dataset.opsId);
   });
 })(typeof window==='undefined'?{}:window);

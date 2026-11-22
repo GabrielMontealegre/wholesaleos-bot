@@ -3,6 +3,7 @@
 const operational = require('./operational-lead-eligibility');
 const roles = require('./contact-route-roles');
 const provenance = require('./field-provenance');
+const { buildContactCardContext } = require('./contact-card-context');
 
 function text(value) { return typeof value === 'string' ? value.trim() : ''; }
 function digits(value) { return text(value).replace(/\D/g, '').replace(/^1(?=\d{10}$)/, ''); }
@@ -59,7 +60,7 @@ function buildLeadContactBrief(input) {
   const allowed = Boolean(identity.name && confirmed[0] && eligibility.callable && !institution(row) && !ownershipNeedsReview && lifecycle.quarantined !== true && !uncertainRestrictions);
   const number = selected ? '+1' + digits(selected.value) : null;
   return {
-    source_kind: 'derived_contact_brief', owner: identity,
+    source_kind: 'derived_contact_brief', owner: identity, context: buildContactCardContext(row),
     phone: selected ? {
       number, confirmed: confirmed.includes(selected),
       label: confirmed.includes(selected) ? 'Source-backed owner or occupant number' : 'Possible number - not confirmed',

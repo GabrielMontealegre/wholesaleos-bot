@@ -1,5 +1,22 @@
 # Decisions
 
+VERIFIED 2026-11-22 UTC: B27d548 releasedc85c7d35540da429f08a4e233f1f960454b60f5a,
+head129c3f76a61231a392c17ffa2d7526988005a412 hosted44999681064 PASS344/0/0.
+Auto7975891917 SUCCESS, public health/exact static-only checks PASS; no private
+production endpoint/body/auth check. Local313/31/0 remains failed, not retried.
+
+ASSUMED 2026-11-22 UTC: keep B27 open after548 because operational saved cards
+still lacked required compact context. B27e derives private response context
+from current raw proof only, reusing normalize-source-date/resolve-source-sale-date,
+sale-date-origin and the existing typed-money reader. No clock/network/writes in
+the context module, no new engine/gate. Whole-dossier builder is NOT used because
+its years-held path has a Date.now fallback. Ignore cached contact context/date
+ISO/resolution/dossier as proof; wrong-origin/missing/ambiguous remains unknown.
+Original principal remains a clue, not payoff; bid/appraisal/list price never debt,
+and no equity dollar estimate or offer is calculated. Fold saved technical detail
+without changing non-admin behavior or any authorization/writer/calendar logic.
+No existing assertion weakened or replaced; browser assertions only extended.
+
 VERIFIED 2026-11-22 UTC: B27c547 released407a9b1f22edd816329adf1c46df1f359e5fe011,
 headf36a6380ac7a45f1616469e2c635056f0b5fc312 hosted44997352778 PASS342/0/0.
 Auto7975575248 SUCCESS, public health/static-only verification PASS. No production

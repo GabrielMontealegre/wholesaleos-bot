@@ -11,3 +11,4 @@
 .lc-source-card>.lc-source-address{font-size:16px;font-weight:650;margin:0 0 8px}.lc-source-card>p,.lc-source-card>div{margin-bottom:8px}
 .lc-source-details{min-width:0;max-width:100%;margin-top:8px}.lc-source-details>summary{min-height:44px;display:flex;align-items:center;cursor:pointer;color:#9dc9ff}
 .lc-source-technical{padding:8px;background:#fff;color:#1f2937;min-width:0;max-width:100%}
+.lc-context{margin-top:8px;border-top:1px solid #46515f;padding-top:6px}.lc-saved-details>summary,.lc-ops-details>summary{min-height:44px;display:flex;align-items:center;color:#9dc9ff;cursor:pointer}.lc-saved-details[open]>div{margin-top:8px}

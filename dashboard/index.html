@@ -28993,6 +28993,7 @@ if(document.readyState==="loading"){
       '</div>' +
       '<div data-lc-saved-body style="overflow:auto;padding:14px 16px;display:flex;flex-direction:column;gap:12px">' +
         (callFirst ? window.WOSLeadContact.markup(lead) : '') +
+        (callFirst ? '<details class="lc-saved-details"><summary>Source details and research</summary>' : '') +
         (typeof renderDallasSheriffPipelinePanel === 'function' ? renderDallasSheriffPipelinePanel(lead) : '') +
         renderDallasVerifiedBanner(lead) +
         renderDallasCompIntelligence(lead) +
@@ -29023,6 +29024,7 @@ if(document.readyState==="loading"){
         '</div>' +
         '<details style="background:#0b1220;border:1px solid #243044;border-radius:10px;padding:12px"><summary style="cursor:pointer;font-size:12px;color:#f8fafc;font-weight:900">Advanced comps</summary><div style="font-size:12px;color:#94a3b8;margin-top:8px">Structured comp slots remain available in the research workspace. This lead drawer keeps only the top 3 visible by default.</div></details>' +
         '<details style="background:#0b1220;border:1px solid #243044;border-radius:10px;padding:12px"><summary style="cursor:pointer;font-size:12px;color:#f8fafc;font-weight:900">Advanced contacts</summary><div style="font-size:12px;color:#94a3b8;margin-top:8px">Skip trace/contact details stay operator-reviewed and hidden here until needed.</div></details>' +
+        (callFirst ? '</details>' : '') +
       '</div>' +
     '</div>';
   }
@@ -29137,7 +29139,7 @@ function wosRealPullState(stateCode, cardEl) {
 <link rel="stylesheet" href="/dashboard/wos-jv-list-tools.css?v=1">
 <script src="/dashboard/wos-jv-list-tools.js?v=1"></script>
 <script src="/dashboard/wos-public-deals.js?v=60"></script>
-<script src="/dashboard/wos-operational-views.js?v=5"></script>
+<script src="/dashboard/wos-operational-views.js?v=6"></script>
 <script src="/dashboard/wos-marketplace.js?v=1"></script>
 <link rel="stylesheet" href="/dashboard/wos-inbox.css?v=3">
 <script src="/dashboard/wos-email-reader.js?v=6"></script>
@@ -29174,8 +29176,8 @@ function wosRealPullState(stateCode, cardEl) {
 <script src="/dashboard/wos-remember-devices.js?v=2"></script>
 <script src="/dashboard/wos-operator-profile.js?v=2"></script>
 <script src="/dashboard/workspace/components.js?v=7"></script>
-<link rel="stylesheet" href="/dashboard/wos-lead-contact.css?v=2">
-<script src="/dashboard/wos-lead-contact.js?v=3"></script>
+<link rel="stylesheet" href="/dashboard/wos-lead-contact.css?v=3">
+<script src="/dashboard/wos-lead-contact.js?v=4"></script>
 <script src="/dashboard/wos-ask-model.js?v=1"></script>
 <script src="/dashboard/wos-ask-demo.js?v=5"></script>
 </body>
