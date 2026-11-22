@@ -1,5 +1,25 @@
 # Backlog
 
+## Latest Run Summary (2026-11-22 UTC, B28b Released)
+
+B28b [#553](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/553)
+RELEASED7114c103c8066dd235f42bdcf6747ad92213b84a. Exact head81cbe05 hosted
+45025234737 PASS348/0/0; auto7979296366 SUCCESS, public health200/exact dashboard/
+app/profitv4/pipelinev5/report-reviewv2 static verification PASS. Pipeline and
+report review share one sourced Estimated profit and closed math; missing prices
+can open existing recorded evidence. Nine inspected synthetic1366/400/412 proofs,
+source click-through/44px/no writes/external requests passed. No backend-module
+diff, new response field, writer, calculator, gate or auth change. First hosted
+45023492304 PASS348/0/0 retained but not merged after self-review; local317/31/0
+retained failed, no exact-head claim or unchanged retry. No private production
+endpoint/body/login/UI read or business/provider/manual Railway action.
+Full B28 remains IN PROGRESS: next B28c source-bound entry/editing and remaining
+Ask/approval/other missing-value screens. A source-review link is not an Add-it
+editor. Existing preview/commit supports pipeline_item revisions; new entry must
+preserve current same-ID/refs/newer-source validation and strict signed-admin
+authority, never infer permission from D069 anonymous fallback. No B28c runtime
+started. B29-B35/B19 UI and owner-blocked source activation remain incomplete.
+
 ## Latest Run Summary (2026-11-22 UTC, B28b In Progress)
 
 B28b applies the shared sourced Estimated profit to Pipeline and report review,
