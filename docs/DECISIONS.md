@@ -1,5 +1,31 @@
 # Decisions
 
+ASSUMED 2026-11-22 UTC: B28c reuses existing signed-admin import preview/commit
+and pipeline-reports.upsert, not a new route, money calculator or canonical writer.
+The editor may change only buyer_price/contract_price/costs/our_share plus explicit
+newer source capture/evidence. Same source URL, refs, report ID, path, waiting state,
+dates and all other facts must match the prior revision. No implicit Date.now
+capture, criteria/asking substitution or configured-cost prefill as sourced costs.
+Optional expected_pipeline_revision + expected_pipeline_version bind a one-report
+editor request to existing report-review content version; commit rechecks both
+latest report ID and target/buyer/review context. Existing generic pipeline import
+plans also gain latest-revision checks before commit; old body shapes still work.
+Production registration passes requireSignedContactAdmin as requireImportAdmin
+for both preview/commit. No D069 restoration or authority from anonymous fallback;
+paired-agent ingress and read routes unchanged. Review can_review remains the
+existing source-sharing check, NOT a newly invented approval gate. First new
+negative test found target changes were not version-bound; keep the assertion
+and fix by reusing report-review version at preview/commit, not by changing gates.
+New UI has X/Escape, fixed header/footer/body-only scroll,44px controls, no initial
+post, checkbox/preview/explicit save, input invalidation, abort/10s/no automatic
+retry, terminal409/429/auth/unknown-save and late-close/identity checks. Price
+revisions remain imported_report/pending; no lead/buyer/deal/calendar/status change.
+Writer/reader trace: Pipeline existing projected report -> priceDraft -> existing
+assistant-find-routes strict preview/commit -> buyer-find-import concurrency checks
+-> pipeline-reports.validate/upsert -> existing shared profit views. New pure,
+local HTTP and actual synthetic UI tests; all original assertions retained.
+Full B28 remains incomplete outside eligible existing report entry and other UI.
+
 VERIFIED 2026-11-22 UTC: B28b553 RELEASED7114c103c8066dd235f42bdcf6747ad92213b84a,
 head81cbe05d457b427badae39f5752e58936a03a482 hosted45025234737 PASS348/0/0.
 Auto7979296366 SUCCESS; public health200/exact dashboard/app/profitv4/pipelinev5/

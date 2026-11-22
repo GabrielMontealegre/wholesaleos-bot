@@ -1,5 +1,20 @@
 # Backlog
 
+## Latest Run Summary (2026-11-22 UTC, B28c In Progress)
+
+B28c adds real Pipeline price entry through the existing import preview/commit:
+explicit amounts/share, same recorded source, newer operator-entered UTC capture
+and evidence, unchecked source/workflow review, preview then explicit save.
+All non-price workflow facts remain unchanged; existing report/review context
+versions reject stale forms/plans and eligibility is rechecked at commit. History
+is appended, never overwritten; no buyer/deal approval, funds, offer or send.
+Production import preview/commit now use the existing signed-admin guard, not
+D069 anonymous fallback; global owner login-lock-off remains unchanged. Existing
+paired-agent ingress is unchanged. Pure/HTTP and synthetic1366/400/412 editor
+checks PASS, full/hosted gates pending. No real production import/write occurred.
+Full B28 still needs other missing-value surfaces and entry without an existing
+report; this slice edits a current eligible source report only.
+
 ## Latest Run Summary (2026-11-22 UTC, B28b Released)
 
 B28b [#553](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/553)
