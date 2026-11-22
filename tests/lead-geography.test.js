@@ -32,7 +32,9 @@ const context={app:{get(_path,fn){handler=fn;}},db:{getLeads:()=>rows},leadLocat
   leadMatchesRegionalModeForList(row){legacyCalls++;return row.state==='TX';},leadMatchesCountyNameForList(){return true;},
   classifyLeadQualityForList:()=>({rank:0,flags:[]}),parseLeadListLimit:v=>Number(v)||2,parseLeadListOffset:v=>Number(v)||0,
   withLeadIntelligence:v=>v,sanitizeLeadForList:v=>({...v}),isDallasLeadForList:()=>false,isDallasSheriffTaxSaleLeadForList:()=>false,
-  operationalLeads:{classify:()=>({}),counts:()=>({})},buildLeadIntakeStatus:()=>({}),console:{error(){throw Error('unexpected route error');}}};
+  operationalLeads:{classify:()=>({}),counts:()=>({})},leadContactBrief:require('../modules/research/lead-contact-brief'),
+  buildLeadIntakeStatus:()=>({}),console:{error(){throw Error('unexpected route error');}}};
+vm.runInNewContext(source.slice(source.indexOf('const LEADS_LIST_DEFAULT_LIMIT'),source.indexOf('function parseLeadListLimit')),context);
 vm.runInNewContext(source.slice(start,end),context);
 function run(query){let result,status=200;handler({query},{status(value){status=value;return this;},json(value){result=value;return this;}});return{status,result};}
 let result=run({geography:'1',operational_mode:'old-restriction',metro:'DFW',limit:'2',offset:'2'});

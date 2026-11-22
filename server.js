@@ -37,6 +37,7 @@ const rememberedDeviceRoutes = require('./modules/security/remembered-device-rou
 const dashboardPairing = require('./modules/security/dashboard-pairing');
 const assistantFindRoutes = require('./modules/buyers/assistant-find-routes');
 const operationalLeads = require('./modules/research/operational-lead-eligibility');
+const leadContactBrief = require('./modules/research/lead-contact-brief');
 const leadLocationFacets = require('./modules/research/lead-location-facets');
 const listingEgressGuard = require('./modules/security/listing-egress-guard');
 const scraperApiClient = require('./modules/research/scraper-api-client');
@@ -1394,6 +1395,7 @@ app.get('/api/leads', (req, res) => {
         if (isDallasSheriffTaxSaleLeadForList(enriched)) safe.sheriff_tax_sale_acquisition = dallasSheriffTaxSaleAcquisitionStatus(enriched);
         safe.lead_quality = quality;
         safe.operational_eligibility = operationalLeads.classify(lead);
+        safe.contact_brief = safeLeadListValue(leadContactBrief.buildLeadContactBrief(lead), 4);
         safe.repair_flags = Array.from(new Set([].concat(safe.repair_flags || [], quality.flags || [])));
         return safe;
       } catch (err) {
@@ -1404,6 +1406,7 @@ app.get('/api/leads', (req, res) => {
         }));
         fallback.lead_quality = fallbackQuality;
         fallback.operational_eligibility = operationalLeads.classify(lead);
+        fallback.contact_brief = safeLeadListValue(leadContactBrief.buildLeadContactBrief(lead), 4);
         if (isDallasLeadForList(lead)) fallback.dallas_verified_acquisition = dallasVerifiedAcquisitionStatus(lead);
         if (isDallasSheriffTaxSaleLeadForList(lead)) fallback.sheriff_tax_sale_acquisition = dallasSheriffTaxSaleAcquisitionStatus(lead);
         fallback.repair_flags = Array.from(new Set([].concat(fallback.repair_flags || [], fallbackQuality.flags || [])));
@@ -1447,7 +1450,7 @@ app.get('/api/dashboard/operational-leads', requireAdmin, (req, res) => {
     const all = store.leads || [];
     const normalize = value => String(value || '').trim().toLowerCase().replace(/\s+county$/, '');
     const scoped = all.filter(row => ['state', 'county', 'city'].every(key => !req.query[key] || normalize(row[key]) === normalize(req.query[key])));
-    const projected = scoped.map(row => ({ ...row, operational_eligibility: operationalLeads.classify(row) }));
+    const projected = scoped.map(row => ({ ...row, operational_eligibility: operationalLeads.classify(row), contact_brief: leadContactBrief.buildLeadContactBrief(row) }));
     const lane = String(req.query.lane || 'working');
     if (!['all', 'working', 'needs_address_proof', 'source_conflict', 'archived', 'callable'].includes(lane)) return res.status(400).json({ code: 'operational_lane_invalid' });
     let rows = projected.filter(row => lane === 'all' || lane === 'callable' ? lane === 'all' || row.operational_eligibility.callable : row.operational_eligibility.lane === lane);
@@ -2768,7 +2771,7 @@ app.patch('/api/leads/:id/address', (req, res) => {
 app.get('/api/leads/:id', (req, res) => {
   const lead = db.getLeads().find(l => l.id === req.params.id);
   if (!lead) return res.status(404).json({ error: 'Lead not found' });
-  res.json({ ...withLeadIntelligence(lead), operational_eligibility: operationalLeads.classify(lead) });
+  res.json({ ...withLeadIntelligence(lead), operational_eligibility: operationalLeads.classify(lead), contact_brief: leadContactBrief.buildLeadContactBrief(lead) });
 });
 
 app.post('/api/leads', (req, res) => {
