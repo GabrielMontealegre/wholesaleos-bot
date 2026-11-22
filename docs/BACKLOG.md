@@ -1,5 +1,21 @@
 # Backlog
 
+## Latest Run Summary (2026-11-22 UTC, B28a Released)
+
+B28a #551 RELEASED7d7229423e95c7be30cc82b7088e9ebdc2b7fff2. Exact head06243af
+hosted45019148882 PASS346/0/0; auto7978443201 SUCCESS. Public health200 and exact
+dashboard/app/profitv3/stylev2/todayv20/jvdeskv2 static verification PASS. No
+private production endpoint/body/login/UI read or business/provider action.
+One sourced Estimated profit replaces competing criteria-room/share headlines,
+without changing any calculator, writer, DTO, approval/readiness/value/auth gate.
+Synthetic1366/400/412 profit/source/missing displays and four-width navigation
+passed; nine inspected screenshots committed. First hosted45017946819 FAILED
+345/1/0 and local314/32/0 retained. Corrected assertion preserves6625/13250 and
+null-split canonical values; no unchanged retry or waiver. Full B28 is IN PROGRESS:
+next B28b missing-field actions/editing/navigation and remaining screens, then
+B29-B35. No B28b runtime started; B19 UI and owner-blocked source activation
+remain incomplete. D069/private-production restriction unchanged.
+
 ## Latest Run Summary (2026-11-22 UTC, B28a In Progress)
 
 B28a removes competing criteria-room/share headlines from Today and JV cards;
@@ -439,7 +455,12 @@ Acceptance
 - Negative tests: no phone, rejected phone, possible phone, bank or government owner (no reach-out),
   missing owner.
 
-## B-28 · Missing numbers become actions; one profit number · TODO
+## B-28 · Missing numbers become actions; one profit number · IN PROGRESS
+
+B28a [#551](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/551) released:
+one sourced estimated-profit headline and source/cost/split disclosure, Today/JV
+criteria-share conflict removed. Missing-field actions and remaining surfaces
+still required; this is not full B28 completion.
 
 Acceptance
 - Replace every "Not established" with what is missing and the action: "Missing: contract price · Add it".

@@ -1,5 +1,14 @@
 # Decisions
 
+VERIFIED 2026-11-22 UTC: B28a551 RELEASED7d7229423e95c7be30cc82b7088e9ebdc2b7fff2,
+head06243af114a6b0d4feec0c7f9d19ae12f694d995 hosted45019148882 PASS346/0/0.
+Automaticdeployment7978443201 SUCCESS; public health200 and exact dashboard/app/
+profitv3/stylev2/todayv20/jvdeskv2 PASS. auth_controls_checked=false; no private
+production endpoint/body/login/UI inspected. First hosted45017946819 FAILED
+345/1/0 and localfull314/32/0 retained; corrected display proof did not change
+runtime calculations, flags, source/value/money gates or auth. B28 remains open
+for actionable missing fields and remaining surfaces; no B28b runtime yet.
+
 ASSUMED 2026-11-22 UTC: split B28 under AGENTS2. B28a is presentation-only:
 one Estimated profit consumes existing match-profit our_net, never buyer_max,
 asking or criteria estimated_spread. Keep pipeline-money calculations, report
