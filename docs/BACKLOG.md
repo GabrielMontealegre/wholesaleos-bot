@@ -8,10 +8,15 @@ fixed public/static/auth checks including contact JS/CSS/operational assets PASS
 Synthetic drawer/cards1366/400/412/360 and six screenshots PASS; no real contact,
 private response or business action. First544 failed331/8/0 retained; only exact
 production JS/CSS inventory corrected, checker/assertions unchanged.
-Full B27 remains incomplete: source cards and other roles BLOCKED on #543's
-bounded approval (last known one OWN comment, no architect answer). B19 UI and
-B28-B35 remain incomplete. At93% primary USED, freeze this docs-only release
-record locally; publish its own green-gated PR only with sufficient fresh usage.
+Full B27 remains incomplete. NEW architect543 answer7074699953 (05:21:10Z)
+authorizes request-time summaries only in existing authenticated/no-store queue
+and saved-lead responses, no new projection/export/persistence. First UI/tap
+slice stays admin-only; non-admin ownership is a later item, not B27. Continue
+admin source-card UI under these limits, then B28 onward. D069 hosted lock-off
+is owner-controlled: do not change or use its fallback to authorize new summaries.
+Production verification now uses health/static only, never a private response.
+B19 UI/B28-B35 remain incomplete. Natural capacity returned; publish this
+reconciled docs-only record through its own hosted gate, preserving all history.
 
 ## Latest Run Summary (2026-11-22 UTC)
 

@@ -1,5 +1,15 @@
 # Decisions
 
+ASSUMED 2026-11-22 UTC: apply genuinely new architect543 answer7074699953 once.
+It authorizes request-time contact summaries only on existing authenticated,
+no-store queue/alias and saved-lead APIs. No new route/static export/persisted
+summary/snapshot write; first UI/tap route stays admin-only, non-admin ownership
+is a later item. D069 remains untouched: do not use anonymous-admin fallback
+as new summary authority. Verify that feature with strict signed/scoped synthetic
+identities, never production private data. Release checks under D069 are public
+health/static only; do not claim anonymous401 protection while the owner lock
+is off. Historical339/0/0/auth checks for85a0450 remain historical, not current.
+
 VERIFIED 2026-11-22 UTC: B27b544 released85a0450d9aa2bd6f69bf0d2f82bceb5c056c78aa,
 exactheade60c8cf03a9489cf0fcd3b1ed6afa62892fe968b hosted44988469122 PASS339/0/0;
 auto7974464627 and fixed public/static/auth checks PASS, including new JS/CSS and
