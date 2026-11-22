@@ -14,8 +14,10 @@
   function matchable(row, buyer) { return eligible(row) && Number(row.arv) > 0 && Number(row.offer) > 0 && buyer && buyer.matching_eligible === true; }
   function rowCard(row) {
     var state = row.operational_eligibility || {};
-    return '<article class="ops-record" data-ops-id="' + esc(row.id) + '"><div class="ops-pii ops-address">' + esc(row.property_address || row.address || 'Record without a property address') + '</div>' +
-      '<p>' + esc([row.city, row.county, row.state].filter(Boolean).join(', ')) + '</p><p>' + esc(state.reason || 'Needs address proof') + '</p>' +
+    var callFirst = root.WOSLeadContact && root.WOSLeadContact.isAdmin();
+    return '<article class="ops-record" data-ops-id="' + esc(row.id) + '"><div class="ops-pii ops-address">' + esc(callFirst ? root.WOSLeadContact.addressLine(row) : row.property_address || row.address || 'Record without a property address') + '</div>' +
+      (callFirst ? root.WOSLeadContact.markup(row) : '<p>' + esc([row.city, row.county, row.state].filter(Boolean).join(', ')) + '</p>') +
+      '<p>' + esc(state.reason || 'Needs address proof') + '</p>' +
       '<p>' + (Number(row.arv) > 0 ? 'Recorded value requires review' : 'Value unknown') + '</p><div class="ops-actions">' + sourceLink(row) +
       '<button type="button" data-ops-open="' + esc(row.id) + '">Open Lead Details</button></div></article>';
   }
