@@ -1,5 +1,11 @@
 # Decisions
 
+ASSUMED 2026-11-22 UTC: first B27a542 hosted44981753158 remains failed335/1/0,
+total336. lead-geography's real-route VM omitted the new contact-brief and list
+serializer dependencies. Add the real module and source serializer declarations
+to the harness; retain every geography/privacy/paging assertion and fixture.
+No unchanged-head retry, red merge, gate waiver or behavior assertion weakened.
+
 ASSUMED 2026-11-22 UTC: B-27 starts with a shared canonical contact brief behind
 existing authenticated saved-lead APIs; B27a is not full B27 DONE. Both card
 surfaces, explicit local tel/sms tap activity and1366/400/412 proof remain.
