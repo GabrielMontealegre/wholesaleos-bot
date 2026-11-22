@@ -45,7 +45,7 @@ function build(store, { now, policies = {} }) {
     return { ...item.money, reason: item.money.missing.length ? 'Reported prices or total costs are incomplete.' :
       'Derived from one pending source report, not agreed prices or confirmed funds.',
       reported_only: true, buyer_confirmed: false, proof_of_funds: 'Not established',
-      buyer_max: candidate.max_price ?? null, field_provenance: item.field_provenance,
+      buyer_max: candidate.max_price ?? null, field_provenance: item.field_provenance, report_provenance:item.provenance,
       report_id: item.id };
   }
   return { forMatch };

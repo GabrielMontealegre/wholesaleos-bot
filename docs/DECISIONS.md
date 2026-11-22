@@ -1,5 +1,29 @@
 # Decisions
 
+ASSUMED 2026-11-22 UTC: B28b extends the existing profit presentation to Pipeline
+and its report-review dialog, with a real missing-price source link, not an
+invented editor. fromReport only adapts exact pending imported-report DTOs with
+current provenance and unwithheld identities; flagged/conflicting/wrong-origin
+data cannot supply amounts or correction links. Existing pipeline-money values
+are consumed unchanged; buyer criteria never become reported prices. Expose the
+same already-private report provenance in eligible match-profit responses only;
+blank/withheld/flagged responses get no source. No new route/public asset/export,
+writer, calculator, gate or auth authority. Pipeline report provenance already
+flows pipeline-reports.project -> pipeline-workspace and report-review; match
+profit is read by reviewed-deals/deal-fit-view/private owner review, never by
+recipient email content. New pure/UI negatives and source click-through are
+synthetic, external source fulfilled locally, no real writes. Existing assertions
+pipeline-buyer-context-ui14/19 replace generic Money-not-established with specific
+missing buyer-price/costs and unavailable profit, retaining numeric168250, pending
+buyer/source separation and all navigation/privacy assertions.
+Writer trace: buyer-find-import.validate/prepareImport/commitImport/ingestMixed ->
+pipeline-reports.validate/upsert -> append-only same report ID/refs, strictly newer
+source capture, exact evidence/HTTPS/ranges; history/reviews remain unchanged.
+assistant-find-routes existing preview/commit uses production-data-boundary,
+which rejects explicit synthetic=true flags in production, not all real imports.
+No production imports are performed. Full B28 still needs explicit source-bound
+entry/editing and other surfaces; the source link does not satisfy Add-it alone.
+
 VERIFIED 2026-11-22 UTC: B28a551 RELEASED7d7229423e95c7be30cc82b7088e9ebdc2b7fff2,
 head06243af114a6b0d4feec0c7f9d19ae12f694d995 hosted45019148882 PASS346/0/0.
 Automaticdeployment7978443201 SUCCESS; public health200 and exact dashboard/app/
