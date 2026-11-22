@@ -248,7 +248,13 @@ Rules for the whole block:
 - Every item keeps the §5 safety invariants. Nothing here turns on server-side sending, calling or paid data.
 - Every UI item ships with 1366 / 400 / 412 screenshots (fake data) and plain-English text (§11).
 
-## B-26 · Hash dashboard passwords · TODO (do first, small)
+## B-26 · Hash dashboard passwords · IN PROGRESS (hosted gate required)
+
+Implementation: versioned salted scrypt hashes, successful-login-only legacy
+upgrade, both credential writers hardened, user response allowlists, remembered
+device binding preserved for legacy users and updated for hashed users.
+Synthetic tests cover migration once, no-write failures, forged hash updates,
+response/error/log redaction and remembered-token invalidation. Not released yet.
 
 Goal: `/api/auth/email-login` compares the plain-text `users[].password` stored in the JSON database. Store a hash instead.
 

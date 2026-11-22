@@ -1,5 +1,14 @@
 # Decisions
 
+ASSUMED 2026-11-22 UTC: D-068's newer owner-approved B-26 is dashboard password
+hashing, not the older paid-assistant issue #538 bearing the same item ID.
+Apply AGENTS section 3 precedence; no paid-assistant/provider work is authorized
+by this slice. Store a versioned salted scrypt hash in password_hash, remove the
+legacy password only after successful login or an explicit credential update.
+Retain legacy remembered-device binding until migration; migration or a password
+change invalidates remembered tokens and requires login again, not user deletion.
+No real credentials or stored hashes are read, logged or exposed in verification.
+
 VERIFIED 2026-11-18 UTC: B21a536 OFF schema code released
 2fbedfaa877369b43dc0167be44db11f432a0622, exacthead8f1933c857becda0c816e290d97f7c8a90d87566,
 hosted44274627417 PASS334/0/0, auto7879478596 and fixed public/static/auth controls

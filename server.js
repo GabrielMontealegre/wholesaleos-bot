@@ -30,6 +30,7 @@ const manualEvidencePacketService = require('./modules/research/manual-evidence-
 const marketDemandIndex = require('./modules/research/market-demand-index');
 const providerCapabilityAudit = require('./modules/research/provider-capability-audit');
 const dashboardAuth = require('./modules/security/dashboard-auth');
+const dashboardPassword = require('./modules/security/dashboard-password');
 const dashboardSession = require('./modules/security/dashboard-session');
 const rememberedDevices = require('./modules/security/remembered-devices');
 const rememberedDeviceRoutes = require('./modules/security/remembered-device-routes');
@@ -3454,13 +3455,13 @@ app.get('/api/users', requireAdmin, (req, res) => {
 app.put('/api/users/:id', requireAdminOrOwnFirstLoginPinUpdate, (req, res) => {
   const result = db.updateUser(req.params.id, req.body);
   if (result?.error) return res.status(400).json(result);
-  res.json({ ok: true, user: result });
+  res.json({ ok: true, user: result ? dashboardAuth.publicUser(result) : null });
 });
 
 app.post('/api/users', requireAdmin, (req, res) => {
   const result = db.addUser(req.body);
   if (result?.error) return res.status(400).json(result);
-  res.json({ ok: true, user: result });
+  res.json({ ok: true, user: dashboardAuth.publicUser(result) });
 });
 
 // Ã¢ÂÂÃ¢ÂÂ API: User-scoped leads Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
@@ -5423,15 +5424,22 @@ app.post('/api/auth/email-login', loginLimiter, (req, res) => {
       return res.status(503).json({ ok: false, error: 'Dashboard session signing is not configured.', code: 'SESSION_NOT_CONFIGURED' });
     }
     const { email, password } = req.body||{};
-    if (!email) return res.status(400).json({ error: 'Email required' });
-    const users = db.readDB().users||[];
+    if (typeof email !== 'string' || !email.trim()) return res.status(400).json({ error: 'Email required' });
+    const dbData = db.readDB();
+    const users = dbData.users||[];
     const user = users.find(u => (u.email||'').toLowerCase()===email.toLowerCase().trim());
     if (!user) return res.status(401).json({ error: 'Invalid credentials' });
-    if (!user.password || !password || user.password!==password) return res.status(401).json({ error: 'Invalid credentials' });
+    const checked = dashboardPassword.verifyPassword(password, user.password_hash || user.password, !user.password_hash);
+    if (!checked.ok) return res.status(401).json({ error: 'Invalid credentials' });
+    if (checked.legacy) {
+      user.password_hash = dashboardPassword.hashPassword(password);
+      delete user.password;
+      db.writeDB(dbData);
+    }
     const publicUser = dashboardAuth.publicUser(user);
     setDashboardSessionCookie(res, publicUser);
     res.json({ ok:true, user:publicUser });
-  } catch(e){ res.status(500).json({error:e.message}); }
+  } catch(e){ res.status(500).json({error:'Login unavailable'}); }
 });
 
 app.post('/api/users/:id/credentials', requireAdmin, (req, res) => {
@@ -5440,11 +5448,15 @@ app.post('/api/users/:id/credentials', requireAdmin, (req, res) => {
     const users  = dbData.users||[];
     const user = users.find(u=>u.id===req.params.id);
     if (!user) return res.status(404).json({error:'User not found'});
+    const passwordHash = req.body.password ? dashboardPassword.hashPassword(req.body.password) : null;
     if (req.body.email) user.email = req.body.email.trim().toLowerCase();
-    if (req.body.password) user.password = req.body.password;
+    if (passwordHash) {
+      user.password_hash = passwordHash;
+      delete user.password;
+    }
     db.writeDB(dbData);
     res.json({ok:true});
-  } catch(e){ res.status(500).json({error:e.message}); }
+  } catch(e){ res.status(500).json({error:'Credential update unavailable'}); }
 });
 
 // ── Rebuild property links for ALL leads ──

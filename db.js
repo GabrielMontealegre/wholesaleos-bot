@@ -4,6 +4,7 @@ const fs   = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const dashboardAuth = require('./modules/security/dashboard-auth');
+const dashboardPassword = require('./modules/security/dashboard-password');
 
 const DB_PATH = process.env.DB_PATH || './data/db.json';
 const DB_FILE = path.resolve(DB_PATH);
@@ -1933,7 +1934,14 @@ function updateUser(id, updates) {
     const taken = db.users.find(u => u.pin === updates.pin && u.id !== id);
     if (taken) return { error: 'PIN already in use by another account' };
   }
-  Object.assign(user, updates);
+  const safeUpdates = { ...updates };
+  delete safeUpdates.password_hash;
+  delete safeUpdates.password;
+  if (Object.prototype.hasOwnProperty.call(updates, 'password')) {
+    safeUpdates.password_hash = dashboardPassword.hashPassword(updates.password);
+  }
+  Object.assign(user, safeUpdates);
+  if (safeUpdates.password_hash) delete user.password;
   writeDB(db);
   return user;
 }
