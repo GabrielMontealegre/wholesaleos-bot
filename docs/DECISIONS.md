@@ -21,6 +21,14 @@ recipient body; jv-profit-time-labels gains real imported-source fixture metadat
 retaining all eleven time cases; plain-card-words-ui retains criteria-room6625
 in the DTO while replacing its conflicting headline with two-column criteria.
 These intentionally changed display assertions implement B28, not a gate waiver.
+First B28a local suite found verify-deal-card-navigation.js28/43/44 still asserting
+the intentionally removed share headline. Preserve numeric6625/13250 and null
+split guard on the canonical DTO; assert buyer ceiling168250 in its actual column
+and unavailable profit without reports, retaining all navigation/privacy checks.
+Retain original local/hosted results; no cancellation or unchanged-head retry.
+Observed first PR551 hosted45017946819 FAILED345/1/0 total346, same navigation
+helper28 assertion; localfull314/32/0 retained. Corrected focused four-width
+navigation PASS; no runtime edits after initial headdef78a0.
 
 VERIFIED 2026-11-22 UTC: B27e549 RELEASEDfd8afaf2dbb7befb067cb84ccdb8908d20a02cd6,
 head29ce1a7c27d3c3f616f3c387b37f72063a2cf9ad hosted45001842370 PASS345/0/0.
