@@ -239,7 +239,27 @@ function setDashboardSessionCookie(res, user, options) {
   return issued;
 }
 
+// TEMPORARY (Gabriel, 2026-11-22): the PIN lock is off on the hosted app until the build is finished.
+// It applies only where Railway runs the app; local runs and tests keep the lock.
+// Turn the lock back on with WOS_LOGIN_LOCK=on, or by reverting this change.
+function loginLockOff(env) {
+  const e = env || process.env;
+  const hosted = Boolean(e.RAILWAY_ENVIRONMENT_NAME || e.RAILWAY_ENVIRONMENT);
+  return hosted && String(e.WOS_LOGIN_LOCK || '').trim().toLowerCase() !== 'on';
+}
+function openAdminIdentity() {
+  if (!loginLockOff()) return null;
+  const admin = (db.readDB().users || []).find((candidate) => candidate && candidate.id === 'admin' && candidate.role === 'admin');
+  return admin ? { ok: true, user: admin, device_id: null } : null;
+}
+
 function dashboardIdentity(req, res) {
+  const verifiedIdentity = signedDashboardIdentity(req, res);
+  if (verifiedIdentity.ok) return verifiedIdentity;
+  return openAdminIdentity() || verifiedIdentity;
+}
+
+function signedDashboardIdentity(req, res) {
   if (!dashboardSession.isConfigured({ env: process.env })) return { ok: false, code: 'SESSION_REQUIRED' };
   const token = dashboardSession.tokenFromRequest(req), options = { env: process.env, now: Date.now() };
   let verified = dashboardSession.verifySession(token, options), strictStore;
