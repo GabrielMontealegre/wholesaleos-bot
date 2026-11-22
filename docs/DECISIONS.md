@@ -1,5 +1,15 @@
 # Decisions
 
+ASSUMED 2026-11-22 UTC: B27c547 first hosted44996024369 remains FAILED339/2/0,
+total341 (remembered-device-ui layout:47:83, shared-dashboard-login route-fetch
+closed-target:23). Separate isolated signed-out browser check reproduced a
+detached remember-device label with zero geometry and no runtime errors.
+Trace: installFetchGuard401 -> showDashboardLogin -> lockIdentity/cache clearing
+then unconditional dispose/remount. Keep all guards/clearing; reuse the existing
+locked form and update text status instead of detaching it on every401. Fresh
+session loss still mounts a new form after disposal. No test assertion relaxed;
+the second hosted failure is not independently attributed to this cause.
+
 ASSUMED 2026-11-22 UTC: split B27c request-time response/auth/cache hardening
 from source-card UI/tap integration for reviewability (AGENTS2). D069 global
 lock policy stays unchanged; its anonymous-admin fallback never authorizes the

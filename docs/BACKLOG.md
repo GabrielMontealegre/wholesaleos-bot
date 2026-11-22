@@ -2,6 +2,12 @@
 
 ## Latest Run Summary (2026-11-22 UTC, B27c Boundary)
 
+B27c #547 first hosted44996024369 FAILED339/2/0 total341, retained.
+Local full suite FAILED310/31/0 total341, missing dependencies observed; no retry.
+Synthetic login geometry reproduced a detached control during repeated401 form
+replacement. Preserve identity/cache clearing and reuse the current locked form;
+fresh-session disposal remains. Original login tests/assertions unchanged.
+
 Docs #546 RELEASEDd510670: hosted44992737484 PASS340/0/0, automatic
 deployment7975016494 SUCCESS, health/static-only verification PASS. No private
 production endpoints were read after D069. B27c implements the approved request-time

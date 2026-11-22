@@ -478,9 +478,14 @@ function showDashboardLogin(message) {
   window.WOSDashboardAuth.lockIdentity(APP);
   var pinScreen = document.getElementById('pin-screen');
   var appEl = document.getElementById('app');
-  if (disposeDashboardLogin) disposeDashboardLogin();
   if (pinScreen) pinScreen.style.display = 'flex';
   if (appEl) appEl.style.display = 'none';
+  if (disposeDashboardLogin && pinScreen && pinScreen.querySelector('#login')) {
+    var status = pinScreen.querySelector('#login-error');
+    if (status) status.textContent = message || '';
+    return;
+  }
+  if (disposeDashboardLogin) disposeDashboardLogin();
   disposeDashboardLogin = window.WOSDashboardLogin.mount(pinScreen, { message: message, onAuthenticated: unlockDashboardUser });
 }
 
