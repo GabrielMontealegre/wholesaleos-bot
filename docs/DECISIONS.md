@@ -1,5 +1,13 @@
 # Decisions
 
+VERIFIED 2026-11-22 UTC: B28b553 RELEASED7114c103c8066dd235f42bdcf6747ad92213b84a,
+head81cbe05d457b427badae39f5752e58936a03a482 hosted45025234737 PASS348/0/0.
+Auto7979296366 SUCCESS; public health200/exact dashboard/app/profitv4/pipelinev5/
+report-reviewv2 PASS, auth_controls_checked=false. No private production endpoint,
+body/login/UI inspection or real source/provider/business action. Final diff has
+no backend module/DTO/auth/writer/calculator change. Local317/31/0 retained;
+first hosted348/0/0 not merged after self-review. Full B28 still incomplete.
+
 ASSUMED 2026-11-22 UTC: B28b extends the existing profit presentation to Pipeline
 and its report-review dialog, with a real missing-price source link, not an
 invented editor. fromReport only adapts exact pending imported-report DTOs with
