@@ -1,5 +1,15 @@
 # Decisions
 
+VERIFIED 2026-11-22 UTC: B28c555 RELEASED28736bae77fec099bcf46e7d59365b0ce2eb4d60,
+head556ee9c0d378d31cf432e1bef19e238fd8061243 hosted45030593346 PASS350/0/0.
+Auto7980028107 SUCCESS; public health200/exact dashboard/app/pipelinev6/report-
+reviewv3/stylev3 PASS, auth_controls_checked=false. No private production read,
+login/UI or real import/provider/business action. Local319/31/0 retained failed;
+first new target-context negative kept and fixed through existing review-version
+binding. Signed import guard is stricter only for preview/commit, no D069 policy
+restoration, paired ingress or calculator/readiness changes. Full B28 remains
+open outside eligible existing-report entry; no next-slice runtime started.
+
 ASSUMED 2026-11-22 UTC: B28c reuses existing signed-admin import preview/commit
 and pipeline-reports.upsert, not a new route, money calculator or canonical writer.
 The editor may change only buyer_price/contract_price/costs/our_share plus explicit

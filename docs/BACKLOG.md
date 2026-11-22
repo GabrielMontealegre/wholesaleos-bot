@@ -1,5 +1,25 @@
 # Backlog
 
+## Latest Run Summary (2026-11-22 UTC, B28c Released)
+
+B28c [#555](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/555)
+RELEASED28736bae77fec099bcf46e7d59365b0ce2eb4d60. Exact head556ee9c hosted
+45030593346 PASS350/0/0; auto7980028107 SUCCESS; public health200 and exact
+dashboard/app/pipelinev6/report-reviewv3/stylev3 static verification PASS. Real
+Pipeline source-bound price entry uses preview and explicit commit, newer source
+capture/evidence, unchanged source URL/workflow facts, report/context version
+guards and append-only history. Import preview/commit require signed admin;
+D069 global owner lock policy and paired ingress stay unchanged. No approval,
+funds, offer, send or canonical business-record mutation. Pure/HTTP and actual
+synthetic1366/400/412,409/429/auth/unknown/deadline/late-close checks PASS;
+nine inspected screenshots committed. Local full319/31/0 remains FAILED with
+dependency errors observed; no retry or waiver. No private production endpoint/
+body/login/UI read, real import/provider/business action or manual Railway.
+Full B28 remains IN PROGRESS: initial report entry and remaining Ask/approval/
+other missing-value screens. No next-slice runtime begun. Fresh primary83% used
+leaves insufficient normal headroom for another large UI/test/release cycle;
+finish this record and preserve the final5% strictly for rollback/redeploy.
+
 ## Latest Run Summary (2026-11-22 UTC, B28c In Progress)
 
 B28c adds real Pipeline price entry through the existing import preview/commit:
