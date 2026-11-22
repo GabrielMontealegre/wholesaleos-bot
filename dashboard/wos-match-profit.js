@@ -16,16 +16,23 @@
       net_fee:base&&Object.values(fields).every(Boolean)&&validRange(p.net_fee,true)?p.net_fee:null};
   }
   function date(v){const clock=root.wosCardClock,label=typeof clock?.formatTime==='function'?clock.formatTime(v,new Date().toISOString()):'Unknown';return label==='Unknown'?'Time not confirmed':label;}
+  function fromReport(item){
+    if(item?.kind!=='pipeline_report'||item.source_kind!=='imported_report'||item.reported!==true||item.verified!==false||item.review_status!=='pending'||item.address_withheld!==false||typeof item.id!=='string'||!item.id||typeof item.report_id!=='string'||!item.report_id||!source(item.provenance)||item.report_review?.state==='flagged'||item.report_review?.conflict)return null;
+    return {...item.money,reported_only:true,buyer_confirmed:false,report_id:item.id,field_provenance:item.field_provenance,report_provenance:item.provenance};
+  }
   function markup(p){
     const view=present(p),labels={buyer_price:'buyer price',contract_price:'contract price',costs:'total costs',our_share:'your recorded share'};
     p=p||{};
+    const correctionProof=p.report_provenance||Object.values(p.field_provenance||{}).find(v=>source(v));
+    const correctionSource=p.source_kind==='derived_workflow'&&p.reported_only===true&&p.buyer_confirmed===false&&typeof p.report_id==='string'&&p.report_id?source(correctionProof):'';
     const fields=[['buyer_price','Reported buyer price'],['contract_price','Reported contract price'],['costs','Total costs']];
     return '<div class="match-profit"><strong data-profit-headline>Estimated profit: '+(view.profit?esc(range(view.profit)):'unavailable')+'</strong>'+
       (view.missing.length?'<ul class="profit-missing">'+view.missing.map(key=>'<li>Missing: '+labels[key]+'. Review the source report.</li>').join('')+'</ul>':'')+
+      (view.missing.length&&correctionSource?'<a data-profit-source-action href="'+esc(correctionSource)+'" target="_blank" rel="noopener noreferrer">Review price source</a>':'')+
       '<p>Potential, no confirmed buyer. Funds are not verified.</p><details><summary>Price sources and costs</summary><p>Buyer price - contract price - total costs = net fee before split. Net fee x your recorded share = estimated profit.</p><dl>'+fields.map(([key,label])=>{
       const proof=p.field_provenance?.[key],url=source(proof,false);
       return '<div><dt>'+label+'</dt><dd>'+esc(view.fields[key]?range(view.fields[key]):'Missing: '+labels[key])+(url?' <a href="'+esc(url)+'" target="_blank" rel="noopener noreferrer">Reported source</a> ('+esc(date(proof.captured_at))+')':'')+'</dd></div>';
     }).join('')+'<div><dt>Net fee before split</dt><dd>'+esc(view.net_fee?range(view.net_fee):'Missing source prices or costs')+'</dd></div><div><dt>Your recorded share</dt><dd>'+esc(view.share===null?'Missing: recorded share':String(view.share*100)+'%')+'</dd></div></dl><p>Path: '+esc(p.path==='assignment'?'Assignment':p.path==='double_close'?'Double close':'Not recorded')+'. '+esc(p.estimate_label||p.reason||'')+'</p><small>Derived estimate only; not an offer, confirmed funds or earned profit.</small></details></div>';
   }
-  if(typeof module==='object'&&module.exports)module.exports={markup,present};else root.wosMatchProfit={markup,present};
+  if(typeof module==='object'&&module.exports)module.exports={markup,present,fromReport};else root.wosMatchProfit={markup,present,fromReport};
 })(typeof window==='object'?window:globalThis);

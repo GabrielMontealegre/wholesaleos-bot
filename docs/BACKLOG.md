@@ -1,5 +1,24 @@
 # Backlog
 
+## Latest Run Summary (2026-11-22 UTC, B28b In Progress)
+
+B28b applies the shared sourced Estimated profit to Pipeline and report review,
+removing their separate net/share headlines. Missing prices offer a source-review
+link only when current imported report provenance is available. Hidden, flagged,
+conflicting, wrong-origin or malformed reports cannot supply that link or profit.
+No writer/calculator/auth/gate change. Pure and actual1366/400/412 source-action,
+disclosure and existing review/navigation tests PASS; full/hosted gates pending.
+Trace confirms buyer-find-import accepts pipeline_item revisions through existing
+preview/commit -> pipeline-reports.upsert append-only validation. No new entry
+form, auto-import, preview or commit is added. Full B28 remains IN PROGRESS:
+explicit source-bound entry/editing and remaining Ask/approval/other missing-value
+surfaces still required. Source review is not represented as an Add-it editor.
+First PR553 head7947f0b hosted45023492304 PASS348/0/0, not merged: self-review
+removed an unnecessary match-profit response field under D069. Only already
+returned browser provenance is consumed. Corrected-head hosted gate required.
+Local full317/31/0 retained failed (missing dependency errors observed), no retry;
+local correction occurred during that run, so it is not an exact-head release gate.
+
 ## Latest Run Summary (2026-11-22 UTC, B28a Released)
 
 B28a #551 RELEASED7d7229423e95c7be30cc82b7088e9ebdc2b7fff2. Exact head06243af
