@@ -1,5 +1,35 @@
 # Decisions
 
+ASSUMED 2026-11-22 UTC: split B28 under AGENTS2. B28a is presentation-only:
+one Estimated profit consumes existing match-profit our_net, never buyer_max,
+asking or criteria estimated_spread. Keep pipeline-money calculations, report
+our_share and independently sourced JV jv_split unchanged; no default share,
+confirmation, offer, readiness or comp-gate authority. Require existing exact
+reported/derived flags, report identity, complete sourced prices/costs and numeric
+recorded share before displaying profit. Missing proof stays missing. B28b owns
+real missing-field actions and remaining pipeline/Ask/approval surfaces; B28 is
+not DONE after B28a. Existing source capture times remain visible in disclosure.
+Trace: pipeline-reports imports/projection -> pipeline-money -> match-profit ->
+reviewed-deals/deal-fit-view -> shared profit UI on Today/buyer/owner-review.
+reviewed-deals.evaluate criteria-room ranking is unchanged; jv-workflow/import
+terms remain separate. Other readers operator-brief/today-workspace/interim-grade,
+ask-workspace/approvals/research room-to-offer are not changed or reclassified.
+Existing assertion changes: match-profit.test.js27 and match-profit-ui.test.js
+headline now our_net8500..12000, retaining net_fee17000..24000 inside disclosure;
+draft-profit-review-ui headline14400, retaining intermediate24000 and unchanged
+recipient body; jv-profit-time-labels gains real imported-source fixture metadata,
+retaining all eleven time cases; plain-card-words-ui retains criteria-room6625
+in the DTO while replacing its conflicting headline with two-column criteria.
+These intentionally changed display assertions implement B28, not a gate waiver.
+First B28a local suite found verify-deal-card-navigation.js28/43/44 still asserting
+the intentionally removed share headline. Preserve numeric6625/13250 and null
+split guard on the canonical DTO; assert buyer ceiling168250 in its actual column
+and unavailable profit without reports, retaining all navigation/privacy checks.
+Retain original local/hosted results; no cancellation or unchanged-head retry.
+Observed first PR551 hosted45017946819 FAILED345/1/0 total346, same navigation
+helper28 assertion; localfull314/32/0 retained. Corrected focused four-width
+navigation PASS; no runtime edits after initial headdef78a0.
+
 VERIFIED 2026-11-22 UTC: B27e549 RELEASEDfd8afaf2dbb7befb067cb84ccdb8908d20a02cd6,
 head29ce1a7c27d3c3f616f3c387b37f72063a2cf9ad hosted45001842370 PASS345/0/0.
 Auto7976217418 SUCCESS, public health200/exact dashboard+app/contactv4/stylev3/

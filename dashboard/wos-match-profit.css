@@ -5,3 +5,4 @@
 .match-profit dd { margin: 0 0 6px; }
 .match-profit a, .match-profit summary { min-height: 44px; display: inline-flex; align-items: center; }
 .match-profit summary { cursor: pointer; }
+.profit-missing{margin:6px 0;padding-left:18px}.match-profit [data-profit-headline]{font-size:16px;line-height:1.4}
