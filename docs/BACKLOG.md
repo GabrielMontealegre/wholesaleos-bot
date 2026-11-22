@@ -1,5 +1,20 @@
 # Backlog
 
+## Latest Run Summary (2026-11-22 UTC, B27 Acceptance Closeout)
+
+B27d #548 RELEASEDc85c7d3, head129c3f7 hosted44999681064 PASS344/0/0,
+auto7975891917 SUCCESS and public health/static-only verification PASS. Local
+313/31/0 retained; no retry/waiver. Source admin call-first cards and canonical
+intent-only activity are released, no snapshot/outcome/lead/public export changes.
+Acceptance audit found operational saved cards still lacked the compact why/date/
+debt/equity/next-step context. B27e closes that gap with request-time pure current
+raw source context using existing strict date and typed-money readers; cached
+context/ISO/dossier copies do not prove facts. Legacy drawer/operational technical
+content folds closed; disclosures do not trigger whole-card navigation. Existing
+contact authorization/readiness/value/calendar/writers remain unchanged. Focused
+pure/provenance/date negatives and four-width source/saved browser proof PASS.
+B27 remains IN PROGRESS until this exact-head hosted gate/deploy/verification.
+
 ## Latest Run Summary (2026-11-22 UTC, B27 Source Cards)
 
 B27c #547 RELEASED407a9b1: correctedheadf36a638 hosted44997352778 PASS342/0/0,
@@ -352,6 +367,9 @@ B27d source UI/intent branch is awaiting its own exact-head hosted gate. Shared
 panel, editable device-only SMS and canonical activity are admin-only; source
 technical detail is collapsed, date uncertainty stays explicit, money is typed
 source evidence only and equity remains unknown rather than inventing a figure.
+B27d548 is now released344/0/0/auto7975891917/public-static PASS. B27e finishes
+compact context on saved operational cards and folds the saved drawer's legacy
+technical body. This final acceptance slice still requires its own green gate.
 First544 hosted44986983142 FAILED331/8/0 total339, retained. New production
 contact JS/CSS omitted from the exact asset inventory; startup check rejects them.
 Add only those two reviewed files; no checker/test weakening or fixture serving.

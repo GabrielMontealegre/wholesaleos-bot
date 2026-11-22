@@ -25,6 +25,19 @@
     if (!prefix || brief.call_href !== 'tel:' + number || brief.text_href !== 'sms:' + number || typeof message !== 'string' || message.length > 1600) return '';
     return prefix + number + (channel === 'text' ? '?body=' + encodeURIComponent(message) : '');
   }
+  function contextMarkup(brief) {
+    const context = brief.context || {}, sale = context.sale_date;
+    const evidence = (value, label) => value && safeUrl(value.source_url) ? ' <a href="' + esc(safeUrl(value.source_url)) + '" target="_blank" rel="noopener noreferrer">' + label + '</a>' : '';
+    const dateText = sale && /^\d{4}-\d{2}-\d{2}$/.test(sale.iso) ? new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' }).format(new Date(sale.iso + 'T12:00:00Z')) : '';
+    const today = new Date(), localToday = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
+    const passed = dateText && sale.iso < localToday;
+    return '<div class="lc-context"><p><b>Why they may sell:</b> ' + esc(context.why && context.why.source_url ? context.why.text : 'Motivation not confirmed - review the source.') + evidence(context.why, 'Source') + '</p>' +
+      '<p>' + (dateText ? 'Sale date from source: ' + esc(dateText) + evidence(sale, 'Source') : 'Sale date not confirmed - ask on the call.') + '</p>' +
+      (passed ? '<p>Sale date passed - confirm ownership first.</p>' : '') +
+      '<div><b>Debt clues</b>' + (Array.isArray(context.debt_clues) && context.debt_clues.length ? context.debt_clues.map(fact => '<p>' + esc(fact.label) + ': ' + esc(fact.amount) + ' (source clue)' + evidence(fact, 'Source') + '</p>').join('') : '<p>Debt not verified.</p>') + '</div>' +
+      '<p><b>Equity band:</b> Unknown - value and current debt need verification.</p>' +
+      '<p><b>Next step:</b> ' + esc(brief.call_allowed === true ? passed ? 'Ask whether the house is still theirs before discussing an offer.' : 'Review the source, then ask whether the owner would consider an offer.' : brief.reason || 'Review the source before contacting anyone.') + '</p></div>';
+  }
   function markup(row, sourceMarket) {
     const brief = row.contact_brief || {}, phone = brief.phone, name = brief.owner && brief.owner.name;
     const enabled = Boolean(href(brief, 'call'));
@@ -44,7 +57,7 @@
       (phone ? '<p>' + esc(phone.label) + '</p>' : '') + actions +
       (!enabled ? '<p>' + esc(brief.reason || 'Review the source record before contacting anyone.') + '</p>' : '') +
       (proof ? '<details class="lc-proof"><summary>Phone source</summary><a href="' + esc(proof) + '" target="_blank" rel="noopener noreferrer">Review phone source</a><p>' + esc(phone.evidence_text) + '</p></details>' : '') +
-      '<p role="status" data-lc-status></p></section>';
+      (!sourceMarket ? contextMarkup(brief) : '') + '<p role="status" data-lc-status></p></section>';
   }
   function createController({ fetchImpl, actor, openLocal, lock, createId, timeout = 20000 }) {
     let sequence = 0, active = null;

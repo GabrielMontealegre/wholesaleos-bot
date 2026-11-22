@@ -53,6 +53,11 @@ async function prove({ screenshots = false } = {}) {
       }, store.leads.map(projected));
       const panel = page.locator('#modal-content .lc-brief'); await panel.waitFor();
       assert.equal(await panel.locator('.lc-owner').innerText(), 'Synthetic Owner');
+      for (const label of ['Why they may sell:', 'Sale date not confirmed', 'Debt not verified.', 'Equity band:', 'Next step:']) assert((await panel.innerText()).includes(label));
+      assert.equal(await page.locator('.lc-saved-details').getAttribute('open'), null);
+      await page.locator('.lc-saved-details>summary').click();
+      assert(await page.locator('.lc-saved-details').evaluate(node => node.open));
+      await page.locator('.lc-saved-details>summary').click();
       assert.equal(await page.locator('[data-lc-header-meta]').getAttribute('open'), null);
       assert.equal(await page.locator('[data-lc-address]').innerText(), store.leads[0].address);
       assert.equal(await panel.locator('a[href^="tel:"]').getAttribute('href'), 'tel:+15550101234');
@@ -85,6 +90,12 @@ async function prove({ screenshots = false } = {}) {
       }, store.leads.map(projected));
       const card = page.locator('.ops-record .lc-brief'); await card.waitFor(); await card.scrollIntoViewIfNeeded();
       assert.equal(await card.locator('.lc-owner').innerText(), 'Synthetic Owner');
+      for (const label of ['Why they may sell:', 'Sale date not confirmed', 'Debt not verified.', 'Equity band:', 'Next step:']) assert((await card.innerText()).includes(label));
+      assert.equal(await page.locator('.lc-ops-details').getAttribute('open'), null);
+      await page.locator('.lc-ops-details>summary').click();
+      assert(await page.locator('.lc-ops-details').evaluate(node => node.open));
+      assert.equal(await page.locator('#modal-overlay').isVisible(), false, 'source disclosure does not open the lead modal');
+      await page.locator('.lc-ops-details>summary').click();
       for (const selector of ['.lc-call', '.lc-text > summary']) {
         const colors = await card.locator(selector).evaluate(element => [getComputedStyle(element).color, getComputedStyle(element).backgroundColor]);
         assert.ok(contrast(...colors) >= 4.5, 'contact control text has readable theme contrast');
