@@ -38,6 +38,8 @@ html[data-wos-scheme=light] .wos-settings-form .wos-control-icon{filter:none}
 .ask-chat,.ask-context{padding:12px 16px;min-width:0}.ask-chat{box-sizing:border-box;width:100%;max-width:469px}.ask-context{border-left:1px solid var(--line,#394449)}
 .wos-ask-panel button,.wos-ask-panel select{min-height:44px;min-width:44px;border:1px solid var(--line,#394449);border-radius:6px;padding:8px 12px;background:var(--card-2,#20272e);color:var(--primary,#81bcff);font:inherit;white-space:normal;overflow-wrap:anywhere;cursor:pointer;max-width:100%}
 .wos-ask-panel button:disabled{opacity:.5;cursor:default}.wos-ask-panel nav,.ask-answer{display:grid;gap:8px;margin:12px 0}.ask-answer button{text-align:left}
+.wos-ask-panel [data-ask-missing]{display:block;background:transparent;border-color:transparent;color:#81bcff;text-decoration:underline;text-align:left;padding:8px 0}
+html[data-wos-scheme=light] .wos-ask-panel [data-ask-missing]{color:#075a9c}
 .wos-ask-panel label{display:grid;gap:6px}.wos-ask-panel textarea{box-sizing:border-box;width:100%;min-height:72px;resize:vertical;background:var(--card-2,#20272e);color:inherit;border:1px solid var(--line,#394449);border-radius:6px;padding:10px;font:inherit}
 .wos-ask-panel form>div{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}.wos-ask-panel :is(button,textarea,select):focus-visible{outline:2px solid var(--primary,#81bcff);outline-offset:2px}
 .wos-ask-panel .ws-icon,#wos-ask-open .ws-icon{width:20px;height:20px;filter:invert(1)}
