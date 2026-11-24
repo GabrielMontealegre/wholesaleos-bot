@@ -1,5 +1,33 @@
 # Decisions
 
+ASSUMED 2026-11-23 UTC: B28d adds first price-report entry through the existing
+signed-admin import preview/commit, not a new route, calculator or business writer.
+New mode requires exact own new_pipeline_price_report=true, one reviewed-deal
+target plus buyer, no prior report ID or target/buyer pair. Blank explicit refs,
+prices/costs/share/source/evidence/UTC capture and next review date/action; no
+asking/criteria/Now fallback. Waiting on Gabriel / decision_needed is an explicit
+operational review task, not a negotiation event or reported outcome. The UI shows
+this classification before preview. Preview simulates ingestion without writes,
+returns only bounded canonical property/buyer names and refs in the signed POST,
+then requires a second unchecked target confirmation. Commit requires exact
+price_target_reviewed=true and revalidates the existing report-review context
+version, eligibility, no prior pair and latest revision. Changed input or another
+preview clears confirmation. No overwrite, approval, funds, offer or send; only
+pending imported-report history and existing activity append. Canonical lead,
+buyer, deal and calendar records unchanged. D069 lock policy, strict signed guard,
+paired ingress, generic imports and existing editor remain unchanged.
+Trace: Pipeline header -> newPriceDraft -> assistant-find-routes -> buyer-find-
+import prepare/commit -> pipeline-reports.validate/upsert -> pipeline-workspace,
+pipeline-report-review and shared profit readers. Existing editableRevision and
+report-review version bind canonical target/buyer/source context; no new gate.
+Existing assertion tests/pipeline-workspace-ui.test.js header text-fit now checks
+all header commands instead of a single button, retaining its original fit intent.
+New pure/HTTP and actual synthetic1366/400/412 tests pass; existing editor/header
+regressions pass. First UI recovery failed on Playwright datetime-local seconds
+format before preview; minute-format fixture correction retains source instant
+and all safety assertions. Nine synthetic screenshots inspected. Local full suite
+running once; hosted exact-head gate and release still pending. Full B28 open.
+
 VERIFIED 2026-11-22 UTC: B28c555 RELEASED28736bae77fec099bcf46e7d59365b0ce2eb4d60,
 head556ee9c0d378d31cf432e1bef19e238fd8061243 hosted45030593346 PASS350/0/0.
 Auto7980028107 SUCCESS; public health200/exact dashboard/app/pipelinev6/report-

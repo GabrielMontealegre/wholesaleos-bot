@@ -13,6 +13,15 @@ function editableRevision(store, revision, now) {
   if(view.coverage.invalid_reports||view.coverage.conflicting_report_ids||reviewed.coverage.invalid_reviews||!item||item.address_withheld||review?.can_review!==true||review.conflict)fail('find_pipeline_changed',409);
   return {report:(store.pipeline_reports || []).find(row=>row.id===revision)?.report,version:review.version};
 }
+function newPriceContext(store, item, now) {
+  const view=pipeline.project(store,{now});
+  if(view.coverage.invalid_reports||view.coverage.conflicting_report_ids||(store.pipeline_reports||[]).some(row=>row.report?.report_id===item.report_id||row.report?.record_ref===item.record_ref&&row.report?.buyer_ref===item.buyer_ref))fail('find_pipeline_changed',409);
+  const draft=ingestMixed(store,[item],{now,operatorId:'preview',createId:()=> '__preview_price'}).store;
+  const projected=pipeline.project(draft,{now}),report=projected.items.find(row=>row.report_id===item.report_id);
+  if(!report||report.target.kind!=='deal'||!report.buyer||report.address_withheld||report.address_needs_source_proof)fail('find_pipeline_changed',409);
+  const revision=editableRevision(draft,report.id,now);
+  return {version:revision.version,target:{record_ref:report.target.ref,name:report.name,buyer_ref:report.buyer.ref,buyer_name:report.buyer.name}};
+}
 
 function validateAgentItems(body, now) {
   if (!body || typeof body !== 'object' || Array.isArray(body) || Object.keys(body).some(key => key !== 'items')) fail('find_request_invalid');
@@ -25,8 +34,9 @@ function validateAgentItems(body, now) {
 }
 
 function prepareImport(store, body, { now }) {
-  if (!body || typeof body !== 'object' || Array.isArray(body) || Object.keys(body).some(key => !['items','expected_pipeline_revision','expected_pipeline_version'].includes(key))) fail('find_request_invalid');
+  if (!body || typeof body !== 'object' || Array.isArray(body) || Object.keys(body).some(key => !['items','expected_pipeline_revision','expected_pipeline_version','new_pipeline_price_report'].includes(key))) fail('find_request_invalid');
   if(Object.hasOwn(body,'expected_pipeline_version')!==Object.hasOwn(body,'expected_pipeline_revision'))fail('find_request_invalid');
+  const creating=Object.hasOwn(body,'new_pipeline_price_report');if(creating&&(body.new_pipeline_price_report!==true||Object.hasOwn(body,'expected_pipeline_revision')))fail('find_request_invalid');
   if (Buffer.byteLength(JSON.stringify(body)) > finds.MAX_REQUEST_BYTES) fail('find_request_too_large', 413);
   if (!Array.isArray(body.items) || !body.items.length || body.items.length > finds.MAX_ITEMS) fail('find_item_limit');
   const items = [];
@@ -43,6 +53,11 @@ function prepareImport(store, body, { now }) {
     catch (error) { rejected.push({ item: index + 1, reason: /^find_[a-z_]+$/.test(error.code || '') ? error.code : 'find_item_invalid' }); }
   });
   const latestRevision = id => (store.pipeline_reports || []).filter(row=>row.report?.report_id===id).sort((a,b)=>b.report.captured_at.localeCompare(a.report.captured_at))[0]?.id || null;
+  let newPrice=null;
+  if(creating){
+    if(body.items.length!==1||items.length!==1||items[0].kind!=='pipeline_item'||!items[0].buyer_ref||items[0].waiting_on!=='gabriel'||items[0].reason_code!=='decision_needed'||items[0].conversation_id||items[0].asked_at||items[0].offer_sent_at||items[0].last_answer||['last_offer','seller_price','walk_away'].some(key=>items[0][key]!==null))fail('find_request_invalid');
+    newPrice=newPriceContext(store,items[0],now);
+  }
   if(Object.hasOwn(body,'expected_pipeline_revision')){
     if(typeof body.expected_pipeline_revision!=='string'||! /^[a-f0-9]{64}$/.test(body.expected_pipeline_revision)||typeof body.expected_pipeline_version!=='string'||! /^[a-f0-9]{64}$/.test(body.expected_pipeline_version)||body.items.length!==1||items.length!==1||items[0].kind!=='pipeline_item')fail('find_request_invalid');
     if(latestRevision(items[0].report_id)!==body.expected_pipeline_revision)fail('find_pipeline_changed',409);
@@ -61,16 +76,18 @@ function prepareImport(store, body, { now }) {
   });
   const deal_versions = items.filter(item=>item.kind==='deal_update').map(item=>({ref:item.ref,value:JSON.stringify((store.reviewed_deals || []).find(d=>activity.reference(d)===item.ref))}));
   const pipeline_versions=items.filter(item=>item.kind==='pipeline_item').map(item=>({report_id:item.report_id,revision:latestRevision(item.report_id)}));
-  return { items, deal_versions, pipeline_versions, pipeline_editor_revision:body.expected_pipeline_revision || null, pipeline_editor_version:body.expected_pipeline_version || null, summary: { counts, rejected } };
+  return { items, deal_versions, pipeline_versions, pipeline_editor_revision:body.expected_pipeline_revision || null, pipeline_editor_version:body.expected_pipeline_version || null, new_pipeline_price_context:newPrice, summary: { counts, rejected, ...(newPrice?{price_report_target:newPrice.target}:{}) } };
 }
 
-function commitImport(store, plan, { now, operatorId, createId, bulkApprove = false }) {
+function commitImport(store, plan, { now, operatorId, createId, bulkApprove = false, priceTargetReviewed = false }) {
   if (!plan.items.length) fail('find_import_empty');
+  if(plan.new_pipeline_price_context&&priceTargetReviewed!==true)fail('find_pipeline_target_review_required',409);
   for(const version of plan.pipeline_versions || []){
     const current=(store.pipeline_reports || []).filter(row=>row.report?.report_id===version.report_id).sort((a,b)=>b.report.captured_at.localeCompare(a.report.captured_at))[0]?.id || null;
     if(current!==version.revision)fail('find_pipeline_changed',409);
   }
   if(plan.pipeline_editor_revision&&editableRevision(store,plan.pipeline_editor_revision,now).version!==plan.pipeline_editor_version)fail('find_pipeline_changed',409);
+  if(plan.new_pipeline_price_context&&newPriceContext(store,plan.items[0],now).version!==plan.new_pipeline_price_context.version)fail('find_pipeline_changed',409);
   for (const version of plan.deal_versions || []) {
     if (JSON.stringify((store.reviewed_deals || []).find(d=>activity.reference(d)===version.ref)) !== version.value) fail('find_deal_update_conflict',409);
   }

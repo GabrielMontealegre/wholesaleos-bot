@@ -7,7 +7,7 @@
  const amount=v=>v&&Number.isFinite(v.low)&&Number.isFinite(v.high)?v.low===v.high?dollars(v.low):dollars(v.low)+' to '+dollars(v.high):'Not established';
  const safe=v=>{try{const u=new URL(v);return u.protocol==='https:'&&!u.username&&!u.password?u.href:'';}catch{return '';}};
  function markup(data,{busy=false,error='',clock}={}){
-  const head='<header class="pipeline-heading"><div><h2>Pipeline</h2><p>Recorded work, why it is waiting, and the next review date.</p></div><button type="button" data-pipe-refresh'+(busy?' disabled':'')+' title="Reload recorded workflow; nothing is sent or approved">Refresh</button></header>';
+  const head='<header class="pipeline-heading"><div><h2>Pipeline</h2><p>Recorded work, why it is waiting, and the next review date.</p></div><div class="pipeline-heading-actions"><button type="button" data-pipe-new-prices'+(busy||!data?' disabled':'')+'>Add price report</button><button type="button" data-pipe-refresh'+(busy?' disabled':'')+' title="Reload recorded workflow; nothing is sent or approved">Refresh</button></div></header>';
   if(!data)return '<section id="wos-pipeline-workspace">'+head+'<p role="status">'+esc(error||'Loading recorded workflow...')+'</p></section>';
   const tabs=[['all','Open work'],...Object.entries(data.groups)].map(([key,label])=>'<button type="button" role="tab" aria-selected="'+(data.group===key)+'" data-pipe-group="'+key+'"'+(busy?' disabled':'')+'><span>'+esc(label)+'</span><strong>'+esc(key==='all'?data.summary.open:data.counts[key])+'</strong></button>').join('');
   const rows=data.items.map(item=>{
@@ -28,7 +28,7 @@
  function clear(){++sequence;controller?.abort();document.getElementById('pipeline-review-dialog')?.close();data=null;busy=false;error='Dashboard login required.';paint();}
  async function load(){if(!document.getElementById('wos-pipeline-workspace')||!actor())return;const identity=actor(),ticket=++sequence;controller?.abort();controller=new AbortController();busy=true;error='';paint();try{const r=await fetch('/api/dashboard/pipeline-workspace?'+new URLSearchParams({group,offset,limit:50}),{cache:'no-store',signal:controller.signal}),v=await r.json();if(ticket!==sequence||actor()!==identity)return;if(!r.ok||v.source_kind!=='derived_workflow'||v.view_kind!=='pipeline_workspace'||v.read_only!==true||!Array.isArray(v.items)||!v.groups||!v.counts||!v.summary)throw Error();data=v;}catch{if(ticket===sequence){data=null;error='Pipeline unavailable. Check your login, then refresh. Nothing was changed.';}}finally{if(ticket===sequence){busy=false;paint();}}}
  root.renderPipeline=function(){setTimeout(load,0);return markup(data,{busy,error,clock:root.wosCardClock});};
- root.wosPipelineWorkspace={itemForReview:key=>actor()&&!busy?data?.items.find(r=>r.key===key&&r.kind==='pipeline_report'):null,reload:load};
+ root.wosPipelineWorkspace={itemForReview:key=>actor()&&!busy?data?.items.find(r=>r.key===key&&r.kind==='pipeline_report'):null,canAddPriceReport:()=>!!(actor()&&!busy&&data?.source_kind==='derived_workflow'),reload:load};
  for(const name of ['signOutDashboard','showDashboardLogin']){const old=root[name];if(old)root[name]=function(){clear();return old.apply(this,arguments);};}
  document.addEventListener('click',e=>{
   if(e.target.closest('[data-pipe-refresh]')){load();return;}
