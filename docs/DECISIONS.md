@@ -1,5 +1,17 @@
 # Decisions
 
+VERIFIED 2026-11-24 UTC: B28d557 RELEASED05d1d6a7cbc8cd78395caafc684961e131c53469,
+exactheadb3217f96b7e9abe2dd4aab2d38e8e421fa867851 hosted45338416313 PASS352/0/0.
+Auto8020531350 SUCCESS; public health200/exact dashboard/app/pipelinev7/report-
+reviewv4/stylev4 PASS, auth_controls_checked=false. No private production data,
+login/UI or real import/provider/business action. Local321/31/0 retained failed,
+no unchanged retry or speculative attribution beyond observed missing dependencies.
+Pure/HTTP/new UI and existing editor/header checks pass, nine synthetic screens
+inspected. Strict signed import auth/D069/paired ingress/source/calendar/value
+gates unchanged. First report is reported/pending plus operational review task,
+not negotiation/approval/funds. Full B28 remains open for other surfaces. This
+docs-only record reuses completed local runtime evidence; own hosted gate required.
+
 ASSUMED 2026-11-23 UTC: B28d adds first price-report entry through the existing
 signed-admin import preview/commit, not a new route, calculator or business writer.
 New mode requires exact own new_pipeline_price_report=true, one reviewed-deal
