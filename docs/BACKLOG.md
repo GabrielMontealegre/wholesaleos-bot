@@ -1,5 +1,22 @@
 # Backlog
 
+## Latest Run Summary (2026-11-24 UTC, B28d Released)
+
+B28d [#557](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/557)
+RELEASED05d1d6a7cbc8cd78395caafc684961e131c53469. Exact headb3217f9 hosted
+45338416313 PASS352/0/0; auto8020531350 SUCCESS; public health200 and exact
+dashboard/app/pipelinev7/report-reviewv4/stylev4 static checks PASS. Initial
+price-report entry now works without an existing report, through strict signed
+import preview/commit, explicit source facts/review task, canonical deal/buyer
+confirmation and stale/pair/version refusal. One pending append, no approval,
+funds, offer, send or canonical business-record change. Nine inspected synthetic
+1366/400/412 proofs, pure/HTTP and old-editor/header regressions PASS. Local full
+321/31/0 remains FAILED with missing-dependency errors observed; no retry/waiver.
+No private production endpoint/body/login/UI read, real import/provider/business
+action or manual Railway. Full B28 IN PROGRESS: remaining Ask/approval/other
+missing-value surfaces. This docs-only record does not repeat the local suite;
+its own exact-head hosted gate remains required.
+
 ## Latest Run Summary (2026-11-23 UTC, B28d In Progress)
 
 Initial price-report entry is implemented locally through existing signed import
@@ -542,6 +559,12 @@ Acceptance
   missing owner.
 
 ## B-28 · Missing numbers become actions; one profit number · IN PROGRESS
+
+B28b #553 and B28c #555 are released: shared Pipeline/report profit and existing
+report editing. B28d [#557](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/557)
+released05d1d6a: first report entry with signed preview, canonical target confirmation,
+explicit source facts and append-only save; hosted352/0/0, auto/public proof PASS.
+Remaining Ask/approval/other missing-value actions still required; not full DONE.
 
 B28a [#551](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/551) released:
 one sourced estimated-profit headline and source/cost/split disclosure, Today/JV
