@@ -73,16 +73,17 @@ function registerAssistantFindRoutes(app, { db, requireAdmin, requireImportAdmin
     try {
       const body = req.body;
       if (!body || typeof body !== 'object' || Array.isArray(body) || typeof body.preview_id !== 'string' ||
-          typeof body.bulk_approve !== 'boolean' || Object.keys(body).some(key => !['preview_id', 'bulk_approve'].includes(key))) {
+          typeof body.bulk_approve !== 'boolean' || Object.keys(body).some(key => !['preview_id', 'bulk_approve','price_target_reviewed'].includes(key)) || Object.hasOwn(body,'price_target_reviewed')&&typeof body.price_target_reviewed!=='boolean') {
         return res.status(400).json({ code: 'find_import_request_invalid' });
       }
       const at = now();
       expirePreviews(Date.parse(at));
       const preview = previews.get(body.preview_id);
       if (!preview || preview.actor !== req.currentUser.id) return res.status(409).json({ code: 'find_preview_required' });
+      if(!preview.plan.new_pipeline_price_context&&Object.hasOwn(body,'price_target_reviewed'))return res.status(400).json({code:'find_import_request_invalid'});
       const original=db.readDBStrict();
       const result = imports.commitImport(original, preview.plan, {
-        now: at, operatorId: req.currentUser.id, createId: () => 'BF' + crypto.randomUUID(), bulkApprove: body.bulk_approve
+        now: at, operatorId: req.currentUser.id, createId: () => 'BF' + crypto.randomUUID(), bulkApprove: body.bulk_approve, priceTargetReviewed:body.price_target_reviewed===true
       });
       db.writeDB(result.store);
       previews.delete(body.preview_id);

@@ -1,5 +1,17 @@
 # Backlog
 
+## Latest Run Summary (2026-11-23 UTC, B28d In Progress)
+
+Initial price-report entry is implemented locally through existing signed import
+preview/commit. Explicit blank source facts and next review task, canonical deal/
+buyer preview, unchecked target confirmation, stale/pair/version refusal and one
+pending append; no business-record mutation or implicit approval/funds/offer.
+New pure/HTTP and actual synthetic1366/400/412 checks plus existing editor/header
+regressions PASS. Nine synthetic screenshots inspected. Full local suite running
+once; exact-head hosted gate, PR, merge and automatic/public verification pending.
+No production private endpoint/body/login/UI or real import/provider/write used.
+Full B28 remains IN PROGRESS for remaining Ask/approval/missing-value surfaces.
+
 ## Latest Run Summary (2026-11-22 UTC, B28c Released)
 
 B28c [#555](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/555)
