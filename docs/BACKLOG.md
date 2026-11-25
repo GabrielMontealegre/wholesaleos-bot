@@ -1,5 +1,16 @@
 # Backlog
 
+## Latest Run Summary (2026-11-24 UTC, B28e Ask In Progress)
+
+Ask missing snapshot values now name the gap and offer an existing canonical
+deal/buyer workspace action. No new money logic, private data field or writer;
+zeros/Preliminary, unverified funds and unsigned JV privacy remain. All six deal
+actions and buyer-funds action pass actual synthetic1366/400/412 click-through,
+forged/ambiguous/session/escaping negatives; classic/native Ask regressions PASS.
+Six final synthetic screens inspected; quiet secondary44px actions verified.
+Full local/hosted gates and automatic/public release proof pending. B28 remains
+IN PROGRESS for approvals/Pipeline/other remaining missing-value surfaces.
+
 ## Latest Run Summary (2026-11-24 UTC, B28d Released)
 
 B28d [#557](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/557)

@@ -1,5 +1,29 @@
 # Decisions
 
+ASSUMED 2026-11-24 UTC: B28e scopes missing-value actions to Ask, using existing
+canonical workspace navigation, not a new editor/calculator/writer or private
+DTO field. Say "Missing here" for asking, reviewed value evidence, repairs,
+recorded offer, buyer rule/room and reviewed funds evidence: the snapshot is
+incomplete and cannot establish that a fact does not exist elsewhere. Its offer
+projection deliberately has no offer field, so never claim an offer was not sent.
+Funds remain unverified; workflow approval/buy-box matches never establish them.
+Numeric zero, canonical value tier/Preliminary and existing privacy/readiness
+gates remain. Each secondary44px action calls existing openRecord, which requires
+current actor and exactly one loaded kind/id before closing Ask/opening the
+canonical deal/buyer workspace. No send/approve/import/price/funds write or fetch
+on initial page load, no extra snapshot/record fields. Existing native host and
+classic navigation carry their own current-record/privacy gates.
+Trace: reviewed-deals.validate/ingest/update/evaluate and assistant-finds criteria
+-> ask-workspace.build canonical asking/value/repair_estimate/matches/funds text
+-> wos-ask-demo.context -> existing openRecord -> native WOSAskHost.openRecord
+or classic openReviewedDeal/openBuyerFind. Writers/backend/read DTO unchanged.
+Changed assertions tests/ask-demo-ui.test.js:39 and:47 replace old offer/funds
+placeholders with explicit snapshot-missing wording, retaining readonly/funds
+proof intent. New actual synthetic tests click every correction, reject forged
+kind/id and ambiguous identity, preserve zero/Preliminary/unsigned JV, escape
+content and clear actions on session end; no writes/external requests. Full B28
+still open outside this Ask slice. Full local/hosted/release gates pending.
+
 VERIFIED 2026-11-24 UTC: B28d557 RELEASED05d1d6a7cbc8cd78395caafc684961e131c53469,
 exactheadb3217f96b7e9abe2dd4aab2d38e8e421fa867851 hosted45338416313 PASS352/0/0.
 Auto8020531350 SUCCESS; public health200/exact dashboard/app/pipelinev7/report-
