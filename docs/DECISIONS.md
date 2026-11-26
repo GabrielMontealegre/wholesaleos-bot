@@ -1,5 +1,18 @@
 # Decisions
 
+VERIFIED 2026-11-26 UTC: B28f561 RELEASED936c9d2b48c639e0863604fdc1449160a65a696f,
+headcceab6276d2d8b3c35030b38ee29660d431f9f1c hosted45743268372 PASS355/0/0.
+Auto8075162655 SUCCESS; public health200/exact dashboard/app/ApprovalJSv5 PASS,
+auth_controls_checked=false. No private production endpoint/body/login/UI or real
+import/provider/business action. Pure/actual three-size exact-target/negative
+tests, old brief/UI regressions and three inspected screenshots PASS. Local
+324/31/0 total355 retained FAILED with dependency errors observed; no retry.
+First new UI failure retained; only new scaffolding corrected to same-store
+canonical destination and stronger exact-ID assertion. No backend/DTO/writer/
+calculator/approval/source/value gate change. Full B28 open beyond pending-deal
+approval gaps. Docs-only release record uses completed local runtime evidence;
+own exact-head hosted all-green gate remains required.
+
 ASSUMED 2026-11-26 UTC: B28f scopes approval missing-value actions to pending
 deals. Existing canonical evaluation decides asking, reviewed value evidence,
 buyer rule and estimated room; raw repair_estimate determines whether the
