@@ -1,5 +1,17 @@
 # Decisions
 
+VERIFIED 2026-11-25 UTC: B28e559 RELEASED154faebe87ee3010f005cfb2f1762621716370c4,
+headc9dd4bce5d2a0a19334b44b28be7643b6cef5162 hosted45505111451 PASS353/0/0.
+Auto8048317083 SUCCESS; public health200/exact dashboard/app/Askv6/uiKitv6 PASS,
+auth_controls_checked=false. No private production endpoint/body/login/UI or real
+import/provider/business action. New three-size click-through/negative tests,
+classic/native Ask regressions and six inspected screens PASS. No backend/DTO/
+writer/calculator/gate change. At this record's creation the original local full
+suite is still running: missing dependencies, desk-shell navigation and Pipeline
+editor locator timeouts retained; no retry or cause claim.
+Full B28 remains open outside Ask. Docs-only release record uses existing local
+runtime evidence; requires its own exact-head hosted gate before merge.
+
 ASSUMED 2026-11-24 UTC: B28e scopes missing-value actions to Ask, using existing
 canonical workspace navigation, not a new editor/calculator/writer or private
 DTO field. Say "Missing here" for asking, reviewed value evidence, repairs,

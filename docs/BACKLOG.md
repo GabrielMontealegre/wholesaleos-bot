@@ -1,5 +1,22 @@
 # Backlog
 
+## Latest Run Summary (2026-11-25 UTC, B28e Ask Released)
+
+B28e [#559](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/559)
+RELEASED154faebe87ee3010f005cfb2f1762621716370c4. Exact headc9dd4bc hosted
+45505111451 PASS353/0/0; auto8048317083 SUCCESS; public health200/exact dashboard/
+app/Askv6/uiKitv6 static checks PASS. Ask names missing snapshot values and opens
+the existing canonical deal/buyer workspace; no new private field, money engine
+or writer. Every correction click and forged/ambiguous/session/escaping/zero/
+Preliminary/unsigned-JV negatives pass at1366/400/412, six screenshots inspected.
+Existing classic/native Ask regressions pass. At this record's creation the
+original local full suite is still running: missing dependencies, desk-shell
+page.goto and Pipeline editor locator timeouts retained. No retry, cancellation
+or speculative cause. Hosted exact-head gate is authoritative; this docs-only
+record does not repeat the local runtime suite and requires its own hosted gate.
+No production private endpoint/body/login/UI or real import/provider/business
+action. Full B28 remains IN PROGRESS for approvals/Pipeline/other missing values.
+
 ## Latest Run Summary (2026-11-24 UTC, B28e Ask In Progress)
 
 Ask missing snapshot values now name the gap and offer an existing canonical
@@ -570,6 +587,11 @@ Acceptance
   missing owner.
 
 ## B-28 · Missing numbers become actions; one profit number · IN PROGRESS
+
+B28e [#559](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/559) released
+154faeb: Ask snapshot-missing actions, existing canonical workspace navigation,
+zero/Preliminary/funds/privacy preserved; hosted353/0/0 and automatic/public proof
+PASS. Approvals/Pipeline/other missing-value actions remain; this is not full DONE.
 
 B28b #553 and B28c #555 are released: shared Pipeline/report profit and existing
 report editing. B28d [#557](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/557)
