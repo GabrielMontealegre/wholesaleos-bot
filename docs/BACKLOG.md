@@ -1,5 +1,17 @@
 # Backlog
 
+## Latest Run Summary (2026-11-26 UTC, B28g Pipeline In Progress)
+
+Unavailable derived buyer criteria now name the missing ceiling and offer
+existing exact buyer/deal workspace actions. Both source inputs can matter;
+no invented cause, price, profit, funds, source or new calculator/writer/DTO.
+Known amounts/source links remain; current actor/key/target guards refuse stale,
+forged, ambiguous and non-admin navigation. Pure and actual1366/400/412 same-store
+canonical-reader checks plus existing buyer/Pipeline UI PASS; six screens
+inspected. Four new test-scaffolding failures retained and corrected without
+runtime/safety-gate changes. Full local/hosted/release gates pending. Full B28
+remains IN PROGRESS for other remaining missing-value surfaces.
+
 ## Latest Run Summary (2026-11-26 UTC, B28f Approvals Released)
 
 B28f [#561](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/561)

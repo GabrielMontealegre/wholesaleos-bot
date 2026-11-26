@@ -1,5 +1,34 @@
 # Decisions
 
+ASSUMED 2026-11-26 UTC: B28g addresses Pipeline's unavailable derived buyer
+criteria ceiling with explicit Missing here copy and existing buyer/deal record
+navigation. Do not identify the buyer as the sole missing input: canonical
+criteria require current buyer rules AND reviewed deal comps/repairs/source.
+Review buyer criteria opens the exact buyer; Review deal evidence opens the
+exact deal when one is linked. Commands require current admin actor, not busy,
+one loaded pipeline-report key, unavailable current ceiling and matching target
+ID/kind. No guesses from labels, no direct writes or new private field/route.
+Known ceilings retain existing amount/source/Open buyer display; zero display
+behavior and all canonical calculation/provenance/funds gates stay unchanged.
+Criteria remain derived, not agreed prices, net profit, confirmed buyers/funds.
+The buyer command preserves its existing data-pipe-buyer marker for navigation
+compatibility; no duplicate unknown-ceiling command remains at the row bottom.
+Trace: assistant-finds validate/ingest/update criteria + reviewed-deals current
+evaluate -> pipeline-workspace buyerCriteria -> browser Pipeline ceiling/missing
+actions -> existing openBuyerFind/openReviewedDeal -> actual canonical readers.
+No backend/DTO/writer/calculator change. Existing report editor/review unchanged.
+Changed display assertion tests/pipeline-buyer-context-ui.test.js:19: old Not
+established placeholder -> explicit Missing here; unknown-profit intent retained.
+New focused scaffolding failures retained: incomplete unit buyer lacked reader
+metadata (use actual importer); handwritten deal stub passed URL strings as
+booleans (use actual reviewed-deal router); exact currency expected no cents
+(match existing cents); 401 assumed fallback-message ownership (assert private
+rows/actions cleared instead). No runtime edits for these failures, no safety
+assertions removed. Same-store exact-target, zero/known/missing/source/profit,
+forged/ambiguous/non-admin/auth/purity and existing buyer/Pipeline UI tests PASS
+at1366/400/412; six synthetic screens inspected. Full local/hosted/release pending.
+Full B28 remains open for other remaining missing-value surfaces.
+
 VERIFIED 2026-11-26 UTC: B28f561 RELEASED936c9d2b48c639e0863604fdc1449160a65a696f,
 headcceab6276d2d8b3c35030b38ee29660d431f9f1c hosted45743268372 PASS355/0/0.
 Auto8075162655 SUCCESS; public health200/exact dashboard/app/ApprovalJSv5 PASS,
