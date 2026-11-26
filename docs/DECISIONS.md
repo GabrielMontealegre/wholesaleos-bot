@@ -1,5 +1,26 @@
 # Decisions
 
+ASSUMED 2026-11-26 UTC: B28h is limited to the JV desk's missing asking price,
+reviewed value range and current derived buyer ceiling. Name the gap without
+blaming one input as the cause. Review recorded deal inputs focuses the existing
+complete deal evidence section (comps/source/repairs/buyer rules), not an implied
+editing/saving command. No new writer/DTO/calculator/import or source value.
+Require current unlocked admin, not loading, active exact ID, one loaded row,
+current JV workflow and still-missing inputs. Reject DOM/target ID disagreement.
+Known amounts and zero rendering, Preliminary/Texas value labels, unsigned
+address privacy, consent/readiness/intro/funds gates remain unchanged.
+Trace: reviewed-deals validate/validateDealUpdate -> ingest/applyDealUpdate/update source
+records -> compValue/ceiling/evaluate -> list/current request-time private DTO ->
+reviewed-deal-routes -> Today card -> wosJVDesk render -> current loaded-row
+guard -> existing complete-card details/summary focus. UI kit adds classes and
+JV list tools decorate filters; actual full-index render tested, not assumed.
+No existing assertions changed. Pure spies cover network/clock/writes; actual
+1366/400/412 known/missing/exact focus/forged/duplicate/non-admin/401/geometry,
+unsigned/privacy/no-consent/no-write checks PASS. Existing JV/plain-card PASS.
+Three captures inspected after moving screenshots before evidence-scroll action;
+the first test passed but its screenshots hid the labels, so capture timing only
+was corrected. Full local/hosted/release gates pending; full B28 not DONE.
+
 VERIFIED 2026-11-26 UTC: B28g563 RELEASED3ce3d86b0f15d751dc297131742bf7b527b4feb4,
 headecca34aea2c5f55a8b99aac6a36d8a35aa8d2b1f hosted45749547752 PASS356/0/0.
 Auto8076012162 SUCCESS; public health200/exact dashboard/app/PipelineJSv8 PASS,
