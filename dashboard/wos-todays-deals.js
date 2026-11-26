@@ -133,6 +133,15 @@
   document.addEventListener('change', function (e) { if (e.target.matches('[data-deal-filter]')) { filters.record_id=''; filters[e.target.dataset.dealFilter] = e.target.type === 'checkbox' ? e.target.checked : e.target.value; } });
   document.addEventListener('keydown',function(e){if(!e.target.matches('#wos-todays-deals [data-deal-card-open]')||!['Enter',' '].includes(e.key))return;e.preventDefault();root.openReviewedDeal(e.target.closest('[data-deal-id]').dataset.dealId);});
   document.addEventListener('click', function (e) {
+    var review=e.target.closest('#wos-todays-deals .td-open-view .jv-desk [data-jv-money-review]');
+    if(review){
+      if(loading || !root.APP?.unlocked || root.APP?.currentUser?.role!=='admin' || !root.APP.currentUser.id)return;
+      var id=review.dataset.jvMoneyReview, rows=(data?.items||[]).filter(function(row){return row.id===id;});
+      if(id!==active || rows.length!==1 || rows[0].deal_kind!=='jv' || !rows[0].jv_workflow || !root.wosJVDesk.missingInputs(rows[0]) || review.closest('[data-deal-id]').dataset.dealId!==id)return;
+      var evidence=review.closest('.td-detail').querySelector(':scope > details');
+      if(evidence){evidence.open=true;var summary=evidence.querySelector(':scope > summary');summary.focus({preventScroll:true});summary.scrollIntoView({block:'start'});}
+      return;
+    }
     var removeFilter=e.target.closest('#wos-todays-deals [data-list-filter-remove]');if(removeFilter){updateLocation(removeFilter.dataset.listFilterRemove,'');return;}
     if(e.target.closest('#wos-todays-deals [data-list-filter-clear]')){updateLocation('state','');return;}
     var matches=e.target.closest('[data-deal-matches]');if(matches){root.openReviewedDeal(matches.closest('[data-deal-id]').dataset.dealId,{matches:true});return;}

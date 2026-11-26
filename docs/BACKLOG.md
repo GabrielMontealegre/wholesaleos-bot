@@ -1,5 +1,19 @@
 # Backlog
 
+## Latest Run Summary (2026-11-26 UTC, B28h JV Inputs In Progress)
+
+JV workspace missing asking/value/buyer-ceiling numbers now name the input gap.
+One Review recorded deal inputs command focuses the current canonical deal's
+existing complete evidence section, not a new editor or writer. Current admin,
+not-loading, active exact ID and unique loaded-row guards reject forged/stale/
+ambiguous/non-admin navigation. Known/zero/Preliminary amounts, signed-address
+privacy, buyer criteria versus profit/funds, readiness and consent remain.
+Pure spies and actual1366/400/412 exact-focus/negative checks plus existing JV/
+plain-card regressions PASS; three corrected synthetic captures inspected.
+Only screenshot capture timing changed after the first successful UI run; no
+failed test or runtime fix for green. Full local/hosted/release gates pending.
+Full B28 remains IN PROGRESS, including Today placeholders outside the JV desk.
+
 ## Latest Run Summary (2026-11-26 UTC, B28g Pipeline Released)
 
 B28g [#563](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/563)
@@ -652,6 +666,10 @@ Acceptance
   missing owner.
 
 ## B-28 · Missing numbers become actions; one profit number · IN PROGRESS
+
+B28h in progress: JV desk input-specific gaps and a guarded existing evidence
+focus command. No new calculator, fields, writer or safety gate. Full suite and
+release pending; other Today missing-value faces still require a bounded slice.
 
 B28g [#563](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/563) released
 3ce3d86: Pipeline missing criteria inputs -> canonical buyer/deal navigation;
