@@ -1,5 +1,23 @@
 # Backlog
 
+## Latest Run Summary (2026-11-26 UTC, B28f Approvals Released)
+
+B28f [#561](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/561)
+RELEASED936c9d2b48c639e0863604fdc1449160a65a696f. Exact headcceab62 hosted
+45743268372 PASS355/0/0; auto8075162655 SUCCESS; public health200 and exact
+dashboard/app/ApprovalJSv5 static checks PASS. Pending deal approvals name the
+missing values and open the existing canonical workspace with admin/unique ID/
+version guards. No approval consent, decision, backend/DTO/calculator/writer or
+source/comp/value gate change. Zero/Preliminary/split-share/unsigned JV remain.
+Pure spies, actual1366/400/412 exact-target and negative tests plus old brief/UI
+regressions PASS; three inspected synthetic screenshots. Original local full
+324/31/0 total355 remains FAILED with dependency errors observed; no retry/waiver.
+First new UI fixture identity mismatch retained; same-store canonical destination
+correction strengthened exact-ID assertion. No private production endpoint/body/
+login/UI read, real import/provider/business action or manual Railway operation.
+Full B28 IN PROGRESS: remaining Pipeline/other missing-value surfaces. This
+docs-only record reuses completed local runtime evidence; own hosted gate required.
+
 ## Latest Run Summary (2026-11-26 UTC, B28f Approvals In Progress)
 
 Pending deal approvals name missing values and provide an explicit existing
@@ -602,6 +620,11 @@ Acceptance
   missing owner.
 
 ## B-28 · Missing numbers become actions; one profit number · IN PROGRESS
+
+B28f [#561](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/561) released
+936c9d2: pending-deal approval missing-value actions, unchanged explicit review
+and server gates; hosted355/0/0, automatic/public proof PASS. Remaining Pipeline/
+other missing-value actions still required; not full DONE.
 
 B28e [#559](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/559) released
 154faeb: Ask snapshot-missing actions, existing canonical workspace navigation,
