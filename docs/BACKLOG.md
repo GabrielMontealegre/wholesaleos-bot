@@ -1,5 +1,25 @@
 # Backlog
 
+## Latest Run Summary (2026-11-26 UTC, B28g Pipeline Released)
+
+B28g [#563](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/563)
+RELEASED3ce3d86b0f15d751dc297131742bf7b527b4feb4. Exact headecca34a hosted
+45749547752 PASS356/0/0; auto8076012162 SUCCESS; public health200/exact dashboard/
+app/PipelineJSv8 static checks PASS. Unavailable derived criteria now link to
+existing exact buyer/deal inputs, guarded by current actor/report key/target.
+Known amounts/source display and criteria-versus-price/profit/funds distinction
+remain; no backend/DTO/writer/calculator/source/value/approval gate change.
+Pure/actual1366/400/412 same-store destination and negative tests plus old buyer/
+Pipeline regressions PASS; six inspected screens. Original local325/31/0 total356
+remains FAILED with dependency errors observed, no retry/waiver. Four focused
+test-scaffolding failures retained; actual importer/router, existing cents and
+private-clearing assertions corrected without runtime/safety changes.
+No private production endpoint/body/login/UI, real import/provider/business
+action or manual Railway. Full B28 IN PROGRESS: review remaining active Today/JV
+missing-number displays and their UI overrides before claiming complete. No next
+slice runtime started. This docs-only record requires its own hosted gate and
+reuses completed local runtime evidence without an unchanged rerun.
+
 ## Latest Run Summary (2026-11-26 UTC, B28g Pipeline In Progress)
 
 Unavailable derived buyer criteria now name the missing ceiling and offer
@@ -632,6 +652,11 @@ Acceptance
   missing owner.
 
 ## B-28 · Missing numbers become actions; one profit number · IN PROGRESS
+
+B28g [#563](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/563) released
+3ce3d86: Pipeline missing criteria inputs -> canonical buyer/deal navigation;
+hosted356/0/0, automatic/public proof PASS. Remaining active Today/JV missing-number
+faces and UI override trace still require review; not full DONE.
 
 B28f [#561](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/561) released
 936c9d2: pending-deal approval missing-value actions, unchanged explicit review

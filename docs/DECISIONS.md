@@ -1,5 +1,17 @@
 # Decisions
 
+VERIFIED 2026-11-26 UTC: B28g563 RELEASED3ce3d86b0f15d751dc297131742bf7b527b4feb4,
+headecca34aea2c5f55a8b99aac6a36d8a35aa8d2b1f hosted45749547752 PASS356/0/0.
+Auto8076012162 SUCCESS; public health200/exact dashboard/app/PipelineJSv8 PASS,
+auth_controls_checked=false. No private production read/login/UI or real import/
+provider/business action. Pure and actual three-size exact-target/negative tests,
+old buyer/Pipeline UI and six inspected screenshots PASS. Local325/31/0 total356
+retained FAILED with dependency errors observed; no unchanged retry. Four focused
+test-scaffolding failures retained and corrected without runtime/gate changes.
+No backend/DTO/writer/calculator/source/value/approval change; criteria remain
+derived and funds unknown. Full B28 remains open for other active missing-number
+faces; no next-slice runtime begun. Docs-only record requires own hosted gate.
+
 ASSUMED 2026-11-26 UTC: B28g addresses Pipeline's unavailable derived buyer
 criteria ceiling with explicit Missing here copy and existing buyer/deal record
 navigation. Do not identify the buyer as the sole missing input: canonical
