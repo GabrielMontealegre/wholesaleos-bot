@@ -1,5 +1,20 @@
 # Backlog
 
+## Latest Run Summary (2026-11-26 UTC, B28f Approvals In Progress)
+
+Pending deal approvals name missing values and provide an explicit existing
+workspace command guarded by current actor, unique ID and version. No new money
+engine, private field, writer or approval/source/comp gate. Zero/Preliminary/
+split-share and unsigned JV privacy remain. Pure spies and actual1366/400/412
+click-through/negative checks plus existing brief/UI regressions PASS; three
+synthetic screenshots inspected. Full local/hosted gates and release pending.
+Full B28 remains IN PROGRESS for Pipeline/other missing-value surfaces.
+
+Prior B28e local original suite finished318/35/0 total353, retained FAILED.
+Observed missing dependencies and desk-shell/Pipeline editor/Today metadata/
+mailbox chrome UI timeouts; no retry, cancellation or common-cause attribution.
+Exact-head hosted353/0/0 and automatic/public release proof remain authoritative.
+
 ## Latest Run Summary (2026-11-25 UTC, B28e Ask Released)
 
 B28e [#559](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/559)
