@@ -1,5 +1,31 @@
 # Decisions
 
+ASSUMED 2026-11-26 UTC: B28f scopes approval missing-value actions to pending
+deals. Existing canonical evaluation decides asking, reviewed value evidence,
+buyer rule and estimated room; raw repair_estimate determines whether the
+repair estimate is missing here. No new calculation or fallback to claimed ARV,
+asking-as-contract, configured costs or buyer approval as funds. Zero, canonical
+split/share, Preliminary and Texas list-price labels remain unchanged. Missing
+here means absent from this projection, not absent from all business history.
+One secondary Open deal workspace command uses existing openReviewedDeal and
+requires current admin actor, one current loaded deal ID and the card version;
+stale/forged/ambiguous/non-admin targets cannot navigate. No source-review consent
+is set, decision is posted or record is changed. Existing approve/reject/skip,
+source/comp review and server rules remain unchanged. No backend/DTO/writer gate.
+Trace: reviewed-deals.validate/ingest/update/evaluate + assistant-finds criteria
+-> approval-workspace.build pending canonical row/evaluation/version ->
+wos-approvals.brief/missingDealValues -> explicit command -> openReviewedDeal ->
+existing todays-deals canonical GET/list. No new stored fields or route.
+Changed display assertions: tests/approval-card-brief.test.js:9,:13,:15 and
+tests/approval-card-brief-ui.test.js:19, old value/buyer-max/room placeholders to
+explicit Missing here labels; same missing/unknown/no-claimed-value intent.
+First new UI test failed because approvals used approval-deal but its destination
+used unrelated fixture-deal. Corrected only new scaffolding to serve actual
+deals.list from the same store and assert exact opened ID; original failure kept.
+Pure spy and three-size actual UI, stale/forged/ambiguous/non-admin/auth/no-write
+checks plus old brief/UI regressions PASS. Three synthetic screenshots inspected.
+Full local/hosted/release gates pending; full B28 remains open beyond this slice.
+
 VERIFIED 2026-11-25 UTC: B28e559 RELEASED154faebe87ee3010f005cfb2f1762621716370c4,
 headc9dd4bce5d2a0a19334b44b28be7643b6cef5162 hosted45505111451 PASS353/0/0.
 Auto8048317083 SUCCESS; public health200/exact dashboard/app/Askv6/uiKitv6 PASS,
